@@ -51,19 +51,16 @@
   <script src="flutter.js" defer></script>
   <script>
     window.addEventListener('load', function(ev) {
-      // 等待 flutter.js 加载
-      if (typeof _flutter === 'undefined') {
-        console.error('Flutter loader not found');
-        return;
-      }
-      
       _flutter.loader.loadEntrypoint({
-        serviceWorker: {
-          serviceWorkerVersion: null,
-        },
         onEntrypointLoaded: function(engineInitializer) {
           engineInitializer.initializeEngine().then(function(appRunner) {
-            appRunner.runApp();
+            appRunner.runApp().then(function(app) {
+              // 隐藏加载器
+              var loader = document.getElementById('flutter-loader');
+              if (loader) {
+                loader.style.display = 'none';
+              }
+            });
           });
         }
       });
