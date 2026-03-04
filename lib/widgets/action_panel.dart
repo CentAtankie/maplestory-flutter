@@ -328,7 +328,7 @@ class ActionPanel extends ConsumerWidget {
               const Divider(color: Colors.white24),
               _buildInfoRow('力量', '${stats.str}'),
               _buildInfoRow('敏捷', '${stats.dex}'),
-              _buildInfoRow('智力', '${stats.int}'),
+              _buildInfoRow('智力', '${stats.intStat}'),
               _buildInfoRow('运气', '${stats.luk}'),
               const Divider(color: Colors.white24),
               _buildInfoRow('攻击力', '${player.getAtk()}'),

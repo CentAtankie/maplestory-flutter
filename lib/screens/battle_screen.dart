@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/game_provider.dart';
 import '../game/models/mob.dart';
+import '../game/models/player.dart';
 import '../widgets/status_bar.dart';
 import '../widgets/game_log.dart';
 
