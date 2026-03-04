@@ -1,0 +1,10 @@
+services:
+  - type: web
+    name: maplestory-flutter
+    runtime: static
+    buildCommand: flutter build web
+    staticPublishPath: build/web
+    pullRequestPreviewsEnabled: true
+    envVars:
+      - key: FLUTTER_VERSION
+        value: 3.19.0
