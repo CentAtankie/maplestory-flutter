@@ -11,6 +11,7 @@ class ShopScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final gameState = ref.watch(gameProvider);
     final player = gameState.player;
+    final currentCategory = gameState.shopCategory;
 
     return Scaffold(
       backgroundColor: const Color(0xFF1A1A2E),
@@ -83,56 +84,78 @@ class ShopScreen extends ConsumerWidget {
           ),
 
           // 商品分类标签
-          _buildCategoryTabs(),
+          _buildCategoryTabs(ref, currentCategory),
 
           // 商品列表
           Expanded(
-            child: _buildItemList(ref, player),
+            child: _buildItemList(ref, player, currentCategory),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildCategoryTabs() {
+  Widget _buildCategoryTabs(WidgetRef ref, ShopCategory currentCategory) {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       child: Row(
         children: [
-          _buildTab('全部', true),
-          _buildTab('药水', false),
-          _buildTab('卷轴', false),
+          _buildTab(ref, '全部', ShopCategory.all, currentCategory),
+          _buildTab(ref, '药水', ShopCategory.consumable, currentCategory),
+          _buildTab(ref, '卷轴', ShopCategory.scroll, currentCategory),
         ],
       ),
     );
   }
 
-  Widget _buildTab(String label, bool isActive) {
+  Widget _buildTab(WidgetRef ref, String label, ShopCategory category, ShopCategory currentCategory) {
+    final isActive = category == currentCategory;
+    
     return Expanded(
-      child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 4),
-        padding: const EdgeInsets.symmetric(vertical: 8),
-        decoration: BoxDecoration(
-          color: isActive ? const Color(0xFF533483) : Colors.transparent,
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(
-            color: isActive ? const Color(0xFF533483) : Colors.white24,
+      child: GestureDetector(
+        onTap: () {
+          ref.read(gameProvider.notifier).setShopCategory(category);
+        },
+        child: Container(
+          margin: const EdgeInsets.symmetric(horizontal: 4),
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          decoration: BoxDecoration(
+            color: isActive ? const Color(0xFF533483) : Colors.transparent,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(
+              color: isActive ? const Color(0xFF533483) : Colors.white24,
+            ),
           ),
-        ),
-        child: Text(
-          label,
-          textAlign: TextAlign.center,
-          style: TextStyle(
-            color: isActive ? Colors.white : Colors.white54,
-            fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
+          child: Text(
+            label,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: isActive ? Colors.white : Colors.white54,
+              fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
+            ),
           ),
         ),
       ),
     );
   }
 
-  Widget _buildItemList(WidgetRef ref, Player player) {
-    final items = ShopDatabase.items;
+  Widget _buildItemList(WidgetRef ref, Player player, ShopCategory category) {
+    // 根据分类筛选物品
+    var items = ShopDatabase.items;
+    if (category == ShopCategory.consumable) {
+      items = items.where((item) => item.type == ItemType.consumable).toList();
+    } else if (category == ShopCategory.scroll) {
+      items = items.where((item) => item.type == ItemType.scroll).toList();
+    }
+
+    if (items.isEmpty) {
+      return const Center(
+        child: Text(
+          '该分类暂无商品',
+          style: TextStyle(color: Colors.white54),
+        ),
+      );
+    }
 
     return ListView.builder(
       padding: const EdgeInsets.all(12),

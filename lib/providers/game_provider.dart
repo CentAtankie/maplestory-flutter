@@ -14,6 +14,13 @@ enum GameState {
   gameOver,   // 游戏结束
 }
 
+// 商店分类
+enum ShopCategory {
+  all,        // 全部
+  consumable, // 药水
+  scroll,     // 卷轴
+}
+
 // 游戏日志条目
 class LogEntry {
   final String message;
@@ -342,8 +349,16 @@ class GameNotifier extends StateNotifier<GameData> {
       addLog('⛔ 只能在村庄进入商店！', LogType.warning);
       return;
     }
-    state = state.copyWith(gameState: GameState.shopping);
+    state = state.copyWith(
+      gameState: GameState.shopping,
+      shopCategory: ShopCategory.all,  // 重置分类为全部
+    );
     addLog('🏪 进入了商店');
+  }
+
+  // 设置商店分类
+  void setShopCategory(ShopCategory category) {
+    state = state.copyWith(shopCategory: category);
   }
 
   // 关闭商店
@@ -370,6 +385,7 @@ class GameData {
   final Mob? currentMob;
   final List<LogEntry> logs;
   final Random random;
+  final ShopCategory shopCategory;  // 当前商店分类
 
   GameData({
     required this.player,
@@ -378,6 +394,7 @@ class GameData {
     this.currentMob,
     required this.logs,
     required this.random,
+    this.shopCategory = ShopCategory.all,  // 默认全部
   });
 
   factory GameData.initial() {
@@ -397,6 +414,7 @@ class GameData {
     GameState? gameState,
     Mob? currentMob,
     List<LogEntry>? logs,
+    ShopCategory? shopCategory,
   }) {
     return GameData(
       player: player ?? this.player,
@@ -405,6 +423,7 @@ class GameData {
       currentMob: currentMob ?? this.currentMob,
       logs: logs ?? this.logs,
       random: random,
+      shopCategory: shopCategory ?? this.shopCategory,
     );
   }
 }
