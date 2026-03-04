@@ -4,7 +4,6 @@ import '../game/models/player.dart';
 import '../game/models/mob.dart';
 import '../game/models/map.dart';
 import '../game/models/item.dart';
-import '../game/models/item.dart';
 
 // 游戏状态枚举
 enum GameState {
