@@ -186,7 +186,7 @@ class ActionPanel extends ConsumerWidget {
         ),
         const SizedBox(width: 12),
         
-        // 商店（仅在村庄显示）
+        // 商店
         Expanded(
           child: _buildActionButton(
             icon: Icons.store,
@@ -194,10 +194,7 @@ class ActionPanel extends ConsumerWidget {
             color: isTown ? Colors.amber : Colors.grey,
             onPressed: isTown
                 ? () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (context) => const ShopScreen()),
-                    );
+                    ref.read(gameProvider.notifier).openShop();
                   }
                 : null,
           ),
@@ -226,26 +223,6 @@ class ActionPanel extends ConsumerWidget {
             onPressed: () {
               _showCharacterDialog(context, ref);
             },
-          ),
-        ),
-        const SizedBox(width: 12),
-        
-        // 商店（只在村庄显示）
-        Expanded(
-          child: _buildActionButton(
-            icon: Icons.store,
-            label: '商店',
-            color: isTown ? Colors.amber : Colors.grey,
-            onPressed: isTown
-                ? () {
-                    ref.read(gameProvider.notifier).openShop();
-                  }
-                : () {
-                    ref.read(gameProvider.notifier).addLog(
-                      '⛔ 商店只在村庄开放！',
-                      LogType.warning,
-                    );
-                  },
           ),
         ),
       ],
