@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/game_provider.dart';
+import '../game/models/map.dart';
 import '../widgets/status_bar.dart';
 import '../widgets/game_log.dart';
 import '../widgets/action_panel.dart';

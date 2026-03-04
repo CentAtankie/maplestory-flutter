@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/game_provider.dart';
+import '../game/models/player.dart';
 
 class StatusBar extends ConsumerWidget {
   const StatusBar({super.key});

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/game_provider.dart';
+import '../game/models/player.dart';
+import '../game/models/map.dart';
 
 class ActionPanel extends ConsumerWidget {
   const ActionPanel({super.key});
