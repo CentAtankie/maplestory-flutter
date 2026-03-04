@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../game/models/player.dart';
 import '../game/models/mob.dart';
@@ -344,5 +345,3 @@ class Random {
   double nextDouble() => _random.nextDouble();
   int nextInt(int max) => _random.nextInt(max);
 }
-
-import 'dart:math' as math;
