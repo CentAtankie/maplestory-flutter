@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/game_provider.dart';
 import '../game/models/player.dart';
 import '../game/models/map.dart';
+import '../game/models/item.dart';
 import '../screens/shop_screen.dart';
 
 class ActionPanel extends ConsumerWidget {
@@ -296,26 +297,16 @@ class ActionPanel extends ConsumerWidget {
         ),
         content: SizedBox(
           width: double.maxFinite,
+          height: 400,
           child: player.inventory.isEmpty
               ? const Center(
                   child: Text(
-                    '背包是空的',
+                    '背包是空的\n去商店购买一些药水吧！',
                     style: TextStyle(color: Colors.white54),
+                    textAlign: TextAlign.center,
                   ),
                 )
-              : ListView.builder(
-                  shrinkWrap: true,
-                  itemCount: player.inventory.length,
-                  itemBuilder: (context, index) {
-                    return ListTile(
-                      leading: const Text('📦', style: TextStyle(fontSize: 20)),
-                      title: Text(
-                        player.inventory[index],
-                        style: const TextStyle(color: Colors.white),
-                      ),
-                    );
-                  },
-                ),
+              : _buildInventoryList(context, ref, player),
         ),
         actions: [
           TextButton(
@@ -324,6 +315,74 @@ class ActionPanel extends ConsumerWidget {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildInventoryList(BuildContext context, WidgetRef ref, Player player) {
+    // 统计物品数量
+    final itemCounts = <String, int>{};
+    for (final itemId in player.inventory) {
+      itemCounts[itemId] = (itemCounts[itemId] ?? 0) + 1;
+    }
+
+    return ListView.builder(
+      shrinkWrap: true,
+      itemCount: itemCounts.length,
+      itemBuilder: (context, index) {
+        final entry = itemCounts.entries.elementAt(index);
+        final item = ShopDatabase.getById(entry.key);
+        if (item == null) return const SizedBox.shrink();
+
+        return Card(
+          color: const Color(0xFF0F3460),
+          margin: const EdgeInsets.only(bottom: 8),
+          child: ListTile(
+            leading: Text(item.emoji, style: const TextStyle(fontSize: 24)),
+            title: Text(
+              item.name,
+              style: const TextStyle(color: Colors.white),
+            ),
+            subtitle: Text(
+              item.description,
+              style: const TextStyle(color: Colors.white70, fontSize: 12),
+            ),
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // 数量
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.blue.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    'x${entry.value}',
+                    style: const TextStyle(
+                      color: Colors.blue,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                // 使用按钮
+                ElevatedButton(
+                  onPressed: () {
+                    Navigator.pop(context);
+                    ref.read(gameProvider.notifier).useItem(item.id);
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.green,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                  ),
+                  child: const Text('使用'),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 
