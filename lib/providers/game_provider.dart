@@ -3,11 +3,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../game/models/player.dart';
 import '../game/models/mob.dart';
 import '../game/models/map.dart';
+import '../game/models/item.dart';
+import '../game/models/item.dart';
 
 // 游戏状态枚举
 enum GameState {
   exploring,  // 探索中
   battling,   // 战斗中
+  shopping,   // 商店中
   menu,       // 菜单
   gameOver,   // 游戏结束
 }
@@ -274,6 +277,80 @@ class GameNotifier extends StateNotifier<GameData> {
   void restart() {
     state = GameData.initial();
     addLog('🎮 新的开始！欢迎来到冒险岛世界！');
+  }
+
+  // 购买物品
+  bool buyItem(GameItem item) {
+    if (state.player.meso < item.price) {
+      addLog('❌ 金币不足，无法购买 ${item.name}', LogType.error);
+      return false;
+    }
+
+    // 扣除金币
+    final newPlayer = state.player.copyWith(
+      meso: state.player.meso - item.price,
+      inventory: [...state.player.inventory, item.id],
+    );
+
+    state = state.copyWith(player: newPlayer);
+    addLog('🛒 购买了 ${item.name}，花费 ${item.price} 金币', LogType.success);
+    return true;
+  }
+
+  // 使用物品
+  bool useItem(String itemId) {
+    final item = ShopDatabase.getById(itemId);
+    if (item == null) return false;
+
+    // 检查背包中是否有该物品
+    final itemIndex = state.player.inventory.indexOf(itemId);
+    if (itemIndex == -1) {
+      addLog('❌ 背包中没有 ${item.name}', LogType.error);
+      return false;
+    }
+
+    // 使用物品效果
+    final newPlayer = item.use(state.player);
+
+    // 从背包中移除一个
+    final newInventory = List<String>.from(state.player.inventory);
+    newInventory.removeAt(itemIndex);
+
+    state = state.copyWith(
+      player: newPlayer.copyWith(inventory: newInventory),
+    );
+
+    String effectMsg = '';
+    switch (item.effect?.type) {
+      case 'heal_hp':
+        effectMsg = '恢复了 ${item.effect?.value} 点 HP';
+        break;
+      case 'heal_mp':
+        effectMsg = '恢复了 ${item.effect?.value} 点 MP';
+        break;
+      case 'teleport':
+        effectMsg = '使用回城卷轴回到了射手村';
+        break;
+    }
+
+    addLog('✨ 使用了 ${item.name}，$effectMsg', LogType.success);
+    return true;
+  }
+
+  // 打开商店
+  void openShop() {
+    if (!state.currentMap.isTown) {
+      addLog('⛔ 只能在村庄进入商店！', LogType.warning);
+      return;
+    }
+    state = state.copyWith(gameState: GameState.shopping);
+    addLog('🏪 进入了商店');
+  }
+
+  // 关闭商店
+  void closeShop() {
+    state = state.copyWith(gameState: GameState.exploring);
+    addLog('👋 离开了商店');
   }
 
   // 添加日志

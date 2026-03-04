@@ -6,6 +6,7 @@ import '../widgets/status_bar.dart';
 import '../widgets/game_log.dart';
 import '../widgets/action_panel.dart';
 import 'battle_screen.dart';
+import 'shop_screen.dart';
 
 class GameScreen extends ConsumerWidget {
   const GameScreen({super.key});
@@ -122,6 +123,8 @@ class GameScreenWrapper extends ConsumerWidget {
     switch (gameState.gameState) {
       case GameState.battling:
         return const BattleScreen();
+      case GameState.shopping:
+        return const ShopScreen();
       case GameState.gameOver:
         return _buildGameOverScreen(context, ref);
       default:

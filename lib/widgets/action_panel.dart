@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/game_provider.dart';
 import '../game/models/player.dart';
 import '../game/models/map.dart';
+import '../screens/shop_screen.dart';
 
 class ActionPanel extends ConsumerWidget {
   const ActionPanel({super.key});
@@ -184,6 +185,24 @@ class ActionPanel extends ConsumerWidget {
         ),
         const SizedBox(width: 12),
         
+        // 商店（仅在村庄显示）
+        Expanded(
+          child: _buildActionButton(
+            icon: Icons.store,
+            label: '商店',
+            color: isTown ? Colors.amber : Colors.grey,
+            onPressed: isTown
+                ? () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => const ShopScreen()),
+                    );
+                  }
+                : null,
+          ),
+        ),
+        const SizedBox(width: 12),
+        
         // 物品栏
         Expanded(
           child: _buildActionButton(
@@ -210,15 +229,22 @@ class ActionPanel extends ConsumerWidget {
         ),
         const SizedBox(width: 12),
         
-        // 设置
+        // 商店（只在村庄显示）
         Expanded(
           child: _buildActionButton(
-            icon: Icons.settings,
-            label: '设置',
-            color: Colors.grey,
-            onPressed: () {
-              _showSettingsDialog(context, ref);
-            },
+            icon: Icons.store,
+            label: '商店',
+            color: isTown ? Colors.amber : Colors.grey,
+            onPressed: isTown
+                ? () {
+                    ref.read(gameProvider.notifier).openShop();
+                  }
+                : () {
+                    ref.read(gameProvider.notifier).addLog(
+                      '⛔ 商店只在村庄开放！',
+                      LogType.warning,
+                    );
+                  },
           ),
         ),
       ],
