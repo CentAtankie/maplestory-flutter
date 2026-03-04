@@ -233,7 +233,7 @@ class ActionPanel extends ConsumerWidget {
     required IconData icon,
     required String label,
     required Color color,
-    required VoidCallback onPressed,
+    VoidCallback? onPressed,
   }) {
     return ElevatedButton(
       onPressed: onPressed,
