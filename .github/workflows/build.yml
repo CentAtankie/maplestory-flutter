@@ -1,14 +1,11 @@
-name: Build and Release
+name: Build Flutter App
 
 on:
   push:
-    branches: [ main, master ]
-  pull_request:
-    branches: [ main, master ]
+    branches: [ main ]
   workflow_dispatch:
 
 jobs:
-  # Web 构建
   build-web:
     runs-on: ubuntu-latest
     steps:
@@ -17,22 +14,24 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.24.5'
+          flutter-version: '3.19.0'
           channel: 'stable'
       
-      - name: Get dependencies
+      - name: Install dependencies
         run: flutter pub get
+      
+      - name: Analyze code
+        run: flutter analyze || true
       
       - name: Build Web
         run: flutter build web --release
       
-      - name: Upload Web artifact
+      - name: Upload Web Build
         uses: actions/upload-artifact@v4
         with:
           name: web-build
           path: build/web/
 
-  # Android APK 构建
   build-android:
     runs-on: ubuntu-latest
     steps:
@@ -47,22 +46,21 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.24.5'
+          flutter-version: '3.19.0'
           channel: 'stable'
       
-      - name: Get dependencies
+      - name: Install dependencies
         run: flutter pub get
       
-      - name: Build Android APK
+      - name: Build Android
         run: flutter build apk --release
       
-      - name: Upload APK artifact
+      - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: android-apk
           path: build/app/outputs/flutter-apk/app-release.apk
 
-  # Windows 构建
   build-windows:
     runs-on: windows-latest
     steps:
@@ -71,49 +69,17 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.24.5'
+          flutter-version: '3.19.0'
           channel: 'stable'
       
-      - name: Get dependencies
+      - name: Install dependencies
         run: flutter pub get
       
       - name: Build Windows
         run: flutter build windows --release
       
-      - name: Upload Windows artifact
+      - name: Upload Windows Build
         uses: actions/upload-artifact@v4
         with:
           name: windows-build
           path: build/windows/x64/runner/Release/
-
-  # 创建 Release（只在推送到 main 分支时）
-  release:
-    needs: [build-web, build-android, build-windows]
-    runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
-    
-    steps:
-      - uses: actions/checkout@v4
-      
-      - name: Download all artifacts
-        uses: actions/download-artifact@v4
-        with:
-          path: artifacts/
-      
-      - name: Create Release Archive
-        run: |
-          cd artifacts
-          zip -r ../maplestory-web.zip web-build/
-          zip -r ../maplestory-android.zip android-apk/
-          zip -r ../maplestory-windows.zip windows-build/
-      
-      - name: Upload to Release
-        uses: softprops/action-gh-release@v1
-        if: startsWith(github.ref, 'refs/tags/')
-        with:
-          files: |
-            maplestory-web.zip
-            maplestory-android.zip
-            maplestory-windows.zip
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

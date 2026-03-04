@@ -25,7 +25,6 @@ class MapleStoryApp extends StatelessWidget {
           brightness: Brightness.dark,
         ),
         useMaterial3: true,
-        fontFamily: 'NotoSansSC',
         textTheme: const TextTheme(
           headlineLarge: TextStyle(
             fontSize: 28,

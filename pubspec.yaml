@@ -1,5 +1,5 @@
 name: maplestory_flutter
-description: 冒险岛文字版 - Flutter + Flame 移植版
+description: 冒险岛文字版 - Flutter 多平台游戏
 publish_to: 'none'
 version: 1.0.0+1
 
@@ -9,52 +9,12 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  
-  # 游戏引擎
-  flame: ^1.15.0
-  flame_riverpod: ^1.2.0
-  
-  # 状态管理
   flutter_riverpod: ^2.4.9
-  riverpod_annotation: ^2.3.3
-  
-  # 本地存储
-  shared_preferences: ^2.2.2
-  
-  # UI 组件
-  google_fonts: ^6.1.0
-  flutter_animate: ^4.3.0
-  
-  # 工具
-  freezed_annotation: ^2.4.1
-  json_annotation: ^4.8.1
-  uuid: ^4.2.2
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^3.0.1
-  build_runner: ^2.4.7
-  freezed: ^2.4.5
-  json_serializable: ^6.7.1
-  riverpod_generator: ^2.3.9
-  custom_lint: ^0.5.7
-  riverpod_lint: ^2.3.7
 
 flutter:
   uses-material-design: true
-  
-  assets:
-    - assets/images/
-    - assets/fonts/
-    - assets/audio/
-  
-  fonts:
-    - family: ZCOOLKuaiLe
-      fonts:
-        - asset: assets/fonts/ZCOOLKuaiLe-Regular.ttf
-    - family: NotoSansSC
-      fonts:
-        - asset: assets/fonts/NotoSansSC-Regular.ttf
-        - asset: assets/fonts/NotoSansSC-Bold.ttf
-          weight: 700
