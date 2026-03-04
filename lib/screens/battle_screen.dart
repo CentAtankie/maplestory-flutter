@@ -295,7 +295,7 @@ class BattleScreen extends ConsumerWidget {
             const Divider(color: Colors.white24),
             _buildStatusRow('力量', '${player.stats.str}'),
             _buildStatusRow('敏捷', '${player.stats.dex}'),
-            _buildStatusRow('智力', '${player.stats.int}'),
+            _buildStatusRow('智力', '${player.stats.intStat}'),
             _buildStatusRow('运气', '${player.stats.luk}'),
             const Divider(color: Colors.white24),
             _buildStatusRow('攻击力', '${player.getAtk()}'),
