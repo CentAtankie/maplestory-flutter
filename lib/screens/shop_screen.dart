@@ -170,7 +170,16 @@ class ShopScreen extends ConsumerWidget {
           child: InkWell(
             onTap: canAfford
                 ? () => _showBuyDialog(context, ref, item)
-                : null,
+                : () {
+                    // 金币不足提示
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('❌ 金币不足！需要 ${item.price} 金币'),
+                        backgroundColor: Colors.red,
+                        duration: const Duration(seconds: 2),
+                      ),
+                    );
+                  },
             borderRadius: BorderRadius.circular(12),
             child: Padding(
               padding: const EdgeInsets.all(12),
