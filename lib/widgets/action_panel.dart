@@ -6,6 +6,9 @@ import '../game/models/map.dart';
 import '../game/models/item.dart';
 import '../screens/shop_screen.dart';
 
+// 导入 LogType
+import '../providers/game_provider.dart' show LogType;
+
 class ActionPanel extends ConsumerWidget {
   const ActionPanel({super.key});
 
