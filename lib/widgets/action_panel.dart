@@ -638,38 +638,48 @@ class ActionPanel extends ConsumerWidget {
             // 背景音乐控制
             StatefulBuilder(
               builder: (context, setState) {
-                final isPlaying = AudioManager().isPlaying;
-                final volume = AudioManager().volume;
+                final audioManager = AudioManager();
+                final isPlaying = audioManager.isPlaying;
+                final volume = audioManager.volume;
+                final isWeb = audioManager.isWeb;
                 
                 return Column(
                   children: [
                     ListTile(
                       leading: Icon(
-                        isPlaying ? Icons.music_note : Icons.music_off,
-                        color: isPlaying ? Colors.green : Colors.grey,
+                        isWeb 
+                            ? Icons.music_off 
+                            : (isPlaying ? Icons.music_note : Icons.music_off),
+                        color: isWeb 
+                            ? Colors.grey 
+                            : (isPlaying ? Colors.green : Colors.grey),
                       ),
                       title: const Text(
                         '背景音乐',
                         style: TextStyle(color: Colors.white),
                       ),
                       subtitle: Text(
-                        isPlaying ? '正在播放: 射手村' : '已暂停',
+                        isWeb 
+                            ? 'Web 平台暂不支持'
+                            : (isPlaying ? '正在播放: 射手村' : '已暂停'),
                         style: const TextStyle(color: Colors.white54, fontSize: 12),
                       ),
-                      trailing: Switch(
-                        value: isPlaying,
-                        onChanged: (value) async {
-                          if (value) {
-                            await AudioManager().resume();
-                          } else {
-                            await AudioManager().pause();
-                          }
-                          setState(() {});
-                        },
-                        activeColor: Colors.green,
-                      ),
+                      trailing: isWeb 
+                          ? null
+                          : Switch(
+                              value: isPlaying,
+                              onChanged: (value) async {
+                                if (value) {
+                                  await AudioManager().resume();
+                                } else {
+                                  await AudioManager().pause();
+                                }
+                                setState(() {});
+                              },
+                              activeColor: Colors.green,
+                            ),
                     ),
-                    if (isPlaying)
+                    if (!isWeb && isPlaying)
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 16),
                         child: Row(
