@@ -1,5 +1,6 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
+import 'potential.dart';
 
 /// 职业类型
 enum Job {
@@ -118,6 +119,7 @@ class Equipment {
   int? levelReq;
   int? crit;     // 暴击率加成
   int? avoid;    // 闪避率加成
+  EquipmentPotential? potential; // 潜能属性
 
   Equipment({
     required this.name,
@@ -136,6 +138,7 @@ class Equipment {
     this.levelReq,
     this.crit,
     this.avoid,
+    this.potential,
   }) : instanceId = instanceId ?? _generateUuid();  // 自动分配UUID
 
   /// 获取装备属性描述
@@ -171,6 +174,7 @@ class Equipment {
       levelReq: levelReq,
       crit: crit,
       avoid: avoid,
+      potential: potential,
     );
   }
 
