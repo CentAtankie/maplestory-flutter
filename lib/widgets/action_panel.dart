@@ -346,10 +346,10 @@ class ActionPanel extends ConsumerWidget {
                       Wrap(
                         spacing: 8,
                         children: [
-                          _buildStatButton('力量', 'str', ref),
-                          _buildStatButton('敏捷', 'dex', ref),
-                          _buildStatButton('智力', 'int', ref),
-                          _buildStatButton('运气', 'luk', ref),
+                          _buildStatButton(context, '力量', 'str', ref),
+                          _buildStatButton(context, '敏捷', 'dex', ref),
+                          _buildStatButton(context, '智力', 'int', ref),
+                          _buildStatButton(context, '运气', 'luk', ref),
                         ],
                       ),
                     ],
@@ -407,7 +407,7 @@ class ActionPanel extends ConsumerWidget {
     );
   }
 
-  Widget _buildStatButton(String label, String statType, WidgetRef ref) {
+  Widget _buildStatButton(BuildContext context, String label, String statType, WidgetRef ref) {
     return ElevatedButton(
       onPressed: () {
         final success = ref.read(gameProvider.notifier).allocateStat(statType);
