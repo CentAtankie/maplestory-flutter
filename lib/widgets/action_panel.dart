@@ -477,6 +477,23 @@ class ActionPanel extends ConsumerWidget {
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+            // 修改名字
+            ListTile(
+              leading: const Icon(Icons.edit, color: Colors.orange),
+              title: const Text(
+                '修改名字',
+                style: TextStyle(color: Colors.white),
+              ),
+              subtitle: Text(
+                '当前: ${ref.read(gameProvider).player.name}',
+                style: const TextStyle(color: Colors.white54, fontSize: 12),
+              ),
+              onTap: () {
+                Navigator.pop(context);
+                _showRenameDialog(context, ref);
+              },
+            ),
+            const Divider(color: Colors.white24),
             // 保存游戏
             ListTile(
               leading: const Icon(Icons.save, color: Colors.green),
@@ -784,6 +801,74 @@ class ActionPanel extends ConsumerWidget {
               backgroundColor: Colors.green,
             ),
             child: const Text('导入'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showRenameDialog(BuildContext context, WidgetRef ref) {
+    final controller = TextEditingController(text: ref.read(gameProvider).player.name);
+    
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xFF1A1A2E),
+        title: const Text(
+          '✏️ 修改名字',
+          style: TextStyle(color: Colors.white),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text(
+              '请输入新的冒险家名字：',
+              style: TextStyle(color: Colors.white70),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: controller,
+              maxLength: 10,
+              style: const TextStyle(color: Colors.white),
+              decoration: InputDecoration(
+                hintText: '输入名字（最多10字）',
+                hintStyle: const TextStyle(color: Colors.white30),
+                filled: true,
+                fillColor: Colors.black26,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: BorderSide.none,
+                ),
+                counterStyle: const TextStyle(color: Colors.white54),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('取消'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              final newName = controller.text.trim();
+              if (newName.isNotEmpty) {
+                Navigator.pop(context);
+                final success = ref.read(gameProvider.notifier).changePlayerName(newName);
+                if (success && context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('✨ 改名成功！欢迎 $newName'),
+                      backgroundColor: Colors.green,
+                    ),
+                  );
+                }
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.orange,
+            ),
+            child: const Text('确认'),
           ),
         ],
       ),

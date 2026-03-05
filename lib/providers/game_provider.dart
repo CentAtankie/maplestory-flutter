@@ -496,6 +496,26 @@ class GameNotifier extends StateNotifier<GameData> {
     addLog('👋 离开了商店');
   }
 
+  // 修改玩家名字
+  bool changePlayerName(String newName) {
+    if (newName.trim().isEmpty) {
+      addLog('❌ 名字不能为空', LogType.error);
+      return false;
+    }
+    
+    if (newName.length > 10) {
+      addLog('❌ 名字不能超过10个字符', LogType.error);
+      return false;
+    }
+
+    final oldName = state.player.name;
+    state = state.copyWith(
+      player: state.player.copyWith(name: newName.trim()),
+    );
+    addLog('✨ $oldName 改名为 $newName！', LogType.success);
+    return true;
+  }
+
   // ========== 存档功能 ==========
   
   /// 保存游戏
