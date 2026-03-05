@@ -317,30 +317,39 @@ class ActionPanel extends ConsumerWidget {
               _buildInfoRow('暴击率', '${player.getCritRate().toStringAsFixed(1)}%'),
               _buildInfoRow('闪避率', '${player.getAvoidRate().toStringAsFixed(1)}%'),
               const Divider(color: Colors.white24),
-              // 属性点区域
-              if (stats.ap > 0) ...[
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.amber.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Colors.amber.withOpacity(0.3)),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          const Icon(Icons.star, color: Colors.amber, size: 20),
-                          const SizedBox(width: 8),
-                          Text(
-                            '可用属性点: ${stats.ap}',
-                            style: const TextStyle(
-                              color: Colors.amber,
-                              fontWeight: FontWeight.bold,
-                            ),
+              // 属性点区域 - 始终显示
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: stats.ap > 0 ? Colors.amber.withOpacity(0.1) : Colors.grey.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: stats.ap > 0 ? Colors.amber.withOpacity(0.3) : Colors.grey.withOpacity(0.3)),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.star,
+                          color: stats.ap > 0 ? Colors.amber : Colors.grey,
+                          size: 20,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          '可用属性点: ${stats.ap}',
+                          style: TextStyle(
+                            color: stats.ap > 0 ? Colors.amber : Colors.grey,
+                            fontWeight: FontWeight.bold,
                           ),
-                        ],
+                        ),
+                      ],
+                    ),
+                    if (stats.ap > 0) ...[
+                      const SizedBox(height: 8),
+                      const Text(
+                        '点击分配：',
+                        style: TextStyle(color: Colors.white54, fontSize: 12),
                       ),
                       const SizedBox(height: 8),
                       Wrap(
@@ -353,10 +362,10 @@ class ActionPanel extends ConsumerWidget {
                         ],
                       ),
                     ],
-                  ),
+                  ],
                 ),
-                const Divider(color: Colors.white24),
-              ],
+              ),
+              const Divider(color: Colors.white24),
               // 显示已装备的装备
               const Text(
                 '已装备',
