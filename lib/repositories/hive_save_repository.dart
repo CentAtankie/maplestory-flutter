@@ -26,10 +26,10 @@ class HiveSaveRepository implements SaveRepository {
       Hive.registerAdapter(PlayerAdapter());
     }
     if (!Hive.isAdapterRegistered(2)) {
-      Hive.registerAdapter(PlayerStatsAdapter());
+      Hive.registerAdapter(StatsAdapter());
     }
     if (!Hive.isAdapterRegistered(3)) {
-      Hive.registerAdapter(JobTypeAdapter());
+      Hive.registerAdapter(JobAdapter());
     }
     if (!Hive.isAdapterRegistered(4)) {
       Hive.registerAdapter(LogEntryAdapter());
@@ -153,8 +153,8 @@ class HiveSaveRepository implements SaveRepository {
     final statsJson = json['stats'] as Map<String, dynamic>;
     return Player(
       name: json['name'] as String,
-      job: JobType.values[json['job'] as int],
-      stats: PlayerStats(
+      job: Job.values[json['job'] as int],
+      stats: Stats(
         level: statsJson['level'] as int,
         hp: statsJson['hp'] as int,
         maxHp: statsJson['maxHp'] as int,
@@ -221,8 +221,8 @@ class PlayerAdapter extends TypeAdapter<Player> {
   Player read(BinaryReader reader) {
     return Player(
       name: reader.readString(),
-      job: JobType.values[reader.readInt()],
-      stats: reader.read() as PlayerStats,
+      job: Job.values[reader.readInt()],
+      stats: reader.read() as Stats,
       meso: reader.readInt(),
       inventory: reader.readList().cast<String>(),
       currentMap: reader.readString(),
@@ -240,13 +240,13 @@ class PlayerAdapter extends TypeAdapter<Player> {
   }
 }
 
-class PlayerStatsAdapter extends TypeAdapter<PlayerStats> {
+class StatsAdapter extends TypeAdapter<Stats> {
   @override
   final int typeId = 2;
 
   @override
-  PlayerStats read(BinaryReader reader) {
-    return PlayerStats(
+  Stats read(BinaryReader reader) {
+    return Stats(
       level: reader.readInt(),
       hp: reader.readInt(),
       maxHp: reader.readInt(),
@@ -262,7 +262,7 @@ class PlayerStatsAdapter extends TypeAdapter<PlayerStats> {
   }
 
   @override
-  void write(BinaryWriter writer, PlayerStats obj) {
+  void write(BinaryWriter writer, Stats obj) {
     writer.writeInt(obj.level);
     writer.writeInt(obj.hp);
     writer.writeInt(obj.maxHp);
@@ -277,17 +277,17 @@ class PlayerStatsAdapter extends TypeAdapter<PlayerStats> {
   }
 }
 
-class JobTypeAdapter extends TypeAdapter<JobType> {
+class JobAdapter extends TypeAdapter<Job> {
   @override
   final int typeId = 3;
 
   @override
-  JobType read(BinaryReader reader) {
-    return JobType.values[reader.readInt()];
+  Job read(BinaryReader reader) {
+    return Job.values[reader.readInt()];
   }
 
   @override
-  void write(BinaryWriter writer, JobType obj) {
+  void write(BinaryWriter writer, Job obj) {
     writer.writeInt(obj.index);
   }
 }
