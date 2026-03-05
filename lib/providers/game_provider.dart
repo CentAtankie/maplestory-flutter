@@ -575,15 +575,23 @@ class GameNotifier extends StateNotifier<GameData> {
   }
 
   // 装备物品
-  bool equipItem(String equipmentId) {
-    final equipment = EquipmentDatabase.getById(equipmentId);
+  bool equipItem(String equipmentIdOrInstanceId) {
+    // 先尝试从实例存储中查找（用于掉落/购买的装备）
+    Equipment? equipment = _equipmentInstances[equipmentIdOrInstanceId];
+    
+    // 如果没找到，尝试从装备数据库查找（用于旧存档兼容）
+    equipment ??= EquipmentDatabase.getById(equipmentIdOrInstanceId);
+    
     if (equipment == null) {
       addLog('❌ 找不到该装备', LogType.error);
       return false;
     }
 
-    // 检查背包中是否有该装备
-    final itemIndex = state.player.inventory.indexOf(equipmentId);
+    // 检查背包中是否有该装备（匹配 instanceId 或 equipment.id）
+    final itemIndex = state.player.inventory.indexWhere(
+      (id) => id == equipmentIdOrInstanceId || id == equipment.id
+    );
+    
     if (itemIndex == -1) {
       addLog('❌ 背包中没有 ${equipment.name}', LogType.error);
       return false;
@@ -596,17 +604,17 @@ class GameNotifier extends StateNotifier<GameData> {
       return false;
     }
 
-    // 从背包中移除装备
+    // 从背包中移除装备（移除实际存储的ID）
     final newInventory = List<String>.from(state.player.inventory);
-    newInventory.removeAt(itemIndex);
+    final removedId = newInventory.removeAt(itemIndex);
 
     // 获取当前已装备的同类装备（如果有）
     final currentEquip = state.player.equipment[equipment.slot];
 
     // 卸下当前装备（如果有）并放入背包
     if (currentEquip != null) {
-      final oldEquipId = currentEquip.id ?? currentEquip.name;
-      newInventory.add(oldEquipId);
+      // 已装备的装备使用 instanceId 放回背包
+      newInventory.add(currentEquip.instanceId);
       addLog('📦 自动卸下 ${currentEquip.name}', LogType.normal);
     }
 
@@ -707,17 +715,24 @@ class GameNotifier extends StateNotifier<GameData> {
   }
 
   // 卖出物品（支持批量）
-  bool sellItem(String itemId, {int quantity = 1}) {
-    // 先尝试从普通物品查找
-    final item = ShopDatabase.getById(itemId);
-    // 再尝试从装备查找
-    final equipment = EquipmentDatabase.getById(itemId);
-
+  bool sellItem(String itemIdOrInstanceId, {int quantity = 1}) {
+    // 先尝试从装备实例存储中查找（用于掉落/购买的装备）
+    Equipment? equipment = _equipmentInstances[itemIdOrInstanceId];
+    
+    // 再尝试从普通物品查找
+    final item = ShopDatabase.getById(itemIdOrInstanceId);
+    
+    // 再尝试从装备数据库查找（兼容旧存档）
+    equipment ??= EquipmentDatabase.getById(itemIdOrInstanceId);
+    
     final itemName = item?.name ?? equipment?.name ?? '物品';
     final itemPrice = item?.price ?? equipment?.price ?? 0;
 
-    // 检查背包中是否有足够数量
-    final inventoryCount = state.player.inventory.where((id) => id == itemId).length;
+    // 检查背包中是否有足够数量（匹配 instanceId 或 equipment.id）
+    final inventoryCount = state.player.inventory.where(
+      (id) => id == itemIdOrInstanceId || id == equipment?.id
+    ).length;
+    
     if (inventoryCount < quantity) {
       addLog('❌ 背包中 $itemName 数量不足', LogType.error);
       return false;
@@ -731,8 +746,12 @@ class GameNotifier extends StateNotifier<GameData> {
     final newInventory = List<String>.from(state.player.inventory);
     int removed = 0;
     newInventory.removeWhere((id) {
-      if (id == itemId && removed < quantity) {
+      if ((id == itemIdOrInstanceId || id == equipment?.id) && removed < quantity) {
         removed++;
+        // 如果是装备实例，从映射表中移除
+        if (_equipmentInstances.containsKey(id)) {
+          _equipmentInstances.remove(id);
+        }
         return true;
       }
       return false;
