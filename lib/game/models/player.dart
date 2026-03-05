@@ -103,7 +103,8 @@ enum EquipmentSlot {
 /// 装备
 class Equipment {
   String name;
-  String? id;
+  String? id;           // 装备类型ID
+  String? instanceId;   // 装备实例唯一ID (UUID)
   String? emoji;
   String? description;
   EquipmentSlot slot;
@@ -121,6 +122,7 @@ class Equipment {
   Equipment({
     required this.name,
     this.id,
+    this.instanceId,  // 可选，如未提供则使用id
     this.emoji,
     this.description,
     required this.slot,
@@ -148,6 +150,39 @@ class Equipment {
     if (crit != null && crit! > 0) statsList.add('暴击+$crit%');
     if (avoid != null && avoid! > 0) statsList.add('闪避+$avoid%');
     return statsList.join(', ');
+  }
+
+  /// 复制装备并生成新的实例ID
+  Equipment copyWithInstanceId({String? newInstanceId}) {
+    return Equipment(
+      name: name,
+      id: id,
+      instanceId: newInstanceId ?? _generateUuid(),
+      emoji: emoji,
+      description: description,
+      slot: slot,
+      atk: atk,
+      def: def,
+      str: str,
+      dex: dex,
+      intBonus: intBonus,
+      luk: luk,
+      price: price,
+      levelReq: levelReq,
+      crit: crit,
+      avoid: avoid,
+    );
+  }
+
+  /// 生成简单的UUID
+  static String _generateUuid() {
+    final random = math.Random();
+    return '${_randomHex(random, 8)}-${_randomHex(random, 4)}-${_randomHex(random, 4)}-${_randomHex(random, 4)}-${_randomHex(random, 12)}';
+  }
+
+  static String _randomHex(math.Random random, int length) {
+    const chars = '0123456789abcdef';
+    return List.generate(length, (_) => chars[random.nextInt(16)]).join();
   }
 }
 

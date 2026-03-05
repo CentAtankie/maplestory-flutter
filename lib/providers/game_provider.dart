@@ -56,8 +56,11 @@ class GameNotifier extends StateNotifier<GameData> {
   Timer? _autoBattleTimer;
   bool _isAutoExplore = false;
   bool _isAutoBattle = false;
+  
+  // 装备实例存储（key: instanceId, value: Equipment）
+  final Map<String, Equipment> _equipmentInstances = {};
 
-  GameNotifier({SaveRepository? saveRepository}) 
+  GameNotifier({SaveRepository? saveRepository})
       : _saveRepository = saveRepository ?? HiveSaveRepository(),
         super(GameData.initial()) {
     // 自动尝试读取存档
@@ -67,6 +70,11 @@ class GameNotifier extends StateNotifier<GameData> {
   bool get isInitialized => _isInitialized;
   bool get isAutoExplore => _isAutoExplore;
   bool get isAutoBattle => _isAutoBattle;
+  
+  /// 通过instanceId获取装备实例
+  Equipment? getEquipmentByInstanceId(String instanceId) {
+    return _equipmentInstances[instanceId];
+  }
   
   /// 清理定时器
   @override
@@ -88,7 +96,7 @@ class GameNotifier extends StateNotifier<GameData> {
       }
     }
   }
-  
+
   /// 设置自动战斗
   void setAutoBattle(bool value) {
     _isAutoBattle = value;
@@ -102,11 +110,11 @@ class GameNotifier extends StateNotifier<GameData> {
       }
     }
   }
-  
+
   /// 启动自动模式定时器
   void _startAutoMode() {
     _autoBattleTimer?.cancel();
-    
+
     // 每2秒执行一次自动操作
     _autoBattleTimer = Timer.periodic(const Duration(seconds: 2), (timer) {
       if (state.gameState == GameState.battling && state.currentMob != null) {
@@ -151,7 +159,7 @@ class GameNotifier extends StateNotifier<GameData> {
   void move(String direction) {
     final currentMap = state.currentMap;
     final nextMapId = currentMap.exits[direction];
-    
+
     if (nextMapId == null) {
       addLog('⛔ 这个方向没有路！', LogType.warning);
       return;
@@ -206,12 +214,12 @@ class GameNotifier extends StateNotifier<GameData> {
 
     final player = state.player;
     final mob = state.currentMob!;
-    
+
     // 玩家攻击
     final playerAtk = player.getAtk();
     final mobDef = mob.def;
     var damage = (playerAtk - mobDef).clamp(1, 9999);
-    
+
     // 暴击判定
     final critRate = player.getCritRate();
     final isCrit = state.random.nextDouble() * 100 < critRate;
@@ -221,7 +229,7 @@ class GameNotifier extends StateNotifier<GameData> {
     } else {
       addLog('⚔️ 你对 ${mob.name} 造成 $damage 点伤害！', LogType.battle);
     }
-    
+
     final newMobHp = mob.hp - damage;
 
     if (newMobHp <= 0) {
@@ -232,20 +240,20 @@ class GameNotifier extends StateNotifier<GameData> {
 
     // 怪物反击
     final mobNew = mob.copyWith(hp: newMobHp);
-    
+
     // 闪避判定
     final avoidRate = player.getAvoidRate();
     final isAvoided = state.random.nextDouble() * 100 < avoidRate;
-    
+
     if (isAvoided) {
       addLog('💨 你闪避了 ${mob.name} 的攻击！', LogType.success);
       state = state.copyWith(currentMob: mobNew);
       return;
     }
-    
+
     final mobDamage = (mob.atk - player.getDef()).clamp(1, 9999);
     final newPlayerHp = player.stats.hp - mobDamage;
-    
+
     addLog('💥 ${mob.name} 对你造成 $mobDamage 点伤害！', LogType.warning);
 
     if (newPlayerHp <= 0) {
@@ -264,7 +272,7 @@ class GameNotifier extends StateNotifier<GameData> {
   // 使用技能
   void useSkill() {
     if (state.gameState != GameState.battling || state.currentMob == null) return;
-    
+
     final player = state.player;
     if (player.stats.mp < 5) {
       addLog('❌ MP 不足！', LogType.error);
@@ -274,7 +282,7 @@ class GameNotifier extends StateNotifier<GameData> {
     final mob = state.currentMob!;
     final damage = (player.getAtk() * 2 - mob.def).clamp(1, 9999);
     final newMobHp = mob.hp - damage;
-    
+
     addLog('✨ 技能攻击！对 ${mob.name} 造成 $damage 点伤害！', LogType.battle);
 
     if (newMobHp <= 0) {
@@ -295,7 +303,7 @@ class GameNotifier extends StateNotifier<GameData> {
   // 逃跑
   void flee() {
     if (state.gameState != GameState.battling) return;
-    
+
     if (state.random.nextDouble() < 0.5) {
       addLog('🏃 逃跑成功！', LogType.success);
       state = state.copyWith(
@@ -333,14 +341,14 @@ class GameNotifier extends StateNotifier<GameData> {
     final player = state.player;
     final newExp = player.stats.exp + mob.exp;
     final newMeso = player.meso + mob.exp * 5;
-    
+
     addLog('🎉 击败了 ${mob.name}！', LogType.success);
     addLog('💰 获得 ${mob.exp * 5} 金币，${mob.exp} 经验值！', LogType.reward);
 
     // 获取掉落物品ID列表
     final dropIds = mob.getDrops();
     final newInventory = List<String>.from(player.inventory);
-    
+
     for (final itemId in dropIds) {
       final item = ShopDatabase.getById(itemId);
       if (item != null) {
@@ -348,12 +356,17 @@ class GameNotifier extends StateNotifier<GameData> {
         addLog('📦 获得掉落：${item.name}！', LogType.reward);
       }
     }
-    
-    // 装备掉落（5%概率）
+
+    // 装备掉落（5%概率）- 生成带UUID的装备实例
     final droppedEquip = EquipmentDatabase.getRandomDrop(player.stats.level);
-    if (droppedEquip != null && droppedEquip.id != null) {
-      newInventory.add(droppedEquip.id!);
-      addLog('✨ 稀有掉落：${droppedEquip.name}！', LogType.reward);
+    if (droppedEquip != null) {
+      // 创建带唯一instanceId的装备副本
+      final equipInstance = droppedEquip.copyWithInstanceId();
+      final instanceId = equipInstance.instanceId!;
+      newInventory.add(instanceId);
+      // 将装备实例存入临时存储（用于后续查找）
+      _equipmentInstances[instanceId] = equipInstance;
+      addLog('✨ 稀有掉落：${equipInstance.name}！', LogType.reward);
     }
 
     // 升级检查
@@ -381,10 +394,10 @@ class GameNotifier extends StateNotifier<GameData> {
     final newMaxHp = player.stats.maxHp + 10;
     final newMaxMp = player.stats.maxMp + 5;
     final newAp = player.stats.ap + 5;  // 获得5点自由属性点
-    
+
     addLog('🆙 升级了！到达 Lv.$newLevel！', LogType.success);
     addLog('💫 获得 5 点属性点，点击角色面板分配', LogType.reward);
-    
+
     return player.copyWith(
       stats: player.stats.copyWith(
         level: newLevel,
@@ -402,7 +415,7 @@ class GameNotifier extends StateNotifier<GameData> {
   // 怪物反击
   void _mobCounterAttack() {
     if (state.currentMob == null) return;
-    
+
     final player = state.player;
     final mob = state.currentMob!;
     final damage = (mob.atk - player.getDef()).clamp(1, 9999);
@@ -426,11 +439,11 @@ class GameNotifier extends StateNotifier<GameData> {
   void _gameOver() {
     final player = state.player;
     final henesys = GameMaps.getMap('henesys');
-    
+
     // 扣除10%金币作为惩罚
     final penalty = (player.meso * 0.1).toInt();
     final newMeso = player.meso - penalty;
-    
+
     state = state.copyWith(
       gameState: GameState.exploring,
       currentMob: null,
@@ -443,7 +456,7 @@ class GameNotifier extends StateNotifier<GameData> {
         ),
       ),
     );
-    
+
     addLog('💀 你被击败了...', LogType.error);
     addLog('💨 被传送回射手村，HP 恢复至 1', LogType.warning);
     if (penalty > 0) {
@@ -533,7 +546,7 @@ class GameNotifier extends StateNotifier<GameData> {
   bool buyEquipment(Equipment equipment) {
     final price = equipment.price ?? 0;
     final levelReq = equipment.levelReq ?? 1;
-    
+
     if (state.player.meso < price) {
       addLog('❌ 金币不足，无法购买 ${equipment.name}', LogType.error);
       return false;
@@ -544,10 +557,16 @@ class GameNotifier extends StateNotifier<GameData> {
       return false;
     }
 
-    // 扣除金币，装备直接进背包（简化处理，实际应该装备到身上）
+    // 生成新的装备实例（带唯一ID）
+    final newEquipment = equipment.copyWithInstanceId();
+    
+    // 将装备实例存入映射表
+    _equipmentInstances[newEquipment.instanceId!] = newEquipment;
+
+    // 扣除金币，装备直接进背包
     final newPlayer = state.player.copyWith(
       meso: state.player.meso - price,
-      inventory: [...state.player.inventory, equipment.id!],
+      inventory: [...state.player.inventory, newEquipment.instanceId],
     );
 
     state = state.copyWith(player: newPlayer);
@@ -583,7 +602,7 @@ class GameNotifier extends StateNotifier<GameData> {
 
     // 获取当前已装备的同类装备（如果有）
     final currentEquip = state.player.equipment[equipment.slot];
-    
+
     // 卸下当前装备（如果有）并放入背包
     if (currentEquip != null) {
       final oldEquipId = currentEquip.id ?? currentEquip.name;
@@ -693,7 +712,7 @@ class GameNotifier extends StateNotifier<GameData> {
     final item = ShopDatabase.getById(itemId);
     // 再尝试从装备查找
     final equipment = EquipmentDatabase.getById(itemId);
-    
+
     final itemName = item?.name ?? equipment?.name ?? '物品';
     final itemPrice = item?.price ?? equipment?.price ?? 0;
 
@@ -707,7 +726,7 @@ class GameNotifier extends StateNotifier<GameData> {
     // 卖出价格（原价的50%）
     final sellPrice = (itemPrice * 0.5).toInt();
     final totalPrice = sellPrice * quantity;
-    
+
     // 从背包中移除指定数量
     final newInventory = List<String>.from(state.player.inventory);
     int removed = 0;
@@ -743,7 +762,7 @@ class GameNotifier extends StateNotifier<GameData> {
       addLog('❌ 名字不能为空', LogType.error);
       return false;
     }
-    
+
     if (newName.length > 10) {
       addLog('❌ 名字不能超过10个字符', LogType.error);
       return false;
@@ -758,7 +777,7 @@ class GameNotifier extends StateNotifier<GameData> {
   }
 
   // ========== 存档功能 ==========
-  
+
   /// 保存游戏
   Future<bool> saveGame() async {
     try {
@@ -770,7 +789,7 @@ class GameNotifier extends StateNotifier<GameData> {
       return false;
     }
   }
-  
+
   /// 读取存档
   Future<bool> loadGame() async {
     try {
@@ -788,12 +807,12 @@ class GameNotifier extends StateNotifier<GameData> {
       return false;
     }
   }
-  
+
   /// 检查是否有存档
   Future<bool> hasSave() async {
     return await _saveRepository.hasSave();
   }
-  
+
   /// 删除存档
   Future<bool> deleteSave() async {
     try {
@@ -805,7 +824,7 @@ class GameNotifier extends StateNotifier<GameData> {
       return false;
     }
   }
-  
+
   /// 导出存档为 JSON
   Future<String?> exportToJson() async {
     try {
@@ -815,7 +834,7 @@ class GameNotifier extends StateNotifier<GameData> {
       return null;
     }
   }
-  
+
   /// 从 JSON 导入存档
   Future<bool> importFromJson(String json) async {
     try {
@@ -903,7 +922,7 @@ final gameProvider = StateNotifierProvider<GameNotifier, GameData>((ref) {
 // 辅助类
 class Random {
   final _random = math.Random();
-  
+
   double nextDouble() => _random.nextDouble();
   int nextInt(int max) => _random.nextInt(max);
 }

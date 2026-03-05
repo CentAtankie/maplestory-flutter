@@ -242,7 +242,15 @@ class _InventoryDialogState extends ConsumerState<InventoryDialog> {
     for (final entry in itemCounts.entries) {
       final itemId = entry.key;
       
-      // 检查是否是装备
+      // 首先尝试通过instanceId获取装备实例（新系统）
+      final equipInstance = ref.read(gameProvider.notifier).getEquipmentByInstanceId(itemId);
+      if (equipInstance != null) {
+        result[InventoryCategory.equipment]!.add(entry);
+        result[InventoryCategory.all]!.add(entry);
+        continue;
+      }
+      
+      // 然后尝试通过类型ID查找（兼容旧系统）
       final equipment = EquipmentDatabase.getById(itemId);
       if (equipment != null) {
         result[InventoryCategory.equipment]!.add(entry);
@@ -330,13 +338,14 @@ class _InventoryDialogState extends ConsumerState<InventoryDialog> {
         final itemId = entry.key;
         final count = entry.value;
         
-        // 获取物品信息
+        // 获取物品信息 - 优先通过instanceId获取装备实例
+        final equipInstance = ref.read(gameProvider.notifier).getEquipmentByInstanceId(itemId);
         final item = ShopDatabase.getById(itemId);
-        final equipment = EquipmentDatabase.getById(itemId);
+        final equipment = equipInstance ?? EquipmentDatabase.getById(itemId);
         
-        final String name = item?.name ?? equipment?.name ?? '未知物品';
-        final String emoji = item?.emoji ?? equipment?.emoji ?? '❓';
-        final String description = item?.description ?? equipment?.description ?? '';
+        final String name = equipInstance?.name ?? item?.name ?? equipment?.name ?? '未知物品';
+        final String emoji = equipInstance?.emoji ?? item?.emoji ?? equipment?.emoji ?? '❓';
+        final String description = equipInstance?.description ?? item?.description ?? equipment?.description ?? '';
         
         // 判断类型
         final bool isEquipment = equipment != null;
