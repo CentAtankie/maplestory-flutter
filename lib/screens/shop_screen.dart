@@ -512,8 +512,10 @@ class ShopScreen extends ConsumerWidget {
       itemCount: equipments.length,
       itemBuilder: (context, index) {
         final equipment = equipments[index];
-        final canAfford = player.meso >= equipment.price;
-        final canEquip = player.stats.level >= equipment.levelReq;
+        final price = equipment.price ?? 0;
+        final levelReq = equipment.levelReq ?? 1;
+        final canAfford = player.meso >= price;
+        final canEquip = player.stats.level >= levelReq;
 
         return Card(
           color: const Color(0xFF0F3460),
@@ -525,7 +527,7 @@ class ShopScreen extends ConsumerWidget {
                     ? () {
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
-                            content: Text('❌ 需要等级 ${equipment.levelReq} 才能装备'),
+                            content: Text('❌ 需要等级 $levelReq 才能装备'),
                             backgroundColor: Colors.red,
                           ),
                         );
@@ -533,7 +535,7 @@ class ShopScreen extends ConsumerWidget {
                     : () {
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
-                            content: Text('❌ 金币不足！需要 ${equipment.price} 金币'),
+                            content: Text('❌ 金币不足！需要 $price 金币'),
                             backgroundColor: Colors.red,
                           ),
                         );
@@ -588,7 +590,7 @@ class ShopScreen extends ConsumerWidget {
                                 borderRadius: BorderRadius.circular(4),
                               ),
                               child: Text(
-                                'Lv.${equipment.levelReq}',
+                                'Lv.$levelReq',
                                 style: TextStyle(
                                   color: canEquip ? Colors.green : Colors.red,
                                   fontSize: 10,
@@ -600,7 +602,7 @@ class ShopScreen extends ConsumerWidget {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          equipment.description,
+                          equipment.description ?? '',
                           style: TextStyle(
                             color: Colors.white.withOpacity(0.6),
                             fontSize: 12,
@@ -634,7 +636,7 @@ class ShopScreen extends ConsumerWidget {
                         ),
                         const SizedBox(width: 4),
                         Text(
-                          '${equipment.price}',
+                          '$price',
                           style: TextStyle(
                             color: canAfford && canEquip
                                 ? Colors.green
@@ -693,7 +695,7 @@ class ShopScreen extends ConsumerWidget {
         backgroundColor: const Color(0xFF1A1A2E),
         title: Row(
           children: [
-            Text(equipment.emoji, style: const TextStyle(fontSize: 28)),
+            Text(equipment.emoji ?? '📦', style: const TextStyle(fontSize: 28)),
             const SizedBox(width: 12),
             Text(
               '购买 ${equipment.name}',
