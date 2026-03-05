@@ -94,15 +94,11 @@ class ActionPanel extends ConsumerWidget {
                 _buildMapTile(context, ref, '射手村', 'henesys', '🏘️'),
               ]),
               const Divider(color: Colors.white24),
-              // 初级地图
-              _buildMapCategory('初级冒险区', [
+              // 野外冒险区
+              _buildMapCategory('野外冒险区', [
                 _buildMapTile(context, ref, '彩虹村', 'rainbow', '🌈'),
                 _buildMapTile(context, ref, '蜗牛壳海滩', 'snail_beach', '🐚'),
                 _buildMapTile(context, ref, '蘑菇园', 'mushroom_farm', '🍄'),
-              ]),
-              const Divider(color: Colors.white24),
-              // 中级地图
-              _buildMapCategory('中级冒险区', [
                 _buildMapTile(context, ref, '魔法密林', 'magic_forest', '🌲'),
                 _buildMapTile(context, ref, '射手村北部山丘', 'henesys_hill', '⛰️'),
               ]),

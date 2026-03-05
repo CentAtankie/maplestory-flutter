@@ -172,26 +172,23 @@ class GameNotifier extends StateNotifier<GameData> {
 
   // 直接传送到指定地图
   void moveToMap(String mapId) {
-    try {
-      final targetMap = GameMaps.getMap(mapId);
-      
-      // 检查是否在战斗中
-      if (state.gameState == GameState.battling) {
-        addLog('⛔ 战斗中无法传送！', LogType.error);
-        return;
-      }
-      
-      // 检查是否在商店中
-      if (state.gameState == GameState.shopping) {
-        addLog('⛔ 请先离开商店', LogType.error);
-        return;
-      }
-      
-      state = state.copyWith(currentMap: targetMap);
-      addLog('✨ 传送到了 ${targetMap.name}！', LogType.success);
-    } catch (e) {
-      addLog('❌ 无法传送到该地图', LogType.error);
+    // 检查是否在战斗中
+    if (state.gameState == GameState.battling) {
+      addLog('⛔ 战斗中无法传送！', LogType.error);
+      return;
     }
+    
+    // 检查是否在商店中
+    if (state.gameState == GameState.shopping) {
+      addLog('⛔ 请先离开商店', LogType.error);
+      return;
+    }
+    
+    // 获取目标地图
+    final targetMap = GameMaps.getMap(mapId);
+    
+    state = state.copyWith(currentMap: targetMap);
+    addLog('✨ 传送到了 ${targetMap.name}！', LogType.success);
   }
 
   // 探索（野外随机遭遇）
