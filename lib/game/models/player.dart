@@ -29,6 +29,7 @@ class Stats {
   int level;
   int exp;
   int maxExp;
+  int ap;  // 自由属性点 (Ability Points)
 
   Stats({
     this.str = 12,
@@ -42,6 +43,7 @@ class Stats {
     this.level = 1,
     this.exp = 0,
     this.maxExp = 15,
+    this.ap = 0,  // 初始没有自由属性点
   });
 
   /// 计算暴击率 (基于运气, 最高40%)
@@ -66,6 +68,7 @@ class Stats {
     int? level,
     int? exp,
     int? maxExp,
+    int? ap,
   }) {
     return Stats(
       str: str ?? this.str,
@@ -79,6 +82,7 @@ class Stats {
       level: level ?? this.level,
       exp: exp ?? this.exp,
       maxExp: maxExp ?? this.maxExp,
+      ap: ap ?? this.ap,
     );
   }
 }

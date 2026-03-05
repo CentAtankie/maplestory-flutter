@@ -317,6 +317,46 @@ class ActionPanel extends ConsumerWidget {
               _buildInfoRow('暴击率', '${player.getCritRate().toStringAsFixed(1)}%'),
               _buildInfoRow('闪避率', '${player.getAvoidRate().toStringAsFixed(1)}%'),
               const Divider(color: Colors.white24),
+              // 属性点区域
+              if (stats.ap > 0) ...[
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.amber.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.amber.withOpacity(0.3)),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          const Icon(Icons.star, color: Colors.amber, size: 20),
+                          const SizedBox(width: 8),
+                          Text(
+                            '可用属性点: ${stats.ap}',
+                            style: const TextStyle(
+                              color: Colors.amber,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Wrap(
+                        spacing: 8,
+                        children: [
+                          _buildStatButton('力量', 'str', ref),
+                          _buildStatButton('敏捷', 'dex', ref),
+                          _buildStatButton('智力', 'int', ref),
+                          _buildStatButton('运气', 'luk', ref),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                const Divider(color: Colors.white24),
+              ],
               // 显示已装备的装备
               const Text(
                 '已装备',
@@ -364,6 +404,32 @@ class ActionPanel extends ConsumerWidget {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildStatButton(String label, String statType, WidgetRef ref) {
+    return ElevatedButton(
+      onPressed: () {
+        final success = ref.read(gameProvider.notifier).allocateStat(statType);
+        if (success) {
+          // 刷新对话框
+          Navigator.pop(context);
+          Future.delayed(const Duration(milliseconds: 100), () {
+            _showCharacterDialog(context, ref);
+          });
+        }
+      },
+      style: ElevatedButton.styleFrom(
+        backgroundColor: Colors.amber.withOpacity(0.2),
+        foregroundColor: Colors.amber,
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        minimumSize: const Size(0, 32),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(6),
+          side: const BorderSide(color: Colors.amber),
+        ),
+      ),
+      child: Text('+ $label'),
     );
   }
 

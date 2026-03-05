@@ -310,8 +310,10 @@ class GameNotifier extends StateNotifier<GameData> {
     final newMaxExp = (player.stats.maxExp * 1.5).toInt();
     final newMaxHp = player.stats.maxHp + 10;
     final newMaxMp = player.stats.maxMp + 5;
+    final newAp = player.stats.ap + 3;  // 获得3点自由属性点
     
     addLog('🆙 升级了！到达 Lv.$newLevel！', LogType.success);
+    addLog('💫 获得 3 点属性点，点击角色面板分配', LogType.reward);
     
     return player.copyWith(
       stats: player.stats.copyWith(
@@ -322,8 +324,7 @@ class GameNotifier extends StateNotifier<GameData> {
         maxMp: newMaxMp,
         hp: newMaxHp,
         mp: newMaxMp,
-        str: player.stats.str + 2,
-        dex: player.stats.dex + 2,
+        ap: newAp,  // 增加属性点，不加固定属性
       ),
     );
   }
@@ -533,6 +534,54 @@ class GameNotifier extends StateNotifier<GameData> {
 
     state = state.copyWith(player: newPlayer);
     addLog('✨ 装备了 ${equipment.name}！${equipment.stats}', LogType.success);
+    return true;
+  }
+
+  // 分配属性点
+  bool allocateStat(String statType) {
+    if (state.player.stats.ap <= 0) {
+      addLog('❌ 没有可用的属性点', LogType.error);
+      return false;
+    }
+
+    final currentStats = state.player.stats;
+    int newStr = currentStats.str;
+    int newDex = currentStats.dex;
+    int newInt = currentStats.intStat;
+    int newLuk = currentStats.luk;
+
+    switch (statType) {
+      case 'str':
+        newStr++;
+        addLog('💪 力量 +1', LogType.success);
+        break;
+      case 'dex':
+        newDex++;
+        addLog('🏃 敏捷 +1', LogType.success);
+        break;
+      case 'int':
+        newInt++;
+        addLog('🧠 智力 +1', LogType.success);
+        break;
+      case 'luk':
+        newLuk++;
+        addLog('🍀 运气 +1', LogType.success);
+        break;
+      default:
+        return false;
+    }
+
+    state = state.copyWith(
+      player: state.player.copyWith(
+        stats: currentStats.copyWith(
+          str: newStr,
+          dex: newDex,
+          intStat: newInt,
+          luk: newLuk,
+          ap: currentStats.ap - 1,
+        ),
+      ),
+    );
     return true;
   }
 
