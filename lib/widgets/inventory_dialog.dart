@@ -324,8 +324,25 @@ class _InventoryDialogState extends ConsumerState<InventoryDialog> {
 
   /// 装备物品
   void _equip(String itemId) {
-    ref.read(gameProvider.notifier).equipItem(itemId);
-    setState(() {}); // 刷新界面
+    final success = ref.read(gameProvider.notifier).equipItem(itemId);
+    if (success) {
+      setState(() {}); // 刷新界面
+    } else {
+      // 装备失败（通常是等级不足），显示提示
+      final equipment = EquipmentDatabase.getById(itemId);
+      if (equipment != null) {
+        final levelReq = equipment.levelReq ?? 1;
+        final playerLevel = ref.read(gameProvider).player.stats.level;
+        if (playerLevel < levelReq) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('❌ 等级不足！需要 Lv.$levelReq 才能装备 ${equipment.name}'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    }
   }
 
   /// 卸下装备
