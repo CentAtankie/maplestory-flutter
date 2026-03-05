@@ -25,12 +25,12 @@ class ShopScreen extends ConsumerWidget {
         ),
         title: const Row(
           children: [
-            Text('馃彧 ', style: TextStyle(fontSize: 24)),
-            Text('鏉傝揣搴?),
+            Text('🏪 ', style: TextStyle(fontSize: 24)),
+            Text('杂货店'),
           ],
         ),
         actions: [
-          // 鏄剧ず閲戝竵
+          // 显示金币
           Container(
             margin: const EdgeInsets.only(right: 16),
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -41,7 +41,7 @@ class ShopScreen extends ConsumerWidget {
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Text('馃挵', style: TextStyle(fontSize: 16)),
+                const Text('💰', style: TextStyle(fontSize: 16)),
                 const SizedBox(width: 4),
                 Text(
                   '${player.meso}',
@@ -57,7 +57,8 @@ class ShopScreen extends ConsumerWidget {
       ),
       body: Column(
         children: [
-          // 鍟嗗簵娆㈣繋璇?          Container(
+          // 商店欢迎语
+          Container(
             margin: const EdgeInsets.all(12),
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
@@ -67,11 +68,11 @@ class ShopScreen extends ConsumerWidget {
             ),
             child: const Row(
               children: [
-                Text('馃懘', style: TextStyle(fontSize: 32)),
+                Text('👴', style: TextStyle(fontSize: 32)),
                 SizedBox(width: 12),
                 Expanded(
                   child: Text(
-                    '娆㈣繋鍏変复锛佽繖閲屾湁鍚勭鑽按鍜屽嵎杞达紝鏃呰鑰呴渶瑕佷拱鐐逛粈涔堝悧锛?,
+                    '欢迎光临！这里有各种药水和卷轴，旅行者需要买点什么吗？',
                     style: TextStyle(
                       color: Colors.white70,
                       fontSize: 14,
@@ -82,10 +83,10 @@ class ShopScreen extends ConsumerWidget {
             ),
           ),
 
-          // 鍟嗗搧鍒嗙被鏍囩
+          // 商品分类标签
           _buildCategoryTabs(ref, currentCategory),
 
-          // 鍟嗗搧鍒楄〃
+          // 商品列表
           Expanded(
             child: currentCategory == ShopCategory.sell
                 ? _buildSellList(ref, player)
@@ -107,10 +108,10 @@ class ShopScreen extends ConsumerWidget {
         scrollDirection: Axis.horizontal,
         child: Row(
           children: [
-            _buildTab(ref, '璐拱', ShopCategory.all, currentCategory),
-            _buildTab(ref, '瑁呭', ShopCategory.equipment, currentCategory),
-            _buildTab(ref, '鐗规畩', ShopCategory.special, currentCategory),
-            _buildTab(ref, '鍗栧嚭', ShopCategory.sell, currentCategory),
+            _buildTab(ref, '购买', ShopCategory.all, currentCategory),
+            _buildTab(ref, '装备', ShopCategory.equipment, currentCategory),
+            _buildTab(ref, '特殊', ShopCategory.special, currentCategory),
+            _buildTab(ref, '卖出', ShopCategory.sell, currentCategory),
           ],
         ),
       ),
@@ -148,7 +149,7 @@ class ShopScreen extends ConsumerWidget {
   }
 
   Widget _buildItemList(WidgetRef ref, Player player, ShopCategory category) {
-    // 鍟嗗簵鍙崠娑堣€楀搧鍜屽嵎杞达紝涓嶅崠鏉愭枡
+    // 商店只卖消耗品和卷轴，不卖材料
     var items = ShopDatabase.items.where((item) => 
       item.type == ItemType.consumable || item.type == ItemType.scroll
     ).toList();
@@ -162,7 +163,7 @@ class ShopScreen extends ConsumerWidget {
     if (items.isEmpty) {
       return const Center(
         child: Text(
-          '璇ュ垎绫绘殏鏃犲晢鍝?,
+          '该分类暂无商品',
           style: TextStyle(color: Colors.white54),
         ),
       );
@@ -182,10 +183,10 @@ class ShopScreen extends ConsumerWidget {
             onTap: canAfford
                 ? () => _showBuyDialog(context, ref, item)
                 : () {
-                    // 閲戝竵涓嶈冻鎻愮ず
+                    // 金币不足提示
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
-                        content: Text('鉂?閲戝竵涓嶈冻锛侀渶瑕?${item.price} 閲戝竵'),
+                        content: Text('❌ 金币不足！需要 ${item.price} 金币'),
                         backgroundColor: Colors.red,
                         duration: const Duration(seconds: 2),
                       ),
@@ -196,7 +197,7 @@ class ShopScreen extends ConsumerWidget {
               padding: const EdgeInsets.all(12),
               child: Row(
                 children: [
-                  // 鐗╁搧鍥炬爣
+                  // 物品图标
                   Container(
                     width: 56,
                     height: 56,
@@ -213,7 +214,7 @@ class ShopScreen extends ConsumerWidget {
                   ),
                   const SizedBox(width: 12),
 
-                  // 鐗╁搧淇℃伅
+                  // 物品信息
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -238,7 +239,7 @@ class ShopScreen extends ConsumerWidget {
                     ),
                   ),
 
-                  // 浠锋牸
+                  // 价格
                   Container(
                     padding: const EdgeInsets.symmetric(
                       horizontal: 12,
@@ -254,7 +255,7 @@ class ShopScreen extends ConsumerWidget {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Text(
-                          canAfford ? '馃挵' : '鉂?,
+                          canAfford ? '💰' : '❌',
                           style: const TextStyle(fontSize: 12),
                         ),
                         const SizedBox(width: 4),
@@ -291,7 +292,7 @@ class ShopScreen extends ConsumerWidget {
   }
 
   Widget _buildSellList(WidgetRef ref, Player player) {
-    // 缁熻鐗╁搧鏁伴噺
+    // 统计物品数量
     final itemCounts = <String, int>{};
     for (final itemId in player.inventory) {
       itemCounts[itemId] = (itemCounts[itemId] ?? 0) + 1;
@@ -300,7 +301,7 @@ class ShopScreen extends ConsumerWidget {
     if (itemCounts.isEmpty) {
       return const Center(
         child: Text(
-          '鑳屽寘鏄┖鐨勶紝娌℃湁浠€涔堝彲鍗栫殑',
+          '背包是空的，没有什么可卖的',
           style: TextStyle(color: Colors.white54),
         ),
       );
@@ -349,7 +350,7 @@ class ShopScreen extends ConsumerWidget {
                           ),
                           if (isMaterial)
                             const Text(
-                              '馃摝 鏉愭枡 - 鍙兘鍗栧嚭',
+                              '📦 材料 - 只能卖出',
                               style: TextStyle(
                                 color: Colors.orange, 
                                 fontSize: 10
@@ -358,7 +359,7 @@ class ShopScreen extends ConsumerWidget {
                         ],
                       ),
                     ),
-                    // 鏁伴噺
+                    // 数量
                     Container(
                       padding: const EdgeInsets.symmetric(
                         horizontal: 12, 
@@ -379,10 +380,11 @@ class ShopScreen extends ConsumerWidget {
                   ],
                 ),
                 const SizedBox(height: 12),
-                // 鎵归噺鍗栧嚭鎸夐挳
+                // 批量卖出按钮
                 Row(
                   children: [
-                    // 鍗?涓?                    Expanded(
+                    // 卖1个
+                    Expanded(
                       child: ElevatedButton(
                         onPressed: () {
                           ref.read(gameProvider.notifier).sellItem(item.id, quantity: 1);
@@ -392,10 +394,11 @@ class ShopScreen extends ConsumerWidget {
                           foregroundColor: Colors.white,
                           padding: const EdgeInsets.symmetric(vertical: 8),
                         ),
-                        child: Text('鍗?涓?馃挵$sellPrice'),
+                        child: Text('卖1个 💰$sellPrice'),
                       ),
                     ),
-                    // 鍗栧叏閮?                    if (maxQuantity > 1) ...[
+                    // 卖全部
+                    if (maxQuantity > 1) ...[
                       const SizedBox(width: 8),
                       Expanded(
                         child: ElevatedButton(
@@ -411,7 +414,7 @@ class ShopScreen extends ConsumerWidget {
                             padding: const EdgeInsets.symmetric(vertical: 8),
                           ),
                           child: Text(
-                            '鍗栧叏閮?馃挵${sellPrice * maxQuantity}',
+                            '卖全部 💰${sellPrice * maxQuantity}',
                             style: const TextStyle(fontSize: 12),
                           ),
                         ),
@@ -428,7 +431,7 @@ class ShopScreen extends ConsumerWidget {
   }
 
   Widget _buildSpecialList(WidgetRef ref, Player player) {
-    // 鐗规畩鐗╁搧锛堥瓟鏂癸級
+    // 特殊物品（魔方）
     final specialItems = [
       ShopDatabase.getById('cube_normal'),
       ShopDatabase.getById('cube_advanced'),
@@ -451,7 +454,7 @@ class ShopScreen extends ConsumerWidget {
                 : () {
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
-                        content: Text('鉂?閲戝竵涓嶈冻锛侀渶瑕?${item.price} 閲戝竵'),
+                        content: Text('❌ 金币不足！需要 ${item.price} 金币'),
                         backgroundColor: Colors.red,
                       ),
                     );
@@ -461,7 +464,7 @@ class ShopScreen extends ConsumerWidget {
               padding: const EdgeInsets.all(12),
               child: Row(
                 children: [
-                  // 鐗╁搧鍥炬爣
+                  // 物品图标
                   Container(
                     width: 56,
                     height: 56,
@@ -478,7 +481,7 @@ class ShopScreen extends ConsumerWidget {
                   ),
                   const SizedBox(width: 12),
 
-                  // 鐗╁搧淇℃伅
+                  // 物品信息
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -503,7 +506,7 @@ class ShopScreen extends ConsumerWidget {
                     ),
                   ),
 
-                  // 浠锋牸
+                  // 价格
                   Container(
                     padding: const EdgeInsets.symmetric(
                       horizontal: 12,
@@ -519,7 +522,7 @@ class ShopScreen extends ConsumerWidget {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Text(
-                          canAfford ? '馃挵' : '鉂?,
+                          canAfford ? '💰' : '❌',
                           style: const TextStyle(fontSize: 12),
                         ),
                         const SizedBox(width: 4),
@@ -552,7 +555,7 @@ class ShopScreen extends ConsumerWidget {
             Text(item.emoji, style: const TextStyle(fontSize: 28)),
             const SizedBox(width: 12),
             Text(
-              '璐拱 ${item.name}',
+              '购买 ${item.name}',
               style: const TextStyle(color: Colors.white),
             ),
           ],
@@ -569,10 +572,10 @@ class ShopScreen extends ConsumerWidget {
             Row(
               children: [
                 const Text(
-                  '浠锋牸: ',
+                  '价格: ',
                   style: TextStyle(color: Colors.white70),
                 ),
-                const Text('馃挵 ', style: TextStyle(fontSize: 16)),
+                const Text('💰 ', style: TextStyle(fontSize: 16)),
                 Text(
                   '${item.price}',
                   style: const TextStyle(
@@ -588,7 +591,7 @@ class ShopScreen extends ConsumerWidget {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('鍙栨秷'),
+            child: const Text('取消'),
           ),
           ElevatedButton(
             onPressed: () {
@@ -596,7 +599,7 @@ class ShopScreen extends ConsumerWidget {
               Navigator.pop(context);
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
-                  content: Text('璐拱鎴愬姛锛?{item.name}'),
+                  content: Text('购买成功：${item.name}'),
                   backgroundColor: Colors.green,
                 ),
               );
@@ -604,21 +607,21 @@ class ShopScreen extends ConsumerWidget {
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.green,
             ),
-            child: const Text('纭璐拱'),
+            child: const Text('确认购买'),
           ),
         ],
       ),
     );
   }
 
-  // 瑁呭鍒楄〃
+  // 装备列表
   Widget _buildEquipmentList(WidgetRef ref, Player player) {
     final equipments = EquipmentDatabase.getShopEquipments();
     
     if (equipments.isEmpty) {
       return const Center(
         child: Text(
-          '鏆傛棤瑁呭鍑哄敭',
+          '暂无装备出售',
           style: TextStyle(color: Colors.white54),
         ),
       );
@@ -644,7 +647,7 @@ class ShopScreen extends ConsumerWidget {
                     ? () {
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
-                            content: Text('鉂?闇€瑕佺瓑绾?$levelReq 鎵嶈兘瑁呭'),
+                            content: Text('❌ 需要等级 $levelReq 才能装备'),
                             backgroundColor: Colors.red,
                           ),
                         );
@@ -652,7 +655,7 @@ class ShopScreen extends ConsumerWidget {
                     : () {
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
-                            content: Text('鉂?閲戝竵涓嶈冻锛侀渶瑕?$price 閲戝竵'),
+                            content: Text('❌ 金币不足！需要 $price 金币'),
                             backgroundColor: Colors.red,
                           ),
                         );
@@ -662,7 +665,7 @@ class ShopScreen extends ConsumerWidget {
               padding: const EdgeInsets.all(12),
               child: Row(
                 children: [
-                  // 瑁呭鍥炬爣
+                  // 装备图标
                   Container(
                     width: 56,
                     height: 56,
@@ -672,14 +675,14 @@ class ShopScreen extends ConsumerWidget {
                     ),
                     child: Center(
                       child: Text(
-                        equipment.emoji ?? '馃摝',
+                        equipment.emoji ?? '📦',
                         style: const TextStyle(fontSize: 28),
                       ),
                     ),
                   ),
                   const SizedBox(width: 12),
 
-                  // 瑁呭淇℃伅
+                  // 装备信息
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -726,12 +729,13 @@ class ShopScreen extends ConsumerWidget {
                           ),
                         ),
                         const SizedBox(height: 4),
-                        // 瑁呭灞炴€?                        _buildEquipmentStats(equipment),
+                        // 装备属性
+                        _buildEquipmentStats(equipment),
                       ],
                     ),
                   ),
 
-                  // 浠锋牸
+                  // 价格
                   Container(
                     padding: const EdgeInsets.symmetric(
                       horizontal: 12,
@@ -747,7 +751,7 @@ class ShopScreen extends ConsumerWidget {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Text(
-                          canAfford && canEquip ? '馃挵' : '鉂?,
+                          canAfford && canEquip ? '💰' : '❌',
                           style: const TextStyle(fontSize: 12),
                         ),
                         const SizedBox(width: 4),
@@ -772,16 +776,17 @@ class ShopScreen extends ConsumerWidget {
     );
   }
 
-  // 瑁呭灞炴€ф樉绀?  Widget _buildEquipmentStats(Equipment equipment) {
-    // 浣跨敤equipment鐨剆tats getter
+  // 装备属性显示
+  Widget _buildEquipmentStats(Equipment equipment) {
+    // 使用equipment的stats getter
     final statTexts = <String>[];
     
-    if (equipment.atk > 0) statTexts.add('鏀诲嚮+${equipment.atk}');
-    if (equipment.def > 0) statTexts.add('闃插尽+${equipment.def}');
-    if (equipment.str > 0) statTexts.add('鍔涢噺+${equipment.str}');
-    if (equipment.dex > 0) statTexts.add('鏁忔嵎+${equipment.dex}');
-    if (equipment.intBonus > 0) statTexts.add('鏅哄姏+${equipment.intBonus}');
-    if (equipment.luk > 0) statTexts.add('杩愭皵+${equipment.luk}');
+    if (equipment.atk > 0) statTexts.add('攻击+${equipment.atk}');
+    if (equipment.def > 0) statTexts.add('防御+${equipment.def}');
+    if (equipment.str > 0) statTexts.add('力量+${equipment.str}');
+    if (equipment.dex > 0) statTexts.add('敏捷+${equipment.dex}');
+    if (equipment.intBonus > 0) statTexts.add('智力+${equipment.intBonus}');
+    if (equipment.luk > 0) statTexts.add('运气+${equipment.luk}');
 
     return Wrap(
       spacing: 8,
@@ -802,17 +807,18 @@ class ShopScreen extends ConsumerWidget {
     );
   }
 
-  // 瑁呭璐拱瀵硅瘽妗?  void _showEquipmentBuyDialog(BuildContext context, WidgetRef ref, Equipment equipment) {
+  // 装备购买对话框
+  void _showEquipmentBuyDialog(BuildContext context, WidgetRef ref, Equipment equipment) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: const Color(0xFF1A1A2E),
         title: Row(
           children: [
-            Text(equipment.emoji ?? '馃摝', style: const TextStyle(fontSize: 28)),
+            Text(equipment.emoji ?? '📦', style: const TextStyle(fontSize: 28)),
             const SizedBox(width: 12),
             Text(
-              '璐拱 ${equipment.name}',
+              '购买 ${equipment.name}',
               style: const TextStyle(color: Colors.white),
             ),
           ],
@@ -827,7 +833,7 @@ class ShopScreen extends ConsumerWidget {
             ),
             const SizedBox(height: 12),
             Text(
-              '闇€瑕佺瓑绾? Lv.${equipment.levelReq ?? 1}',
+              '需要等级: Lv.${equipment.levelReq ?? 1}',
               style: TextStyle(
                 color: (equipment.levelReq ?? 1) <= ref.read(gameProvider).player.stats.level
                     ? Colors.green
@@ -841,10 +847,10 @@ class ShopScreen extends ConsumerWidget {
             Row(
               children: [
                 const Text(
-                  '浠锋牸: ',
+                  '价格: ',
                   style: TextStyle(color: Colors.white70),
                 ),
-                const Text('馃挵 ', style: TextStyle(fontSize: 16)),
+                const Text('💰 ', style: TextStyle(fontSize: 16)),
                 Text(
                   '${equipment.price ?? 0}',
                   style: const TextStyle(
@@ -860,7 +866,7 @@ class ShopScreen extends ConsumerWidget {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('鍙栨秷'),
+            child: const Text('取消'),
           ),
           ElevatedButton(
             onPressed: () {
@@ -868,7 +874,7 @@ class ShopScreen extends ConsumerWidget {
               Navigator.pop(context);
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
-                  content: Text('璐拱鎴愬姛锛?{equipment.name}'),
+                  content: Text('购买成功：${equipment.name}'),
                   backgroundColor: Colors.green,
                 ),
               );
@@ -876,7 +882,7 @@ class ShopScreen extends ConsumerWidget {
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.green,
             ),
-            child: const Text('纭璐拱'),
+            child: const Text('确认购买'),
           ),
         ],
       ),
