@@ -41,7 +41,12 @@ class GameItem {
 
   /// 使用物品
   Player use(Player player) {
-    if (type == ItemType.material || effect == null) return player;  // 材料不能使用
+    // 材料不能使用
+    if (type == ItemType.material) {
+      return player;
+    }
+    
+    if (effect == null) return player;
 
     switch (effect!.type) {
       case 'heal_hp':

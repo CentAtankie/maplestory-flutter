@@ -355,19 +355,37 @@ class ActionPanel extends ConsumerWidget {
                   ),
                 ),
                 const SizedBox(width: 8),
-                // 使用按钮
-                ElevatedButton(
-                  onPressed: () {
-                    Navigator.pop(context);
-                    ref.read(gameProvider.notifier).useItem(item.id);
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.green,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                // 材料显示"卖出"，消耗品显示"使用"
+                if (item.type == ItemType.material)
+                  ElevatedButton(
+                    onPressed: () {
+                      ref.read(gameProvider.notifier).sellItem(item.id, quantity: 1);
+                      // 刷新对话框
+                      Navigator.pop(context);
+                      Future.delayed(const Duration(milliseconds: 100), () {
+                        _showInventoryDialog(context, ref);
+                      });
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.orange,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                    ),
+                    child: const Text('卖出'),
+                  )
+                else
+                  ElevatedButton(
+                    onPressed: () {
+                      Navigator.pop(context);
+                      ref.read(gameProvider.notifier).useItem(item.id);
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.green,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                    ),
+                    child: const Text('使用'),
                   ),
-                  child: const Text('使用'),
-                ),
               ],
             ),
           ),

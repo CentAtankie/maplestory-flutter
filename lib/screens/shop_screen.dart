@@ -305,66 +305,111 @@ class ShopScreen extends ConsumerWidget {
         if (item == null) return const SizedBox.shrink();
 
         final sellPrice = (item.price * 0.5).toInt();
+        final maxQuantity = entry.value;
+        final isMaterial = item.type == ItemType.material;
 
         return Card(
           color: const Color(0xFF0F3460),
           margin: const EdgeInsets.only(bottom: 8),
-          child: ListTile(
-            leading: Text(item.emoji, style: const TextStyle(fontSize: 28)),
-            title: Text(
-              item.name,
-              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-            ),
-            subtitle: Text(
-              item.description,
-              style: const TextStyle(color: Colors.white70, fontSize: 12),
-            ),
-            trailing: Row(
-              mainAxisSize: MainAxisSize.min,
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: Column(
               children: [
-                // 数量
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: Colors.blue.withOpacity(0.2),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Text(
-                    'x${entry.value}',
-                    style: const TextStyle(
-                      color: Colors.blue,
-                      fontWeight: FontWeight.bold,
+                Row(
+                  children: [
+                    Text(item.emoji, style: const TextStyle(fontSize: 28)),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            item.name,
+                            style: const TextStyle(
+                              color: Colors.white, 
+                              fontWeight: FontWeight.bold
+                            ),
+                          ),
+                          Text(
+                            item.description,
+                            style: const TextStyle(
+                              color: Colors.white70, 
+                              fontSize: 12
+                            ),
+                          ),
+                          if (isMaterial)
+                            const Text(
+                              '📦 材料 - 只能卖出',
+                              style: TextStyle(
+                                color: Colors.orange, 
+                                fontSize: 10
+                              ),
+                            ),
+                        ],
+                      ),
                     ),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                // 卖出价格
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: Colors.amber.withOpacity(0.2),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Text(
-                    '💰 $sellPrice',
-                    style: const TextStyle(
-                      color: Colors.amber,
-                      fontWeight: FontWeight.bold,
+                    // 数量
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12, 
+                        vertical: 6
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.blue.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        'x$maxQuantity',
+                        style: const TextStyle(
+                          color: Colors.blue,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                     ),
-                  ),
+                  ],
                 ),
-                const SizedBox(width: 8),
-                // 卖出按钮
-                ElevatedButton(
-                  onPressed: () {
-                    ref.read(gameProvider.notifier).sellItem(item.id);
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.green,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                  ),
-                  child: const Text('卖出'),
+                const SizedBox(height: 12),
+                // 批量卖出按钮
+                Row(
+                  children: [
+                    // 卖1个
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () {
+                          ref.read(gameProvider.notifier).sellItem(item.id, quantity: 1);
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.green,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 8),
+                        ),
+                        child: Text('卖1个 💰$sellPrice'),
+                      ),
+                    ),
+                    // 卖全部
+                    if (maxQuantity > 1) ...[
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: () {
+                            ref.read(gameProvider.notifier).sellItem(
+                              item.id, 
+                              quantity: maxQuantity
+                            );
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.orange,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 8),
+                          ),
+                          child: Text(
+                            '卖全部 💰${sellPrice * maxQuantity}',
+                            style: const TextStyle(fontSize: 12),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
               ],
             ),

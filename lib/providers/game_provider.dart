@@ -300,10 +300,34 @@ class GameNotifier extends StateNotifier<GameData> {
     );
   }
 
-  // 游戏结束
+  // 游戏结束 - 死亡回到射手村
   void _gameOver() {
-    state = state.copyWith(gameState: GameState.gameOver);
-    addLog('💀 你被击败了...游戏结束', LogType.error);
+    final player = state.player;
+    final henesys = GameMaps.getMap('henesys');
+    
+    // 扣除10%金币作为惩罚
+    final penalty = (player.meso * 0.1).toInt();
+    final newMeso = player.meso - penalty;
+    
+    state = state.copyWith(
+      gameState: GameState.exploring,
+      currentMob: null,
+      currentMap: henesys,
+      player: player.copyWith(
+        currentMap: 'henesys',
+        meso: newMeso,
+        stats: player.stats.copyWith(
+          hp: 1,  // 剩1点血
+        ),
+      ),
+    );
+    
+    addLog('💀 你被击败了...', LogType.error);
+    addLog('💨 被传送回射手村，HP 恢复至 1', LogType.warning);
+    if (penalty > 0) {
+      addLog('💸 损失 $penalty 金币作为惩罚', LogType.warning);
+    }
+    addLog('🏥 去找治疗师休息恢复吧！', LogType.success);
   }
 
   // 重新开始
@@ -388,34 +412,42 @@ class GameNotifier extends StateNotifier<GameData> {
     state = state.copyWith(shopCategory: category);
   }
 
-  // 卖出物品
-  bool sellItem(String itemId) {
+  // 卖出物品（支持批量）
+  bool sellItem(String itemId, {int quantity = 1}) {
     final item = ShopDatabase.getById(itemId);
     if (item == null) return false;
 
-    // 检查背包中是否有该物品
-    final itemIndex = state.player.inventory.indexOf(itemId);
-    if (itemIndex == -1) {
-      addLog('❌ 背包中没有 ${item.name}', LogType.error);
+    // 检查背包中是否有足够数量
+    final inventoryCount = state.player.inventory.where((id) => id == itemId).length;
+    if (inventoryCount < quantity) {
+      addLog('❌ 背包中 ${item.name} 数量不足', LogType.error);
       return false;
     }
 
     // 卖出价格（原价的50%）
     final sellPrice = (item.price * 0.5).toInt();
+    final totalPrice = sellPrice * quantity;
     
-    // 从背包中移除一个
+    // 从背包中移除指定数量
     final newInventory = List<String>.from(state.player.inventory);
-    newInventory.removeAt(itemIndex);
+    int removed = 0;
+    newInventory.removeWhere((id) {
+      if (id == itemId && removed < quantity) {
+        removed++;
+        return true;
+      }
+      return false;
+    });
 
     // 增加金币
     state = state.copyWith(
       player: state.player.copyWith(
-        meso: state.player.meso + sellPrice,
+        meso: state.player.meso + totalPrice,
         inventory: newInventory,
       ),
     );
 
-    addLog('💰 卖出 ${item.name}，获得 $sellPrice 金币', LogType.success);
+    addLog('💰 卖出 ${item.name} x$quantity，获得 $totalPrice 金币', LogType.success);
     return true;
   }
 
