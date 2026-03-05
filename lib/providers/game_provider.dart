@@ -49,16 +49,19 @@ enum LogType {
 // 游戏状态管理
 class GameNotifier extends StateNotifier<GameData> {
   final SaveRepository _saveRepository;
+  bool _isInitialized = false;
 
   GameNotifier({SaveRepository? saveRepository}) 
       : _saveRepository = saveRepository ?? HiveSaveRepository(),
         super(GameData.initial()) {
     // 自动尝试读取存档
-    _autoLoadSave();
+    _init();
   }
 
-  /// 自动读取存档
-  void _autoLoadSave() async {
+  bool get isInitialized => _isInitialized;
+
+  /// 初始化 - 自动读取存档
+  Future<void> _init() async {
     try {
       final hasSave = await _saveRepository.hasSave();
       if (hasSave) {
@@ -69,9 +72,9 @@ class GameNotifier extends StateNotifier<GameData> {
         }
       }
     } catch (e) {
-      // 自动读取失败不显示错误，使用默认新游戏
       print('自动读取存档失败: $e');
     }
+    _isInitialized = true;
   }
 
   // 移动
