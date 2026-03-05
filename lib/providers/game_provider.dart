@@ -310,10 +310,10 @@ class GameNotifier extends StateNotifier<GameData> {
     final newMaxExp = (player.stats.maxExp * 1.5).toInt();
     final newMaxHp = player.stats.maxHp + 10;
     final newMaxMp = player.stats.maxMp + 5;
-    final newAp = player.stats.ap + 3;  // 获得3点自由属性点
+    final newAp = player.stats.ap + 5;  // 获得5点自由属性点
     
     addLog('🆙 升级了！到达 Lv.$newLevel！', LogType.success);
-    addLog('💫 获得 3 点属性点，点击角色面板分配', LogType.reward);
+    addLog('💫 获得 5 点属性点，点击角色面板分配', LogType.reward);
     
     return player.copyWith(
       stats: player.stats.copyWith(
