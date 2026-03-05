@@ -16,9 +16,10 @@ enum GameState {
 
 // 商店分类
 enum ShopCategory {
-  all,        // 全部
+  all,        // 全部（购买）
   consumable, // 药水
   scroll,     // 卷轴
+  sell,       // 卖出
 }
 
 // 游戏日志条目
@@ -379,6 +380,37 @@ class GameNotifier extends StateNotifier<GameData> {
   // 设置商店分类
   void setShopCategory(ShopCategory category) {
     state = state.copyWith(shopCategory: category);
+  }
+
+  // 卖出物品
+  bool sellItem(String itemId) {
+    final item = ShopDatabase.getById(itemId);
+    if (item == null) return false;
+
+    // 检查背包中是否有该物品
+    final itemIndex = state.player.inventory.indexOf(itemId);
+    if (itemIndex == -1) {
+      addLog('❌ 背包中没有 ${item.name}', LogType.error);
+      return false;
+    }
+
+    // 卖出价格（原价的50%）
+    final sellPrice = (item.price * 0.5).toInt();
+    
+    // 从背包中移除一个
+    final newInventory = List<String>.from(state.player.inventory);
+    newInventory.removeAt(itemIndex);
+
+    // 增加金币
+    state = state.copyWith(
+      player: state.player.copyWith(
+        meso: state.player.meso + sellPrice,
+        inventory: newInventory,
+      ),
+    );
+
+    addLog('💰 卖出 ${item.name}，获得 $sellPrice 金币', LogType.success);
+    return true;
   }
 
   // 关闭商店

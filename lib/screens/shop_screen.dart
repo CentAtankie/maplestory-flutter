@@ -88,7 +88,9 @@ class ShopScreen extends ConsumerWidget {
 
           // 商品列表
           Expanded(
-            child: _buildItemList(ref, player, currentCategory),
+            child: currentCategory == ShopCategory.sell
+                ? _buildSellList(ref, player)
+                : _buildItemList(ref, player, currentCategory),
           ),
         ],
       ),
@@ -100,9 +102,8 @@ class ShopScreen extends ConsumerWidget {
       margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       child: Row(
         children: [
-          _buildTab(ref, '全部', ShopCategory.all, currentCategory),
-          _buildTab(ref, '药水', ShopCategory.consumable, currentCategory),
-          _buildTab(ref, '卷轴', ShopCategory.scroll, currentCategory),
+          _buildTab(ref, '购买', ShopCategory.all, currentCategory),
+          _buildTab(ref, '卖出', ShopCategory.sell, currentCategory),
         ],
       ),
     );
@@ -277,6 +278,100 @@ class ShopScreen extends ConsumerWidget {
       case ItemType.material:
         return Colors.blue;
     }
+  }
+
+  Widget _buildSellList(WidgetRef ref, Player player) {
+    // 统计物品数量
+    final itemCounts = <String, int>{};
+    for (final itemId in player.inventory) {
+      itemCounts[itemId] = (itemCounts[itemId] ?? 0) + 1;
+    }
+
+    if (itemCounts.isEmpty) {
+      return const Center(
+        child: Text(
+          '背包是空的，没有什么可卖的',
+          style: TextStyle(color: Colors.white54),
+        ),
+      );
+    }
+
+    return ListView.builder(
+      padding: const EdgeInsets.all(12),
+      itemCount: itemCounts.length,
+      itemBuilder: (context, index) {
+        final entry = itemCounts.entries.elementAt(index);
+        final item = ShopDatabase.getById(entry.key);
+        if (item == null) return const SizedBox.shrink();
+
+        final sellPrice = (item.price * 0.5).toInt();
+
+        return Card(
+          color: const Color(0xFF0F3460),
+          margin: const EdgeInsets.only(bottom: 8),
+          child: ListTile(
+            leading: Text(item.emoji, style: const TextStyle(fontSize: 28)),
+            title: Text(
+              item.name,
+              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+            ),
+            subtitle: Text(
+              item.description,
+              style: const TextStyle(color: Colors.white70, fontSize: 12),
+            ),
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // 数量
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.blue.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    'x${entry.value}',
+                    style: const TextStyle(
+                      color: Colors.blue,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                // 卖出价格
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.amber.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    '💰 $sellPrice',
+                    style: const TextStyle(
+                      color: Colors.amber,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                // 卖出按钮
+                ElevatedButton(
+                  onPressed: () {
+                    ref.read(gameProvider.notifier).sellItem(item.id);
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.green,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                  ),
+                  child: const Text('卖出'),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
   }
 
   void _showBuyDialog(BuildContext context, WidgetRef ref, GameItem item) {
