@@ -216,10 +216,15 @@ class GameNotifier extends StateNotifier<GameData> {
     addLog('🎉 击败了 ${mob.name}！', LogType.success);
     addLog('💰 获得 ${mob.exp * 5} 金币，${mob.exp} 经验值！', LogType.reward);
 
-    // 处理掉落
-    for (final drop in mob.drops) {
-      if (state.random.nextDouble() < drop.chance) {
-        addLog('📦 获得掉落：${drop.name}！', LogType.reward);
+    // 获取掉落物品ID列表
+    final dropIds = mob.getDrops();
+    final newInventory = List<String>.from(player.inventory);
+    
+    for (final itemId in dropIds) {
+      final item = ShopDatabase.getById(itemId);
+      if (item != null) {
+        newInventory.add(itemId);
+        addLog('📦 获得掉落：${item.name}！', LogType.reward);
       }
     }
 
@@ -227,6 +232,7 @@ class GameNotifier extends StateNotifier<GameData> {
     var updatedPlayer = player.copyWith(
       stats: player.stats.copyWith(exp: newExp),
       meso: newMeso,
+      inventory: newInventory,
     );
 
     if (newExp >= player.stats.maxExp) {

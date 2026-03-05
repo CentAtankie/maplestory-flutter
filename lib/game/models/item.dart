@@ -41,7 +41,7 @@ class GameItem {
 
   /// 使用物品
   Player use(Player player) {
-    if (effect == null) return player;
+    if (type == ItemType.material || effect == null) return player;  // 材料不能使用
 
     switch (effect!.type) {
       case 'heal_hp':
@@ -135,6 +135,70 @@ class ShopDatabase {
       description: '恢复 300 点 MP',
       price: 250,
       effect: ItemEffect(type: 'heal_mp', value: 300),
+    ),
+    // ========== 怪物掉落材料 ==========
+    // 蜗牛壳
+    GameItem(
+      id: 'snail_shell',
+      name: '蜗牛壳',
+      emoji: '🐚',
+      type: ItemType.material,
+      description: '蜗牛的外壳，可以卖给商店',
+      price: 10,
+    ),
+    // 蓝蜗牛壳
+    GameItem(
+      id: 'blue_snail_shell',
+      name: '蓝蜗牛壳',
+      emoji: '🔷',
+      type: ItemType.material,
+      description: '蓝蜗牛的壳，比普通的更值钱',
+      price: 20,
+    ),
+    // 红蜗牛壳
+    GameItem(
+      id: 'red_snail_shell',
+      name: '红蜗牛壳',
+      emoji: '🔴',
+      type: ItemType.material,
+      description: '红蜗牛的壳，很稀有',
+      price: 30,
+    ),
+    // 绿水灵的珠
+    GameItem(
+      id: 'slime_bubble',
+      name: '绿水灵的珠',
+      emoji: '💧',
+      type: ItemType.material,
+      description: '绿水灵体内的宝珠',
+      price: 40,
+    ),
+    // 蘑菇仔的帽子
+    GameItem(
+      id: 'mushroom_cap',
+      name: '蘑菇仔的帽子',
+      emoji: '🍄',
+      type: ItemType.material,
+      description: '蘑菇仔的伞盖',
+      price: 50,
+    ),
+    // 蓝蘑菇盖
+    GameItem(
+      id: 'blue_mushroom_cap',
+      name: '蓝蘑菇盖',
+      emoji: '🟦',
+      type: ItemType.material,
+      description: '蓝蘑菇的伞盖，很值钱',
+      price: 70,
+    ),
+    // 刺蘑菇盖
+    GameItem(
+      id: 'horny_mushroom_cap',
+      name: '刺蘑菇盖',
+      emoji: '🌵',
+      type: ItemType.material,
+      description: '刺蘑菇的伞盖，非常稀有',
+      price: 100,
     ),
   ];
 
