@@ -342,17 +342,17 @@ class _InventoryDialogState extends ConsumerState<InventoryDialog> {
         final bool isEquipment = equipment != null;
         final bool isConsumable = item?.type == ItemType.consumable || item?.type == ItemType.scroll;
         
-        // 检查装备是否已装备
-        final bool isEquipped = isEquipment && _isEquipped(equipment!, player);
+        // 检查装备是否已装备（仅用于视觉标记，不影响按钮显示）
+        final bool hasEquipped = isEquipment && _hasEquippedType(equipment!, player);
         final bool isSelected = _selectedItems.contains(itemId);
 
         return Card(
           color: isSelected 
               ? Colors.orange.withOpacity(0.3)
-              : (isEquipped ? const Color(0xFF533483) : const Color(0xFF0F3460)),
+              : (hasEquipped ? const Color(0xFF533483) : const Color(0xFF0F3460)),
           margin: const EdgeInsets.only(bottom: 8),
           child: InkWell(
-            onTap: _isBatchMode && !isEquipped
+            onTap: _isBatchMode
                 ? () {
                     setState(() {
                       if (isSelected) {
@@ -367,7 +367,7 @@ class _InventoryDialogState extends ConsumerState<InventoryDialog> {
               leading: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  if (_isBatchMode && !isEquipped)
+                  if (_isBatchMode)
                     Padding(
                       padding: const EdgeInsets.only(right: 8),
                       child: Icon(
@@ -386,7 +386,7 @@ class _InventoryDialogState extends ConsumerState<InventoryDialog> {
                       style: const TextStyle(color: Colors.white),
                     ),
                   ),
-                  if (isEquipped)
+                  if (hasEquipped)
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                       decoration: BoxDecoration(
@@ -394,7 +394,7 @@ class _InventoryDialogState extends ConsumerState<InventoryDialog> {
                         borderRadius: BorderRadius.circular(4),
                       ),
                       child: const Text(
-                        '已装备',
+                        '已装备同类型',
                         style: TextStyle(
                           color: Colors.green,
                           fontSize: 10,
@@ -443,18 +443,8 @@ class _InventoryDialogState extends ConsumerState<InventoryDialog> {
                             ),
                           ),
                         const SizedBox(width: 8),
-                        // 操作按钮
-                        if (isEquipped)
-                          ElevatedButton(
-                            onPressed: () => _unequip(equipment!),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.red,
-                              foregroundColor: Colors.white,
-                              padding: const EdgeInsets.symmetric(horizontal: 12),
-                            ),
-                            child: const Text('卸下'),
-                          )
-                        else if (isEquipment)
+                        // 操作按钮 - 背包里的装备都显示装备和卖出
+                        if (isEquipment)
                           Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
@@ -508,8 +498,8 @@ class _InventoryDialogState extends ConsumerState<InventoryDialog> {
     );
   }
 
-  /// 检查装备是否已装备
-  bool _isEquipped(Equipment equipment, Player player) {
+  /// 检查玩家是否已装备同类型装备（仅用于显示标记）
+  bool _hasEquippedType(Equipment equipment, Player player) {
     return player.equipment.values.any((eq) => eq?.id == equipment.id);
   }
 
