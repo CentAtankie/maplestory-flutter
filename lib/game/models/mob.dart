@@ -203,7 +203,9 @@ class Mob {
       
       if (possibleEquipments.isNotEmpty) {
         final equipment = possibleEquipments[random.nextInt(possibleEquipments.length)];
-        result.add(equipment.id);
+        if (equipment.id != null) {
+          result.add(equipment.id!);
+        }
       }
     }
     

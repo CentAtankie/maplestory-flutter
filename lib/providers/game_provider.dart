@@ -238,8 +238,8 @@ class GameNotifier extends StateNotifier<GameData> {
     
     // 装备掉落（5%概率）
     final droppedEquip = EquipmentDatabase.getRandomDrop(player.stats.level);
-    if (droppedEquip != null) {
-      newInventory.add(droppedEquip.id);
+    if (droppedEquip != null && droppedEquip.id != null) {
+      newInventory.add(droppedEquip.id!);
       addLog('✨ 稀有掉落：${droppedEquip.name}！', LogType.reward);
     }
 

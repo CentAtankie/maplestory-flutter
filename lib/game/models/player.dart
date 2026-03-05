@@ -90,6 +90,7 @@ class Equipment {
   String name;
   String? id;
   String? emoji;
+  String? description;
   EquipmentSlot slot;
   int atk;
   int def;
@@ -104,6 +105,7 @@ class Equipment {
     required this.name,
     this.id,
     this.emoji,
+    this.description,
     required this.slot,
     this.atk = 0,
     this.def = 0,
@@ -114,6 +116,18 @@ class Equipment {
     this.price,
     this.levelReq,
   });
+
+  /// 获取装备属性描述
+  String get stats {
+    final statsList = <String>[];
+    if (atk > 0) statsList.add('攻击+$atk');
+    if (def > 0) statsList.add('防御+$def');
+    if (str > 0) statsList.add('力量+$str');
+    if (dex > 0) statsList.add('敏捷+$dex');
+    if (intBonus > 0) statsList.add('智力+$intBonus');
+    if (luk > 0) statsList.add('运气+$luk');
+    return statsList.join(', ');
+  }
 }
 
 /// 装备数据库

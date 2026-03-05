@@ -553,7 +553,7 @@ class ShopScreen extends ConsumerWidget {
                     ),
                     child: Center(
                       child: Text(
-                        equipment.emoji,
+                        equipment.emoji ?? '📦',
                         style: const TextStyle(fontSize: 28),
                       ),
                     ),
@@ -656,17 +656,15 @@ class ShopScreen extends ConsumerWidget {
 
   // 装备属性显示
   Widget _buildEquipmentStats(Equipment equipment) {
-    final stats = equipment.stats;
+    // 使用equipment的stats getter
     final statTexts = <String>[];
     
-    if (stats.atk != null) statTexts.add('攻击+${stats.atk}');
-    if (stats.def != null) statTexts.add('防御+${stats.def}');
-    if (stats.str != null) statTexts.add('力量+${stats.str}');
-    if (stats.dex != null) statTexts.add('敏捷+${stats.dex}');
-    if (stats.intStat != null) statTexts.add('智力+${stats.intStat}');
-    if (stats.luk != null) statTexts.add('运气+${stats.luk}');
-    if (stats.hp != null) statTexts.add('HP+${stats.hp}');
-    if (stats.mp != null) statTexts.add('MP+${stats.mp}');
+    if (equipment.atk > 0) statTexts.add('攻击+${equipment.atk}');
+    if (equipment.def > 0) statTexts.add('防御+${equipment.def}');
+    if (equipment.str > 0) statTexts.add('力量+${equipment.str}');
+    if (equipment.dex > 0) statTexts.add('敏捷+${equipment.dex}');
+    if (equipment.intBonus > 0) statTexts.add('智力+${equipment.intBonus}');
+    if (equipment.luk > 0) statTexts.add('运气+${equipment.luk}');
 
     return Wrap(
       spacing: 8,
@@ -708,14 +706,14 @@ class ShopScreen extends ConsumerWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              equipment.description,
+              equipment.description ?? '',
               style: const TextStyle(color: Colors.white70),
             ),
             const SizedBox(height: 12),
             Text(
-              '需要等级: Lv.${equipment.levelReq}',
+              '需要等级: Lv.${equipment.levelReq ?? 1}',
               style: TextStyle(
-                color: equipment.levelReq <= ref.read(gameProvider).player.stats.level
+                color: (equipment.levelReq ?? 1) <= ref.read(gameProvider).player.stats.level
                     ? Colors.green
                     : Colors.red,
                 fontWeight: FontWeight.bold,
@@ -732,7 +730,7 @@ class ShopScreen extends ConsumerWidget {
                 ),
                 const Text('💰 ', style: TextStyle(fontSize: 16)),
                 Text(
-                  '${equipment.price}',
+                  '${equipment.price ?? 0}',
                   style: const TextStyle(
                     color: Colors.amber,
                     fontSize: 18,
