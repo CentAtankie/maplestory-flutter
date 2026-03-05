@@ -52,7 +52,27 @@ class GameNotifier extends StateNotifier<GameData> {
 
   GameNotifier({SaveRepository? saveRepository}) 
       : _saveRepository = saveRepository ?? HiveSaveRepository(),
-        super(GameData.initial());
+        super(GameData.initial()) {
+    // 自动尝试读取存档
+    _autoLoadSave();
+  }
+
+  /// 自动读取存档
+  void _autoLoadSave() async {
+    try {
+      final hasSave = await _saveRepository.hasSave();
+      if (hasSave) {
+        final savedData = await _saveRepository.loadGame();
+        if (savedData != null) {
+          state = savedData;
+          addLog('📂 欢迎回来，${state.player.name}！', LogType.success);
+        }
+      }
+    } catch (e) {
+      // 自动读取失败不显示错误，使用默认新游戏
+      print('自动读取存档失败: $e');
+    }
+  }
 
   // 移动
   void move(String direction) {
@@ -438,6 +458,56 @@ class GameNotifier extends StateNotifier<GameData> {
 
     state = state.copyWith(player: newPlayer);
     addLog('🛡️ 购买了 ${equipment.name}，已放入背包', LogType.success);
+    return true;
+  }
+
+  // 装备物品
+  bool equipItem(String equipmentId) {
+    final equipment = EquipmentDatabase.getById(equipmentId);
+    if (equipment == null) {
+      addLog('❌ 找不到该装备', LogType.error);
+      return false;
+    }
+
+    // 检查背包中是否有该装备
+    final itemIndex = state.player.inventory.indexOf(equipmentId);
+    if (itemIndex == -1) {
+      addLog('❌ 背包中没有 ${equipment.name}', LogType.error);
+      return false;
+    }
+
+    // 检查等级要求
+    final levelReq = equipment.levelReq ?? 1;
+    if (state.player.stats.level < levelReq) {
+      addLog('❌ 等级不足，需要 Lv.$levelReq 才能装备 ${equipment.name}', LogType.error);
+      return false;
+    }
+
+    // 从背包中移除装备
+    final newInventory = List<String>.from(state.player.inventory);
+    newInventory.removeAt(itemIndex);
+
+    // 获取当前已装备的同类装备（如果有）
+    final currentEquip = state.player.equipment[equipment.slot];
+    
+    // 卸下当前装备（如果有）
+    if (currentEquip != null) {
+      newInventory.add(currentEquip.name); // 使用name作为id存入背包
+      addLog('📦 卸下 ${currentEquip.name}', LogType.normal);
+    }
+
+    // 装备新装备
+    final newEquipment = Map<EquipmentSlot, Equipment?>.from(state.player.equipment);
+    newEquipment[equipment.slot] = equipment;
+
+    // 更新玩家状态
+    final newPlayer = state.player.copyWith(
+      inventory: newInventory,
+      equipment: newEquipment,
+    );
+
+    state = state.copyWith(player: newPlayer);
+    addLog('✨ 装备了 ${equipment.name}！${equipment.stats}', LogType.success);
     return true;
   }
 

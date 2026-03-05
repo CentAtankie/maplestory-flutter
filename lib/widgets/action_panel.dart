@@ -320,21 +320,47 @@ class ActionPanel extends ConsumerWidget {
       itemCount: itemCounts.length,
       itemBuilder: (context, index) {
         final entry = itemCounts.entries.elementAt(index);
-        final item = ShopDatabase.getById(entry.key);
-        if (item == null) return const SizedBox.shrink();
+        final itemId = entry.key;
+        final count = entry.value;
+        
+        // 先尝试获取普通物品
+        final item = ShopDatabase.getById(itemId);
+        // 再尝试获取装备
+        final equipment = EquipmentDatabase.getById(itemId);
+        
+        // 获取显示信息
+        final String name = item?.name ?? equipment?.name ?? '未知物品';
+        final String emoji = item?.emoji ?? equipment?.emoji ?? '❓';
+        final String description = item?.description ?? equipment?.description ?? '';
+        final bool isMaterial = item?.type == ItemType.material;
+        final bool isEquipment = equipment != null;
+        final bool isConsumable = item?.type == ItemType.consumable || item?.type == ItemType.scroll;
 
         return Card(
           color: const Color(0xFF0F3460),
           margin: const EdgeInsets.only(bottom: 8),
           child: ListTile(
-            leading: Text(item.emoji, style: const TextStyle(fontSize: 24)),
+            leading: Text(emoji, style: const TextStyle(fontSize: 24)),
             title: Text(
-              item.name,
+              name,
               style: const TextStyle(color: Colors.white),
             ),
-            subtitle: Text(
-              item.description,
-              style: const TextStyle(color: Colors.white70, fontSize: 12),
+            subtitle: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  description,
+                  style: const TextStyle(color: Colors.white70, fontSize: 12),
+                ),
+                if (isEquipment)
+                  Text(
+                    equipment!.stats,
+                    style: TextStyle(
+                      color: Colors.green.withOpacity(0.8),
+                      fontSize: 10,
+                    ),
+                  ),
+              ],
             ),
             trailing: Row(
               mainAxisSize: MainAxisSize.min,
@@ -347,7 +373,7 @@ class ActionPanel extends ConsumerWidget {
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(
-                    'x${entry.value}',
+                    'x$count',
                     style: const TextStyle(
                       color: Colors.blue,
                       fontWeight: FontWeight.bold,
@@ -355,44 +381,9 @@ class ActionPanel extends ConsumerWidget {
                   ),
                 ),
                 const SizedBox(width: 8),
-                // 材料显示"卖出"，消耗品显示"使用"
-                if (item.type == ItemType.material)
-                  ElevatedButton(
-                    onPressed: () {
-                      ref.read(gameProvider.notifier).sellItem(item.id, quantity: 1);
-                      // 刷新对话框
-                      Navigator.pop(context);
-                      Future.delayed(const Duration(milliseconds: 100), () {
-                        _showInventoryDialog(context, ref);
-                      });
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.orange,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(horizontal: 12),
-                    ),
-                    child: const Text('卖出'),
-                  )
-                else
-                  ElevatedButton(
-                    onPressed: () {
-                      Navigator.pop(context);
-                      ref.read(gameProvider.notifier).useItem(item.id);
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.green,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(horizontal: 12),
-                    ),
-                    child: const Text('使用'),
-                  ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
+                // 根据类型显示不同按钮
+                if (isEquipment)
+                  // 装备 - 显示
 
   void _showCharacterDialog(BuildContext context, WidgetRef ref) {
     final player = ref.read(gameProvider).player;
