@@ -43,6 +43,11 @@ class ActionPanel extends ConsumerWidget {
             
             // 功能按钮
             _buildActionButtons(context, ref, isTown),
+            
+            const SizedBox(height: 12),
+            
+            // 自动模式开关
+            _buildAutoModeSwitches(context, ref),
           ],
         ),
       ),
@@ -241,6 +246,128 @@ class ActionPanel extends ConsumerWidget {
           ),
         ),
       ],
+    );
+  }
+
+  /// 构建自动模式开关
+  Widget _buildAutoModeSwitches(BuildContext context, WidgetRef ref) {
+    final isAutoExplore = ref.watch(gameProvider.notifier).isAutoExplore;
+    final isAutoBattle = ref.watch(gameProvider.notifier).isAutoBattle;
+    final gameState = ref.watch(gameProvider);
+    final isTown = gameState.currentMap.isTown;
+    final isBattling = gameState.gameState == GameState.battling;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: const Color(0xFF0F3460),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        children: [
+          // 自动探索开关
+          Expanded(
+            child: InkWell(
+              onTap: isTown || isBattling
+                  ? null
+                  : () {
+                      ref.read(gameProvider.notifier).setAutoExplore(!isAutoExplore);
+                    },
+              child: Container(
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                decoration: BoxDecoration(
+                  color: isAutoExplore
+                      ? Colors.orange.withOpacity(0.3)
+                      : Colors.transparent,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: isAutoExplore ? Colors.orange : Colors.white24,
+                  ),
+                ),
+                child: Column(
+                  children: [
+                    Icon(
+                      isAutoExplore ? Icons.explore : Icons.explore_outlined,
+                      color: isTown || isBattling
+                          ? Colors.grey
+                          : (isAutoExplore ? Colors.orange : Colors.white54),
+                      size: 20,
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '自动探索',
+                      style: TextStyle(
+                        color: isTown || isBattling
+                            ? Colors.grey
+                            : (isAutoExplore ? Colors.orange : Colors.white54),
+                        fontSize: 10,
+                      ),
+                    ),
+                    if (isAutoExplore)
+                      Container(
+                        margin: const EdgeInsets.only(top: 2),
+                        width: 6,
+                        height: 6,
+                        decoration: const BoxDecoration(
+                          color: Colors.green,
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          // 自动战斗开关
+          Expanded(
+            child: InkWell(
+              onTap: () {
+                ref.read(gameProvider.notifier).setAutoBattle(!isAutoBattle);
+              },
+              child: Container(
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                decoration: BoxDecoration(
+                  color: isAutoBattle
+                      ? Colors.red.withOpacity(0.3)
+                      : Colors.transparent,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: isAutoBattle ? Colors.red : Colors.white24,
+                  ),
+                ),
+                child: Column(
+                  children: [
+                    Icon(
+                      isAutoBattle ? Icons.flash_on : Icons.flash_off,
+                      color: isAutoBattle ? Colors.red : Colors.white54,
+                      size: 20,
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '自动战斗',
+                      style: TextStyle(
+                        color: isAutoBattle ? Colors.red : Colors.white54,
+                        fontSize: 10,
+                      ),
+                    ),
+                    if (isAutoBattle)
+                      Container(
+                        margin: const EdgeInsets.only(top: 2),
+                        width: 6,
+                        height: 6,
+                        decoration: const BoxDecoration(
+                          color: Colors.green,
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 

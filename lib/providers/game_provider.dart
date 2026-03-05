@@ -50,6 +50,11 @@ enum LogType {
 class GameNotifier extends StateNotifier<GameData> {
   final SaveRepository _saveRepository;
   bool _isInitialized = false;
+  
+  // 自动战斗相关
+  Timer? _autoBattleTimer;
+  bool _isAutoExplore = false;
+  bool _isAutoBattle = false;
 
   GameNotifier({SaveRepository? saveRepository}) 
       : _saveRepository = saveRepository ?? HiveSaveRepository(),
@@ -59,6 +64,63 @@ class GameNotifier extends StateNotifier<GameData> {
   }
 
   bool get isInitialized => _isInitialized;
+  bool get isAutoExplore => _isAutoExplore;
+  bool get isAutoBattle => _isAutoBattle;
+  
+  /// 清理定时器
+  @override
+  void dispose() {
+    _autoBattleTimer?.cancel();
+    super.dispose();
+  }
+
+  /// 设置自动探索
+  void setAutoExplore(bool value) {
+    _isAutoExplore = value;
+    if (value) {
+      addLog('🤖 自动探索已开启', LogType.success);
+      _startAutoMode();
+    } else {
+      addLog('🛑 自动探索已关闭', LogType.warning);
+      if (!_isAutoBattle) {
+        _autoBattleTimer?.cancel();
+      }
+    }
+  }
+  
+  /// 设置自动战斗
+  void setAutoBattle(bool value) {
+    _isAutoBattle = value;
+    if (value) {
+      addLog('⚔️ 自动战斗已开启', LogType.success);
+      _startAutoMode();
+    } else {
+      addLog('🛑 自动战斗已关闭', LogType.warning);
+      if (!_isAutoExplore) {
+        _autoBattleTimer?.cancel();
+      }
+    }
+  }
+  
+  /// 启动自动模式定时器
+  void _startAutoMode() {
+    _autoBattleTimer?.cancel();
+    
+    // 每2秒执行一次自动操作
+    _autoBattleTimer = Timer.periodic(const Duration(seconds: 2), (timer) {
+      if (state.gameState == GameState.battling && state.currentMob != null) {
+        // 战斗中：自动攻击
+        if (_isAutoBattle) {
+          attack();
+        }
+      } else if (state.gameState == GameState.exploring) {
+        // 探索中：自动探索
+        if (_isAutoExplore && !state.currentMap.isTown) {
+          explore();
+        }
+      }
+    });
+  }
 
   /// 设置新玩家（用于创建角色）
   void setNewPlayer(Player player) {

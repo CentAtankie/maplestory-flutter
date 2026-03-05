@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/game_provider.dart';
@@ -22,6 +23,8 @@ class InventoryDialog extends ConsumerStatefulWidget {
 
 class _InventoryDialogState extends ConsumerState<InventoryDialog> {
   InventoryCategory _selectedCategory = InventoryCategory.all;
+  bool _isBatchMode = false;  // 批量模式
+  final Set<String> _selectedItems = {};  // 选中的物品ID
 
   @override
   Widget build(BuildContext context) {
@@ -30,12 +33,41 @@ class _InventoryDialogState extends ConsumerState<InventoryDialog> {
     // 分类物品
     final categorizedItems = _categorizeItems(player);
     final displayItems = _getDisplayItems(categorizedItems);
+    
+    // 计算选中物品的总价值
+    final totalSellPrice = _calculateTotalSellPrice();
 
     return AlertDialog(
       backgroundColor: const Color(0xFF1A1A2E),
-      title: const Text(
-        '🎒 物品栏',
-        style: TextStyle(color: Colors.white),
+      title: Row(
+        children: [
+          const Text(
+            '🎒 物品栏',
+            style: TextStyle(color: Colors.white),
+          ),
+          const Spacer(),
+          // 批量模式切换按钮
+          TextButton.icon(
+            onPressed: () {
+              setState(() {
+                _isBatchMode = !_isBatchMode;
+                _selectedItems.clear();
+              });
+            },
+            icon: Icon(
+              _isBatchMode ? Icons.check_box : Icons.check_box_outline_blank,
+              color: _isBatchMode ? Colors.amber : Colors.white54,
+              size: 20,
+            ),
+            label: Text(
+              _isBatchMode ? '退出批量' : '批量出售',
+              style: TextStyle(
+                color: _isBatchMode ? Colors.amber : Colors.white54,
+                fontSize: 12,
+              ),
+            ),
+          ),
+        ],
       ),
       content: SizedBox(
         width: double.maxFinite,
@@ -56,15 +88,139 @@ class _InventoryDialogState extends ConsumerState<InventoryDialog> {
                     )
                   : _buildItemList(displayItems, player),
             ),
+            // 批量操作栏
+            if (_isBatchMode && _selectedItems.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.orange.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.orange.withOpacity(0.3)),
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            '已选中 ${_selectedItems.length} 件物品',
+                            style: const TextStyle(
+                              color: Colors.white70,
+                              fontSize: 12,
+                            ),
+                          ),
+                          Text(
+                            '预计获得: $totalSellPrice 金币',
+                            style: const TextStyle(
+                              color: Colors.amber,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    ElevatedButton.icon(
+                      onPressed: _batchSell,
+                      icon: const Icon(Icons.sell, size: 18),
+                      label: const Text('出售'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.orange,
+                        foregroundColor: Colors.white,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ],
         ),
       ),
       actions: [
+        if (_isBatchMode)
+          TextButton(
+            onPressed: () {
+              setState(() {
+                _selectedItems.clear();
+              });
+            },
+            child: const Text('清空选择'),
+          ),
         TextButton(
           onPressed: () => Navigator.pop(context),
           child: const Text('关闭'),
         ),
       ],
+    );
+  }
+
+  /// 计算选中物品的总售价
+  int _calculateTotalSellPrice() {
+    int total = 0;
+    for (final itemId in _selectedItems) {
+      final item = ShopDatabase.getById(itemId);
+      final equipment = EquipmentDatabase.getById(itemId);
+      final price = item?.price ?? equipment?.price ?? 0;
+      total += (price * 0.5).toInt();
+    }
+    return total;
+  }
+
+  /// 批量出售
+  void _batchSell() {
+    if (_selectedItems.isEmpty) return;
+    
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xFF1A1A2E),
+        title: const Text(
+          '确认批量出售?',
+          style: TextStyle(color: Colors.orange),
+        ),
+        content: Text(
+          '即将出售 ${_selectedItems.length} 件物品，获得 ${_calculateTotalSellPrice()} 金币',
+          style: const TextStyle(color: Colors.white70),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('取消'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              int totalGold = 0;
+              for (final itemId in _selectedItems.toList()) {
+                final item = ShopDatabase.getById(itemId);
+                final equipment = EquipmentDatabase.getById(itemId);
+                final itemName = item?.name ?? equipment?.name ?? '物品';
+                final price = item?.price ?? equipment?.price ?? 0;
+                
+                if (ref.read(gameProvider.notifier).sellItem(itemId, quantity: 1)) {
+                  totalGold += (price * 0.5).toInt();
+                }
+              }
+              
+              setState(() {
+                _selectedItems.clear();
+              });
+              
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('💰 批量出售完成，获得 $totalGold 金币'),
+                  backgroundColor: Colors.green,
+                ),
+              );
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.orange,
+            ),
+            child: const Text('确认出售'),
+          ),
+        ],
+      ),
     );
   }
 
@@ -85,7 +241,6 @@ class _InventoryDialogState extends ConsumerState<InventoryDialog> {
 
     for (final entry in itemCounts.entries) {
       final itemId = entry.key;
-      final count = entry.value;
       
       // 检查是否是装备
       final equipment = EquipmentDatabase.getById(itemId);
@@ -140,7 +295,12 @@ class _InventoryDialogState extends ConsumerState<InventoryDialog> {
     
     return Expanded(
       child: GestureDetector(
-        onTap: () => setState(() => _selectedCategory = category),
+        onTap: () {
+          setState(() {
+            _selectedCategory = category;
+            _selectedItems.clear(); // 切换分类时清空选择
+          });
+        },
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 8),
           decoration: BoxDecoration(
@@ -184,132 +344,163 @@ class _InventoryDialogState extends ConsumerState<InventoryDialog> {
         
         // 检查装备是否已装备
         final bool isEquipped = isEquipment && _isEquipped(equipment!, player);
+        final bool isSelected = _selectedItems.contains(itemId);
 
         return Card(
-          color: isEquipped ? const Color(0xFF533483) : const Color(0xFF0F3460),
+          color: isSelected 
+              ? Colors.orange.withOpacity(0.3)
+              : (isEquipped ? const Color(0xFF533483) : const Color(0xFF0F3460)),
           margin: const EdgeInsets.only(bottom: 8),
-          child: ListTile(
-            leading: Text(emoji, style: const TextStyle(fontSize: 24)),
-            title: Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    name,
-                    style: const TextStyle(color: Colors.white),
-                  ),
-                ),
-                if (isEquipped)
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                    decoration: BoxDecoration(
-                      color: Colors.green.withOpacity(0.3),
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                    child: const Text(
-                      '已装备',
-                      style: TextStyle(
-                        color: Colors.green,
-                        fontSize: 10,
-                        fontWeight: FontWeight.bold,
+          child: InkWell(
+            onTap: _isBatchMode && !isEquipped
+                ? () {
+                    setState(() {
+                      if (isSelected) {
+                        _selectedItems.remove(itemId);
+                      } else {
+                        _selectedItems.add(itemId);
+                      }
+                    });
+                  }
+                : null,
+            child: ListTile(
+              leading: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (_isBatchMode && !isEquipped)
+                    Padding(
+                      padding: const EdgeInsets.only(right: 8),
+                      child: Icon(
+                        isSelected ? Icons.check_box : Icons.check_box_outline_blank,
+                        color: isSelected ? Colors.orange : Colors.white54,
                       ),
                     ),
-                  ),
-              ],
-            ),
-            subtitle: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  description,
-                  style: const TextStyle(color: Colors.white70, fontSize: 12),
-                ),
-                if (isEquipment)
-                  Text(
-                    equipment!.stats,
-                    style: TextStyle(
-                      color: Colors.green.withOpacity(0.8),
-                      fontSize: 10,
-                    ),
-                  ),
-              ],
-            ),
-            trailing: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // 数量
-                if (count > 1)
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: Colors.blue.withOpacity(0.2),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
+                  Text(emoji, style: const TextStyle(fontSize: 24)),
+                ],
+              ),
+              title: Row(
+                children: [
+                  Expanded(
                     child: Text(
-                      'x$count',
-                      style: const TextStyle(
-                        color: Colors.blue,
-                        fontWeight: FontWeight.bold,
-                      ),
+                      name,
+                      style: const TextStyle(color: Colors.white),
                     ),
                   ),
-                const SizedBox(width: 8),
-                // 操作按钮
-                if (isEquipped)
-                  ElevatedButton(
-                    onPressed: () => _unequip(equipment!),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.red,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(horizontal: 12),
-                    ),
-                    child: const Text('卸下'),
-                  )
-                else if (isEquipment)
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      ElevatedButton(
-                        onPressed: () => _equip(itemId),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.purple,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(horizontal: 12),
-                        ),
-                        child: const Text('装备'),
+                  if (isEquipped)
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: Colors.green.withOpacity(0.3),
+                        borderRadius: BorderRadius.circular(4),
                       ),
-                      const SizedBox(width: 8),
-                      ElevatedButton(
-                        onPressed: () => _sell(itemId),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.orange,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(horizontal: 12),
+                      child: const Text(
+                        '已装备',
+                        style: TextStyle(
+                          color: Colors.green,
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
                         ),
-                        child: const Text('卖出'),
                       ),
-                    ],
-                  )
-                else if (item?.type == ItemType.material)
-                  ElevatedButton(
-                    onPressed: () => _sell(itemId),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.orange,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(horizontal: 12),
                     ),
-                    child: const Text('卖出'),
-                  )
-                else if (isConsumable)
-                  ElevatedButton(
-                    onPressed: () => _use(itemId),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.green,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(horizontal: 12),
-                    ),
-                    child: const Text('使用'),
+                ],
+              ),
+              subtitle: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    description,
+                    style: const TextStyle(color: Colors.white70, fontSize: 12),
                   ),
-              ],
+                  if (isEquipment)
+                    Text(
+                      equipment!.stats,
+                      style: TextStyle(
+                        color: Colors.green.withOpacity(0.8),
+                        fontSize: 10,
+                      ),
+                    ),
+                ],
+              ),
+              trailing: _isBatchMode
+                  ? null
+                  : Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        // 数量
+                        if (count > 1)
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: Colors.blue.withOpacity(0.2),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Text(
+                              'x$count',
+                              style: const TextStyle(
+                                color: Colors.blue,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        const SizedBox(width: 8),
+                        // 操作按钮
+                        if (isEquipped)
+                          ElevatedButton(
+                            onPressed: () => _unequip(equipment!),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.red,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(horizontal: 12),
+                            ),
+                            child: const Text('卸下'),
+                          )
+                        else if (isEquipment)
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              ElevatedButton(
+                                onPressed: () => _equip(itemId),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.purple,
+                                  foregroundColor: Colors.white,
+                                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                                ),
+                                child: const Text('装备'),
+                              ),
+                              const SizedBox(width: 8),
+                              ElevatedButton(
+                                onPressed: () => _sell(itemId),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.orange,
+                                  foregroundColor: Colors.white,
+                                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                                ),
+                                child: const Text('卖出'),
+                              ),
+                            ],
+                          )
+                        else if (item?.type == ItemType.material)
+                          ElevatedButton(
+                            onPressed: () => _sell(itemId),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.orange,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(horizontal: 12),
+                            ),
+                            child: const Text('卖出'),
+                          )
+                        else if (isConsumable)
+                          ElevatedButton(
+                            onPressed: () => _use(itemId),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.green,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(horizontal: 12),
+                            ),
+                            child: const Text('使用'),
+                          ),
+                      ],
+                    ),
             ),
           ),
         );
@@ -328,7 +519,6 @@ class _InventoryDialogState extends ConsumerState<InventoryDialog> {
     final success = ref.read(gameProvider.notifier).equipItem(itemId);
     if (success) {
       setState(() {}); // 刷新界面
-      // 显示装备成功提示
       if (equipment != null) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -339,7 +529,6 @@ class _InventoryDialogState extends ConsumerState<InventoryDialog> {
         );
       }
     } else {
-      // 装备失败（通常是等级不足），显示提示
       if (equipment != null) {
         final levelReq = equipment.levelReq ?? 1;
         final playerLevel = ref.read(gameProvider).player.stats.level;
@@ -379,7 +568,6 @@ class _InventoryDialogState extends ConsumerState<InventoryDialog> {
 
   /// 卖出物品
   void _sell(String itemId) {
-    // 先获取物品信息用于提示
     final item = ShopDatabase.getById(itemId);
     final equipment = EquipmentDatabase.getById(itemId);
     final itemName = item?.name ?? equipment?.name ?? '物品';
