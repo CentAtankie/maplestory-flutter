@@ -75,17 +75,21 @@ class Stats {
 
 /// 装备槽位
 enum EquipmentSlot {
-  weapon,
-  helmet,
-  armor,
-  pants,
-  shoes,
-  cape,
+  weapon,   // 武器
+  helmet,   // 头盔
+  armor,    // 衣服
+  pants,    // 裤子
+  shoes,    // 鞋子
+  cape,     // 披风
+  shield,   // 盾牌
+  gloves,   // 手套
 }
 
 /// 装备
 class Equipment {
   String name;
+  String? id;
+  String? emoji;
   EquipmentSlot slot;
   int atk;
   int def;
@@ -93,9 +97,13 @@ class Equipment {
   int dex;
   int intBonus;
   int luk;
+  int? price;
+  int? levelReq;
 
   Equipment({
     required this.name,
+    this.id,
+    this.emoji,
     required this.slot,
     this.atk = 0,
     this.def = 0,
@@ -103,6 +111,8 @@ class Equipment {
     this.dex = 0,
     this.intBonus = 0,
     this.luk = 0,
+    this.price,
+    this.levelReq,
   });
 }
 

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/game_provider.dart';
-import '../game/models/item.dart';
+import '../game/models/item.dart' hide Equipment;
 import '../game/models/player.dart';
 
 class ShopScreen extends ConsumerWidget {

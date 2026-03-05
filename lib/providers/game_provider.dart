@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../game/models/player.dart';
 import '../game/models/mob.dart';
 import '../game/models/map.dart';
-import '../game/models/item.dart';
+import '../game/models/item.dart' hide Equipment;
 import '../repositories/save_repository.dart';
 import '../repositories/hive_save_repository.dart';
 
@@ -417,20 +417,23 @@ class GameNotifier extends StateNotifier<GameData> {
 
   // 购买装备
   bool buyEquipment(Equipment equipment) {
-    if (state.player.meso < equipment.price) {
+    final price = equipment.price ?? 0;
+    final levelReq = equipment.levelReq ?? 1;
+    
+    if (state.player.meso < price) {
       addLog('❌ 金币不足，无法购买 ${equipment.name}', LogType.error);
       return false;
     }
 
-    if (state.player.stats.level < equipment.levelReq) {
-      addLog('❌ 等级不足，需要 Lv.${equipment.levelReq} 才能装备 ${equipment.name}', LogType.error);
+    if (state.player.stats.level < levelReq) {
+      addLog('❌ 等级不足，需要 Lv.$levelReq 才能装备 ${equipment.name}', LogType.error);
       return false;
     }
 
     // 扣除金币，装备直接进背包（简化处理，实际应该装备到身上）
     final newPlayer = state.player.copyWith(
-      meso: state.player.meso - equipment.price,
-      inventory: [...state.player.inventory, equipment.id],
+      meso: state.player.meso - price,
+      inventory: [...state.player.inventory, equipment.id!],
     );
 
     state = state.copyWith(player: newPlayer);
