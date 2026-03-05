@@ -4,6 +4,8 @@ import '../game/models/player.dart';
 import '../game/models/mob.dart';
 import '../game/models/map.dart';
 import '../game/models/item.dart';
+import '../repositories/save_repository.dart';
+import '../repositories/hive_save_repository.dart';
 
 // 游戏状态枚举
 enum GameState {
@@ -45,7 +47,11 @@ enum LogType {
 
 // 游戏状态管理
 class GameNotifier extends StateNotifier<GameData> {
-  GameNotifier() : super(GameData.initial());
+  final SaveRepository _saveRepository;
+
+  GameNotifier({SaveRepository? saveRepository}) 
+      : _saveRepository = saveRepository ?? HiveSaveRepository(),
+        super(GameData.initial());
 
   // 移动
   void move(String direction) {
@@ -417,6 +423,83 @@ class GameNotifier extends StateNotifier<GameData> {
   void closeShop() {
     state = state.copyWith(gameState: GameState.exploring);
     addLog('👋 离开了商店');
+  }
+
+  // ========== 存档功能 ==========
+  
+  /// 保存游戏
+  Future<bool> saveGame() async {
+    try {
+      await _saveRepository.saveGame(state);
+      addLog('💾 游戏已保存', LogType.success);
+      return true;
+    } catch (e) {
+      addLog('❌ 保存失败: $e', LogType.error);
+      return false;
+    }
+  }
+  
+  /// 读取存档
+  Future<bool> loadGame() async {
+    try {
+      final savedData = await _saveRepository.loadGame();
+      if (savedData != null) {
+        state = savedData;
+        addLog('📂 存档已读取', LogType.success);
+        return true;
+      } else {
+        addLog('⚠️ 没有找到存档', LogType.warning);
+        return false;
+      }
+    } catch (e) {
+      addLog('❌ 读取失败: $e', LogType.error);
+      return false;
+    }
+  }
+  
+  /// 检查是否有存档
+  Future<bool> hasSave() async {
+    return await _saveRepository.hasSave();
+  }
+  
+  /// 删除存档
+  Future<bool> deleteSave() async {
+    try {
+      await _saveRepository.deleteSave();
+      addLog('🗑️ 存档已删除', LogType.success);
+      return true;
+    } catch (e) {
+      addLog('❌ 删除失败: $e', LogType.error);
+      return false;
+    }
+  }
+  
+  /// 导出存档为 JSON
+  Future<String?> exportToJson() async {
+    try {
+      return await _saveRepository.exportToJson();
+    } catch (e) {
+      addLog('❌ 导出失败: $e', LogType.error);
+      return null;
+    }
+  }
+  
+  /// 从 JSON 导入存档
+  Future<bool> importFromJson(String json) async {
+    try {
+      await _saveRepository.importFromJson(json);
+      // 重新加载
+      final savedData = await _saveRepository.loadGame();
+      if (savedData != null) {
+        state = savedData;
+        addLog('📥 存档已导入', LogType.success);
+        return true;
+      }
+      return false;
+    } catch (e) {
+      addLog('❌ 导入失败: $e', LogType.error);
+      return false;
+    }
   }
 
   // 添加日志

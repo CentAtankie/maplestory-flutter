@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/game_provider.dart';
 import '../game/models/player.dart';
@@ -442,7 +443,11 @@ class ActionPanel extends ConsumerWidget {
     );
   }
 
-  void _showSettingsDialog(BuildContext context, WidgetRef ref) {
+  void _showSettingsDialog(BuildContext context, WidgetRef ref) async {
+    final hasSave = await ref.read(gameProvider.notifier).hasSave();
+    
+    if (!context.mounted) return;
+    
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -454,20 +459,200 @@ class ActionPanel extends ConsumerWidget {
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+            // 保存游戏
             ListTile(
-              leading: const Icon(Icons.save, color: Colors.white70),
+              leading: const Icon(Icons.save, color: Colors.green),
               title: const Text(
                 '保存游戏',
                 style: TextStyle(color: Colors.white),
               ),
-              onTap: () {
-                // TODO: 实现存档功能
+              subtitle: const Text(
+                '将当前进度保存到本地',
+                style: TextStyle(color: Colors.white54, fontSize: 12),
+              ),
+              onTap: () async {
                 Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('存档功能开发中...')),
-                );
+                final success = await ref.read(gameProvider.notifier).saveGame();
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(success ? '✅ 游戏已保存' : '❌ 保存失败'),
+                      backgroundColor: success ? Colors.green : Colors.red,
+                    ),
+                  );
+                }
               },
             ),
+            // 读取存档
+            ListTile(
+              leading: Icon(Icons.folder_open, 
+                color: hasSave ? Colors.blue : Colors.grey),
+              title: Text(
+                '读取存档',
+                style: TextStyle(
+                  color: hasSave ? Colors.white : Colors.grey,
+                ),
+              ),
+              subtitle: Text(
+                hasSave ? '加载上次保存的进度' : '没有存档',
+                style: TextStyle(
+                  color: hasSave ? Colors.white54 : Colors.grey, 
+                  fontSize: 12
+                ),
+              ),
+              onTap: hasSave ? () async {
+                Navigator.pop(context);
+                final success = await ref.read(gameProvider.notifier).loadGame();
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(success ? '✅ 存档已读取' : '❌ 读取失败'),
+                      backgroundColor: success ? Colors.green : Colors.red,
+                    ),
+                  );
+                }
+              } : null,
+            ),
+            // 导出存档
+            ListTile(
+              leading: const Icon(Icons.upload, color: Colors.orange),
+              title: const Text(
+                '导出存档',
+                style: TextStyle(color: Colors.white),
+              ),
+              subtitle: const Text(
+                '导出为 JSON 文件（可转移存档）',
+                style: TextStyle(color: Colors.white54, fontSize: 12),
+              ),
+              onTap: () async {
+                Navigator.pop(context);
+                final json = await ref.read(gameProvider.notifier).exportToJson();
+                if (context.mounted) {
+                  if (json != null) {
+                    // 显示导出成功提示，并让用户复制
+                    showDialog(
+                      context: context,
+                      builder: (context) => AlertDialog(
+                        backgroundColor: const Color(0xFF1A1A2E),
+                        title: const Text(
+                          '📤 存档已导出',
+                          style: TextStyle(color: Colors.white),
+                        ),
+                        content: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Text(
+                              '请复制以下文本保存到安全的地方：',
+                              style: TextStyle(color: Colors.white70),
+                            ),
+                            const SizedBox(height: 12),
+                            Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: Colors.black26,
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: SelectableText(
+                                json.substring(0, json.length > 200 ? 200 : json.length) + '...',
+                                style: const TextStyle(
+                                  color: Colors.white70,
+                                  fontSize: 12,
+                                  fontFamily: 'monospace',
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.pop(context),
+                            child: const Text('关闭'),
+                          ),
+                        ],
+                      ),
+                    );
+                  } else {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('❌ 导出失败'),
+                        backgroundColor: Colors.red,
+                      ),
+                    );
+                  }
+                }
+              },
+            ),
+            // 导入存档
+            ListTile(
+              leading: const Icon(Icons.download, color: Colors.purple),
+              title: const Text(
+                '导入存档',
+                style: TextStyle(color: Colors.white),
+              ),
+              subtitle: const Text(
+                '从 JSON 文件恢复存档',
+                style: TextStyle(color: Colors.white54, fontSize: 12),
+              ),
+              onTap: () {
+                Navigator.pop(context);
+                _showImportDialog(context, ref);
+              },
+            ),
+            const Divider(color: Colors.white24),
+            // 删除存档
+            ListTile(
+              leading: Icon(Icons.delete, 
+                color: hasSave ? Colors.red : Colors.grey),
+              title: Text(
+                '删除存档',
+                style: TextStyle(
+                  color: hasSave ? Colors.red : Colors.grey,
+                ),
+              ),
+              onTap: hasSave ? () {
+                Navigator.pop(context);
+                showDialog(
+                  context: context,
+                  builder: (context) => AlertDialog(
+                    backgroundColor: const Color(0xFF1A1A2E),
+                    title: const Text(
+                      '⚠️ 确认删除?',
+                      style: TextStyle(color: Colors.red),
+                    ),
+                    content: const Text(
+                      '存档将被永久删除，无法恢复！',
+                      style: TextStyle(color: Colors.white70),
+                    ),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(context),
+                        child: const Text('取消'),
+                      ),
+                      TextButton(
+                        onPressed: () async {
+                          Navigator.pop(context);
+                          final success = await ref.read(gameProvider.notifier).deleteSave();
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(success ? '🗑️ 存档已删除' : '❌ 删除失败'),
+                                backgroundColor: success ? Colors.green : Colors.red,
+                              ),
+                            );
+                          }
+                        },
+                        child: const Text(
+                          '确认删除',
+                          style: TextStyle(color: Colors.red),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              } : null,
+            ),
+            const Divider(color: Colors.white24),
+            // 重新开始
             ListTile(
               leading: const Icon(Icons.refresh, color: Colors.white70),
               title: const Text(
@@ -514,6 +699,73 @@ class ActionPanel extends ConsumerWidget {
           TextButton(
             onPressed: () => Navigator.pop(context),
             child: const Text('关闭'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showImportDialog(BuildContext context, WidgetRef ref) {
+    final controller = TextEditingController();
+    
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xFF1A1A2E),
+        title: const Text(
+          '📥 导入存档',
+          style: TextStyle(color: Colors.white),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text(
+              '请粘贴之前导出的存档 JSON：',
+              style: TextStyle(color: Colors.white70),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: controller,
+              maxLines: 5,
+              style: const TextStyle(color: Colors.white, fontSize: 12),
+              decoration: InputDecoration(
+                hintText: '{"player": {...}, ...}',
+                hintStyle: const TextStyle(color: Colors.white30),
+                filled: true,
+                fillColor: Colors.black26,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: BorderSide.none,
+                ),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('取消'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              final json = controller.text.trim();
+              if (json.isNotEmpty) {
+                Navigator.pop(context);
+                final success = await ref.read(gameProvider.notifier).importFromJson(json);
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(success ? '✅ 存档已导入' : '❌ 导入失败，请检查JSON格式'),
+                      backgroundColor: success ? Colors.green : Colors.red,
+                    ),
+                  );
+                }
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.green,
+            ),
+            child: const Text('导入'),
           ),
         ],
       ),

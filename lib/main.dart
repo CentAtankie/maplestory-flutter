@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'repositories/hive_save_repository.dart';
 import 'screens/game_screen.dart';
-import 'screens/shop_screen.dart';
 
-void main() {
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  
+  // 初始化 Hive 存档
+  await HiveSaveRepository().init();
+  
   runApp(
     const ProviderScope(
       child: MapleStoryApp(),
