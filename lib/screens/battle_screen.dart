@@ -174,17 +174,19 @@ class BattleScreen extends ConsumerWidget {
           children: [
             Row(
               children: [
+                // 左上角：查看状态
                 Expanded(
                   child: _buildActionButton(
-                    icon: Icons.sports_martial_arts,
-                    label: '普通攻击',
-                    color: Colors.red,
+                    icon: Icons.info,
+                    label: '查看状态',
+                    color: Colors.blue,
                     onPressed: () {
-                      ref.read(gameProvider.notifier).attack();
+                      _showStatusDialog(context, player);
                     },
                   ),
                 ),
                 const SizedBox(width: 12),
+                // 右上角：技能攻击
                 Expanded(
                   child: _buildActionButton(
                     icon: Icons.auto_fix_high,
@@ -201,6 +203,19 @@ class BattleScreen extends ConsumerWidget {
             const SizedBox(height: 12),
             Row(
               children: [
+                // 左下角：普通攻击
+                Expanded(
+                  child: _buildActionButton(
+                    icon: Icons.sports_martial_arts,
+                    label: '普通攻击',
+                    color: Colors.red,
+                    onPressed: () {
+                      ref.read(gameProvider.notifier).attack();
+                    },
+                  ),
+                ),
+                const SizedBox(width: 12),
+                // 右下角：逃跑
                 Expanded(
                   child: _buildActionButton(
                     icon: Icons.run_circle,
@@ -208,17 +223,6 @@ class BattleScreen extends ConsumerWidget {
                     color: Colors.orange,
                     onPressed: () {
                       ref.read(gameProvider.notifier).flee();
-                    },
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: _buildActionButton(
-                    icon: Icons.info,
-                    label: '查看状态',
-                    color: Colors.blue,
-                    onPressed: () {
-                      _showStatusDialog(context, player);
                     },
                   ),
                 ),
