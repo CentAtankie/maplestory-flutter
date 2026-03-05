@@ -1,4 +1,5 @@
 import 'dart:math';
+import 'item.dart';
 
 /// 怪物类型
 enum MobType {
@@ -180,15 +181,32 @@ class Mob {
     );
   }
 
-  /// 获取掉落物品ID列表
+  /// 获取掉落（材料和装备）
   List<String> getDrops() {
     final random = Random();
     final result = <String>[];
+    
+    // 掉落材料
     for (final drop in drops) {
       if (random.nextDouble() < drop.chance) {
         result.add(drop.itemId);
       }
     }
+    
+    // 小概率掉落装备 (5% - 15% 根据怪物等级)
+    final equipDropChance = 0.05 + (level * 0.01); // 5% - 17%
+    if (random.nextDouble() < equipDropChance) {
+      // 根据怪物等级选择合适等级的装备
+      final minEquipLevel = (level / 2).floor().clamp(1, 20);
+      final maxEquipLevel = level.clamp(1, 20);
+      final possibleEquipments = EquipmentDatabase.getByLevelRange(minEquipLevel, maxEquipLevel);
+      
+      if (possibleEquipments.isNotEmpty) {
+        final equipment = possibleEquipments[random.nextInt(possibleEquipments.length)];
+        result.add(equipment.id);
+      }
+    }
+    
     return result;
   }
 }

@@ -21,6 +21,7 @@ enum ShopCategory {
   all,        // 全部（购买）
   consumable, // 药水
   scroll,     // 卷轴
+  equipment,  // 装备
   sell,       // 卖出
 }
 
@@ -405,6 +406,29 @@ class GameNotifier extends StateNotifier<GameData> {
       shopCategory: ShopCategory.all,  // 重置分类为全部
     );
     addLog('🏪 进入了商店');
+  }
+
+  // 购买装备
+  bool buyEquipment(Equipment equipment) {
+    if (state.player.meso < equipment.price) {
+      addLog('❌ 金币不足，无法购买 ${equipment.name}', LogType.error);
+      return false;
+    }
+
+    if (state.player.stats.level < equipment.levelReq) {
+      addLog('❌ 等级不足，需要 Lv.${equipment.levelReq} 才能装备 ${equipment.name}', LogType.error);
+      return false;
+    }
+
+    // 扣除金币，装备直接进背包（简化处理，实际应该装备到身上）
+    final newPlayer = state.player.copyWith(
+      meso: state.player.meso - equipment.price,
+      inventory: [...state.player.inventory, equipment.id],
+    );
+
+    state = state.copyWith(player: newPlayer);
+    addLog('🛡️ 购买了 ${equipment.name}，已放入背包', LogType.success);
+    return true;
   }
 
   // 设置商店分类

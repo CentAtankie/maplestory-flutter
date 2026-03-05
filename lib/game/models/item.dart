@@ -227,15 +227,211 @@ class ShopDatabase {
   }
 }
 
-/// 背包物品（带数量）
-class InventoryItem {
-  String itemId;
-  int quantity;
+/// 装备位置
+enum EquipmentSlot {
+  weapon,   // 武器
+  armor,    // 衣服
+  helmet,   // 头盔
+  shield,   // 盾牌
+  shoes,    // 鞋子
+  gloves,   // 手套
+}
 
-  InventoryItem({
-    required this.itemId,
-    this.quantity = 1,
+/// 装备属性
+class EquipmentStats {
+  final int? str;      // 力量加成
+  final int? dex;      // 敏捷加成
+  final int? intStat;  // 智力加成
+  final int? luk;      // 运气加成
+  final int? atk;      // 攻击力加成
+  final int? def;      // 防御力加成
+  final int? hp;       // HP加成
+  final int? mp;       // MP加成
+
+  EquipmentStats({
+    this.str,
+    this.dex,
+    this.intStat,
+    this.luk,
+    this.atk,
+    this.def,
+    this.hp,
+    this.mp,
   });
+}
 
-  GameItem? get item => ShopDatabase.getById(itemId);
+/// 装备类
+class Equipment {
+  final String id;
+  final String name;
+  final String emoji;
+  final EquipmentSlot slot;
+  final String description;
+  final int price;
+  final int levelReq;        // 等级要求
+  final EquipmentStats stats;
+
+  Equipment({
+    required this.id,
+    required this.name,
+    required this.emoji,
+    required this.slot,
+    required this.description,
+    required this.price,
+    this.levelReq = 1,
+    required this.stats,
+  });
+}
+
+/// 装备数据库
+class EquipmentDatabase {
+  static final List<Equipment> equipments = [
+    // 新手装备
+    Equipment(
+      id: 'beginner_sword',
+      name: '新手剑',
+      emoji: '🗡️',
+      slot: EquipmentSlot.weapon,
+      description: '新手村的训练用剑',
+      price: 100,
+      levelReq: 1,
+      stats: EquipmentStats(atk: 2),
+    ),
+    // 战士装备
+    Equipment(
+      id: 'iron_sword',
+      name: '铁剑',
+      emoji: '⚔️',
+      slot: EquipmentSlot.weapon,
+      description: '铁质长剑，适合战士',
+      price: 500,
+      levelReq: 5,
+      stats: EquipmentStats(atk: 8, str: 2),
+    ),
+    Equipment(
+      id: 'iron_armor',
+      name: '铁甲',
+      emoji: '👕',
+      slot: EquipmentSlot.armor,
+      description: '铁质铠甲，提供良好防护',
+      price: 400,
+      levelReq: 5,
+      stats: EquipmentStats(def: 5, str: 1),
+    ),
+    // 法师装备
+    Equipment(
+      id: 'wooden_staff',
+      name: '木杖',
+      emoji: '🪄',
+      slot: EquipmentSlot.weapon,
+      description: '魔法师的入门法杖',
+      price: 500,
+      levelReq: 5,
+      stats: EquipmentStats(atk: 6, intStat: 3),
+    ),
+    Equipment(
+      id: 'magic_robe',
+      name: '魔法袍',
+      emoji: '👘',
+      slot: EquipmentSlot.armor,
+      description: '蕴含魔力的长袍',
+      price: 400,
+      levelReq: 5,
+      stats: EquipmentStats(def: 3, intStat: 2, mp: 20),
+    ),
+    // 弓箭手装备
+    Equipment(
+      id: 'wooden_bow',
+      name: '木弓',
+      emoji: '🏹',
+      slot: EquipmentSlot.weapon,
+      description: '轻便的木质弓箭',
+      price: 500,
+      levelReq: 5,
+      stats: EquipmentStats(atk: 7, dex: 3),
+    ),
+    Equipment(
+      id: 'leather_armor',
+      name: '皮甲',
+      emoji: '🦺',
+      slot: EquipmentSlot.armor,
+      description: '轻便的皮质护甲',
+      price: 400,
+      levelReq: 5,
+      stats: EquipmentStats(def: 4, dex: 2),
+    ),
+    // 高级装备
+    Equipment(
+      id: 'steel_sword',
+      name: '钢剑',
+      emoji: '🗡️',
+      slot: EquipmentSlot.weapon,
+      description: '精钢打造的锋利长剑',
+      price: 1500,
+      levelReq: 15,
+      stats: EquipmentStats(atk: 15, str: 5),
+    ),
+    Equipment(
+      id: 'steel_armor',
+      name: '钢甲',
+      emoji: '🛡️',
+      slot: EquipmentSlot.armor,
+      description: '坚固的钢制铠甲',
+      price: 1200,
+      levelReq: 15,
+      stats: EquipmentStats(def: 12, str: 3, hp: 30),
+    ),
+    // 通用防具
+    Equipment(
+      id: 'leather_helmet',
+      name: '皮帽',
+      emoji: '🎩',
+      slot: EquipmentSlot.helmet,
+      description: '普通的皮帽',
+      price: 200,
+      levelReq: 3,
+      stats: EquipmentStats(def: 2),
+    ),
+    Equipment(
+      id: 'leather_shoes',
+      name: '皮鞋',
+      emoji: '👞',
+      slot: EquipmentSlot.shoes,
+      description: '结实的皮鞋',
+      price: 150,
+      levelReq: 3,
+      stats: EquipmentStats(def: 1, dex: 1),
+    ),
+    Equipment(
+      id: 'leather_gloves',
+      name: '皮手套',
+      emoji: '🧤',
+      slot: EquipmentSlot.gloves,
+      description: '耐用的皮手套',
+      price: 150,
+      levelReq: 3,
+      stats: EquipmentStats(atk: 1, def: 1),
+    ),
+  ];
+
+  /// 根据ID获取装备
+  static Equipment? getById(String id) {
+    try {
+      return equipments.firstWhere((eq) => eq.id == id);
+    } catch (e) {
+      return null;
+    }
+  }
+
+  /// 获取商店出售的装备（低级装备）
+  static List<Equipment> getShopEquipments() {
+    return equipments.where((eq) => eq.levelReq <= 10).toList();
+  }
+
+  /// 获取指定等级范围的装备（用于怪物掉落）
+  static List<Equipment> getByLevelRange(int minLevel, int maxLevel) {
+    return equipments.where((eq) => 
+      eq.levelReq >= minLevel && eq.levelReq <= maxLevel
+    ).toList();
+  }
 }

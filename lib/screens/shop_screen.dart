@@ -90,7 +90,9 @@ class ShopScreen extends ConsumerWidget {
           Expanded(
             child: currentCategory == ShopCategory.sell
                 ? _buildSellList(ref, player)
-                : _buildItemList(ref, player, currentCategory),
+                : currentCategory == ShopCategory.equipment
+                    ? _buildEquipmentList(ref, player)
+                    : _buildItemList(ref, player, currentCategory),
           ),
         ],
       ),
@@ -103,6 +105,7 @@ class ShopScreen extends ConsumerWidget {
       child: Row(
         children: [
           _buildTab(ref, '购买', ShopCategory.all, currentCategory),
+          _buildTab(ref, '装备', ShopCategory.equipment, currentCategory),
           _buildTab(ref, '卖出', ShopCategory.sell, currentCategory),
         ],
       ),
@@ -141,8 +144,11 @@ class ShopScreen extends ConsumerWidget {
   }
 
   Widget _buildItemList(WidgetRef ref, Player player, ShopCategory category) {
-    // 根据分类筛选物品
-    var items = ShopDatabase.items;
+    // 商店只卖消耗品和卷轴，不卖材料
+    var items = ShopDatabase.items.where((item) => 
+      item.type == ItemType.consumable || item.type == ItemType.scroll
+    ).toList();
+    
     if (category == ShopCategory.consumable) {
       items = items.where((item) => item.type == ItemType.consumable).toList();
     } else if (category == ShopCategory.scroll) {
@@ -474,6 +480,281 @@ class ShopScreen extends ConsumerWidget {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
                   content: Text('购买成功：${item.name}'),
+                  backgroundColor: Colors.green,
+                ),
+              );
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.green,
+            ),
+            child: const Text('确认购买'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // 装备列表
+  Widget _buildEquipmentList(WidgetRef ref, Player player) {
+    final equipments = EquipmentDatabase.getShopEquipments();
+    
+    if (equipments.isEmpty) {
+      return const Center(
+        child: Text(
+          '暂无装备出售',
+          style: TextStyle(color: Colors.white54),
+        ),
+      );
+    }
+
+    return ListView.builder(
+      padding: const EdgeInsets.all(12),
+      itemCount: equipments.length,
+      itemBuilder: (context, index) {
+        final equipment = equipments[index];
+        final canAfford = player.meso >= equipment.price;
+        final canEquip = player.stats.level >= equipment.levelReq;
+
+        return Card(
+          color: const Color(0xFF0F3460),
+          margin: const EdgeInsets.only(bottom: 8),
+          child: InkWell(
+            onTap: canAfford && canEquip
+                ? () => _showEquipmentBuyDialog(context, ref, equipment)
+                : canAfford && !canEquip
+                    ? () {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('❌ 需要等级 ${equipment.levelReq} 才能装备'),
+                            backgroundColor: Colors.red,
+                          ),
+                        );
+                      }
+                    : () {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('❌ 金币不足！需要 ${equipment.price} 金币'),
+                            backgroundColor: Colors.red,
+                          ),
+                        );
+                      },
+            borderRadius: BorderRadius.circular(12),
+            child: Padding(
+              padding: const EdgeInsets.all(12),
+              child: Row(
+                children: [
+                  // 装备图标
+                  Container(
+                    width: 56,
+                    height: 56,
+                    decoration: BoxDecoration(
+                      color: Colors.purple.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Center(
+                      child: Text(
+                        equipment.emoji,
+                        style: const TextStyle(fontSize: 28),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+
+                  // 装备信息
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Text(
+                              equipment.name,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 6,
+                                vertical: 2,
+                              ),
+                              decoration: BoxDecoration(
+                                color: canEquip
+                                    ? Colors.green.withOpacity(0.3)
+                                    : Colors.red.withOpacity(0.3),
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: Text(
+                                'Lv.${equipment.levelReq}',
+                                style: TextStyle(
+                                  color: canEquip ? Colors.green : Colors.red,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          equipment.description,
+                          style: TextStyle(
+                            color: Colors.white.withOpacity(0.6),
+                            fontSize: 12,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        // 装备属性
+                        _buildEquipmentStats(equipment),
+                      ],
+                    ),
+                  ),
+
+                  // 价格
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      color: canAfford && canEquip
+                          ? Colors.green.withOpacity(0.2)
+                          : Colors.red.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          canAfford && canEquip ? '💰' : '❌',
+                          style: const TextStyle(fontSize: 12),
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          '${equipment.price}',
+                          style: TextStyle(
+                            color: canAfford && canEquip
+                                ? Colors.green
+                                : Colors.red,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  // 装备属性显示
+  Widget _buildEquipmentStats(Equipment equipment) {
+    final stats = equipment.stats;
+    final statTexts = <String>[];
+    
+    if (stats.atk != null) statTexts.add('攻击+${stats.atk}');
+    if (stats.def != null) statTexts.add('防御+${stats.def}');
+    if (stats.str != null) statTexts.add('力量+${stats.str}');
+    if (stats.dex != null) statTexts.add('敏捷+${stats.dex}');
+    if (stats.intStat != null) statTexts.add('智力+${stats.intStat}');
+    if (stats.luk != null) statTexts.add('运气+${stats.luk}');
+    if (stats.hp != null) statTexts.add('HP+${stats.hp}');
+    if (stats.mp != null) statTexts.add('MP+${stats.mp}');
+
+    return Wrap(
+      spacing: 8,
+      children: statTexts.map((text) => Container(
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+        decoration: BoxDecoration(
+          color: Colors.amber.withOpacity(0.2),
+          borderRadius: BorderRadius.circular(4),
+        ),
+        child: Text(
+          text,
+          style: const TextStyle(
+            color: Colors.amber,
+            fontSize: 10,
+          ),
+        ),
+      )).toList(),
+    );
+  }
+
+  // 装备购买对话框
+  void _showEquipmentBuyDialog(BuildContext context, WidgetRef ref, Equipment equipment) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xFF1A1A2E),
+        title: Row(
+          children: [
+            Text(equipment.emoji, style: const TextStyle(fontSize: 28)),
+            const SizedBox(width: 12),
+            Text(
+              '购买 ${equipment.name}',
+              style: const TextStyle(color: Colors.white),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              equipment.description,
+              style: const TextStyle(color: Colors.white70),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              '需要等级: Lv.${equipment.levelReq}',
+              style: TextStyle(
+                color: equipment.levelReq <= ref.read(gameProvider).player.stats.level
+                    ? Colors.green
+                    : Colors.red,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 8),
+            _buildEquipmentStats(equipment),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                const Text(
+                  '价格: ',
+                  style: TextStyle(color: Colors.white70),
+                ),
+                const Text('💰 ', style: TextStyle(fontSize: 16)),
+                Text(
+                  '${equipment.price}',
+                  style: const TextStyle(
+                    color: Colors.amber,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('取消'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              ref.read(gameProvider.notifier).buyEquipment(equipment);
+              Navigator.pop(context);
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('购买成功：${equipment.name}'),
                   backgroundColor: Colors.green,
                 ),
               );
