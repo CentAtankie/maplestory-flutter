@@ -44,6 +44,16 @@ class Stats {
     this.maxExp = 15,
   });
 
+  /// 计算暴击率 (基于运气, 最高40%)
+  double getCritRate() {
+    return (luk * 0.3).clamp(0, 40);
+  }
+
+  /// 计算闪避率 (基于敏捷, 最高40%)
+  double getAvoidRate() {
+    return (dex * 0.3).clamp(0, 40);
+  }
+
   Stats copyWith({
     int? str,
     int? dex,
@@ -100,6 +110,8 @@ class Equipment {
   int luk;
   int? price;
   int? levelReq;
+  int? crit;     // 暴击率加成
+  int? avoid;    // 闪避率加成
 
   Equipment({
     required this.name,
@@ -115,6 +127,8 @@ class Equipment {
     this.luk = 0,
     this.price,
     this.levelReq,
+    this.crit,
+    this.avoid,
   });
 
   /// 获取装备属性描述
@@ -126,6 +140,8 @@ class Equipment {
     if (dex > 0) statsList.add('敏捷+$dex');
     if (intBonus > 0) statsList.add('智力+$intBonus');
     if (luk > 0) statsList.add('运气+$luk');
+    if (crit != null && crit! > 0) statsList.add('暴击+$crit%');
+    if (avoid != null && avoid! > 0) statsList.add('闪避+$avoid%');
     return statsList.join(', ');
   }
 }
@@ -215,6 +231,24 @@ class Player {
     return equipment.values
         .where((e) => e != null)
         .fold(0, (sum, e) => sum + e!.def);
+  }
+
+  /// 获取暴击率 (基础 + 装备加成, 最高50%)
+  double getCritRate() {
+    final baseCrit = stats.getCritRate();
+    final equipCrit = equipment.values
+        .where((e) => e != null)
+        .fold(0, (sum, e) => sum + (e!.crit ?? 0));
+    return (baseCrit + equipCrit).clamp(0, 50);
+  }
+
+  /// 获取闪避率 (基础 + 装备加成, 最高50%)
+  double getAvoidRate() {
+    final baseAvoid = stats.getAvoidRate();
+    final equipAvoid = equipment.values
+        .where((e) => e != null)
+        .fold(0, (sum, e) => sum + (e!.avoid ?? 0));
+    return (baseAvoid + equipAvoid).clamp(0, 50);
   }
 
   /// 复制玩家

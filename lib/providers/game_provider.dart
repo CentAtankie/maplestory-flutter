@@ -140,10 +140,19 @@ class GameNotifier extends StateNotifier<GameData> {
     // 玩家攻击
     final playerAtk = player.getAtk();
     final mobDef = mob.def;
-    final damage = (playerAtk - mobDef).clamp(1, 9999);
+    var damage = (playerAtk - mobDef).clamp(1, 9999);
+    
+    // 暴击判定
+    final critRate = player.getCritRate();
+    final isCrit = state.random.nextDouble() * 100 < critRate;
+    if (isCrit) {
+      damage = (damage * 1.5).toInt(); // 暴击1.5倍伤害
+      addLog('💥 暴击！你对 ${mob.name} 造成 $damage 点伤害！', LogType.reward);
+    } else {
+      addLog('⚔️ 你对 ${mob.name} 造成 $damage 点伤害！', LogType.battle);
+    }
     
     final newMobHp = mob.hp - damage;
-    addLog('⚔️ 你对 ${mob.name} 造成 $damage 点伤害！', LogType.battle);
 
     if (newMobHp <= 0) {
       // 怪物死亡
@@ -153,6 +162,17 @@ class GameNotifier extends StateNotifier<GameData> {
 
     // 怪物反击
     final mobNew = mob.copyWith(hp: newMobHp);
+    
+    // 闪避判定
+    final avoidRate = player.getAvoidRate();
+    final isAvoided = state.random.nextDouble() * 100 < avoidRate;
+    
+    if (isAvoided) {
+      addLog('💨 你闪避了 ${mob.name} 的攻击！', LogType.success);
+      state = state.copyWith(currentMob: mobNew);
+      return;
+    }
+    
     final mobDamage = (mob.atk - player.getDef()).clamp(1, 9999);
     final newPlayerHp = player.stats.hp - mobDamage;
     
