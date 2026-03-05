@@ -122,6 +122,34 @@ class ShopDatabase {
       price: 200,
       effect: ItemEffect(type: 'teleport', value: 0),
     ),
+    // ========== 魔方道具 ==========
+    // 神奇魔方
+    GameItem(
+      id: 'cube_normal',
+      name: '神奇魔方',
+      emoji: '🎲',
+      type: ItemType.consumable,
+      description: '重塑装备潜能属性',
+      price: 10000,
+    ),
+    // 高级神奇魔方
+    GameItem(
+      id: 'cube_advanced',
+      name: '高级神奇魔方',
+      emoji: '🔷',
+      type: ItemType.consumable,
+      description: '重塑潜能，30%概率升级为黄色(史诗)',
+      price: 50000,
+    ),
+    // 超级神奇魔方
+    GameItem(
+      id: 'cube_super',
+      name: '超级神奇魔方',
+      emoji: '💎',
+      type: ItemType.consumable,
+      description: '重塑潜能，20%概率升级为绿色(传说)',
+      price: 200000,
+    ),
     // 橙色药水（高级）
     GameItem(
       id: 'orange_potion',

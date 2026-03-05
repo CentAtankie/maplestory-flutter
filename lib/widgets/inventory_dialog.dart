@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/game_provider.dart';
 import '../game/models/player.dart';
 import '../game/models/item.dart';
+import 'cube_dialog.dart';
 
 /// 物品栏分类
 enum InventoryCategory {
@@ -561,6 +562,21 @@ class _InventoryDialogState extends ConsumerState<InventoryDialog> {
 
   /// 使用物品
   void _use(String itemId) {
+    // 检查是否是魔方
+    if (itemId == 'cube_normal' || itemId == 'cube_advanced' || itemId == 'cube_super') {
+      Navigator.pop(context);
+      final cubeType = itemId == 'cube_advanced' 
+          ? 'advanced' 
+          : itemId == 'cube_super' 
+              ? 'super' 
+              : 'normal';
+      showDialog(
+        context: context,
+        builder: (context) => CubeEquipmentSelector(cubeType: cubeType),
+      );
+      return;
+    }
+    
     ref.read(gameProvider.notifier).useItem(itemId);
     Navigator.pop(context);
   }

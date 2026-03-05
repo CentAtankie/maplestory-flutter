@@ -102,12 +102,16 @@ class ShopScreen extends ConsumerWidget {
   Widget _buildCategoryTabs(WidgetRef ref, ShopCategory currentCategory) {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      child: Row(
-        children: [
-          _buildTab(ref, '购买', ShopCategory.all, currentCategory),
-          _buildTab(ref, '装备', ShopCategory.equipment, currentCategory),
-          _buildTab(ref, '卖出', ShopCategory.sell, currentCategory),
-        ],
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(
+          children: [
+            _buildTab(ref, '购买', ShopCategory.all, currentCategory),
+            _buildTab(ref, '装备', ShopCategory.equipment, currentCategory),
+            _buildTab(ref, '特殊', ShopCategory.special, currentCategory),
+            _buildTab(ref, '卖出', ShopCategory.sell, currentCategory),
+          ],
+        ),
       ),
     );
   }
@@ -418,6 +422,121 @@ class ShopScreen extends ConsumerWidget {
                   ],
                 ),
               ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildSpecialList(WidgetRef ref, Player player) {
+    // 特殊物品（魔方）
+    final specialItems = [
+      ShopDatabase.getById('cube_normal'),
+      ShopDatabase.getById('cube_advanced'),
+      ShopDatabase.getById('cube_super'),
+    ].where((item) => item != null).toList();
+
+    return ListView.builder(
+      padding: const EdgeInsets.all(12),
+      itemCount: specialItems.length,
+      itemBuilder: (context, index) {
+        final item = specialItems[index]!;
+        final canAfford = player.meso >= item.price;
+
+        return Card(
+          color: const Color(0xFF0F3460),
+          margin: const EdgeInsets.only(bottom: 8),
+          child: InkWell(
+            onTap: canAfford
+                ? () => _showBuyDialog(context, ref, item)
+                : () {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('❌ 金币不足！需要 ${item.price} 金币'),
+                        backgroundColor: Colors.red,
+                      ),
+                    );
+                  },
+            borderRadius: BorderRadius.circular(12),
+            child: Padding(
+              padding: const EdgeInsets.all(12),
+              child: Row(
+                children: [
+                  // 物品图标
+                  Container(
+                    width: 56,
+                    height: 56,
+                    decoration: BoxDecoration(
+                      color: Colors.purple.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Center(
+                      child: Text(
+                        item.emoji,
+                        style: const TextStyle(fontSize: 28),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+
+                  // 物品信息
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          item.name,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          item.description,
+                          style: TextStyle(
+                            color: Colors.white.withOpacity(0.6),
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  // 价格
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      color: canAfford
+                          ? Colors.amber.withOpacity(0.2)
+                          : Colors.red.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          canAfford ? '💰' : '❌',
+                          style: const TextStyle(fontSize: 12),
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          '${item.price}',
+                          style: TextStyle(
+                            color: canAfford ? Colors.amber : Colors.red,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         );

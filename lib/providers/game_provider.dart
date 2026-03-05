@@ -23,6 +23,7 @@ enum ShopCategory {
   consumable, // 药水
   scroll,     // 卷轴
   equipment,  // 装备
+  special,    // 特殊（魔方等）
   sell,       // 卖出
 }
 
@@ -51,12 +52,12 @@ enum LogType {
 class GameNotifier extends StateNotifier<GameData> {
   final SaveRepository _saveRepository;
   bool _isInitialized = false;
-  
+
   // 自动战斗相关
   Timer? _autoBattleTimer;
   bool _isAutoExplore = false;
   bool _isAutoBattle = false;
-  
+
   // 装备实例存储（key: instanceId, value: Equipment）
   final Map<String, Equipment> _equipmentInstances = {};
 
@@ -70,12 +71,12 @@ class GameNotifier extends StateNotifier<GameData> {
   bool get isInitialized => _isInitialized;
   bool get isAutoExplore => _isAutoExplore;
   bool get isAutoBattle => _isAutoBattle;
-  
+
   /// 通过instanceId获取装备实例
   Equipment? getEquipmentByInstanceId(String instanceId) {
     return _equipmentInstances[instanceId];
   }
-  
+
   /// 清理定时器
   @override
   void dispose() {
@@ -177,16 +178,16 @@ class GameNotifier extends StateNotifier<GameData> {
       addLog('⛔ 战斗中无法传送！', LogType.error);
       return;
     }
-    
+
     // 检查是否在商店中
     if (state.gameState == GameState.shopping) {
       addLog('⛔ 请先离开商店', LogType.error);
       return;
     }
-    
+
     // 获取目标地图
     final targetMap = GameMaps.getMap(mapId);
-    
+
     state = state.copyWith(currentMap: targetMap);
     addLog('✨ 传送到了 ${targetMap.name}！', LogType.success);
   }
@@ -581,7 +582,7 @@ class GameNotifier extends StateNotifier<GameData> {
     // 生成新的装备实例（带唯一ID）
     final newEquipment = equipment.copyWithInstanceId();
     final String newInstanceId = newEquipment.instanceId;  // 显式转换为非空
-    
+
     // 将装备实例存入映射表
     _equipmentInstances[newInstanceId] = newEquipment;
 
@@ -600,10 +601,10 @@ class GameNotifier extends StateNotifier<GameData> {
   bool equipItem(String equipmentIdOrInstanceId) {
     // 先尝试从实例存储中查找（用于掉落/购买的装备）
     Equipment? equipment = _equipmentInstances[equipmentIdOrInstanceId];
-    
+
     // 如果没找到，尝试从装备数据库查找（用于旧存档兼容）
     equipment ??= EquipmentDatabase.getById(equipmentIdOrInstanceId);
-    
+
     if (equipment == null) {
       addLog('❌ 找不到该装备', LogType.error);
       return false;
@@ -614,7 +615,7 @@ class GameNotifier extends StateNotifier<GameData> {
     final itemIndex = state.player.inventory.indexWhere(
       (id) => id == equipmentIdOrInstanceId || (equipId != null && id == equipId)
     );
-    
+
     if (itemIndex == -1) {
       addLog('❌ 背包中没有 ${equipment.name}', LogType.error);
       return false;
@@ -742,13 +743,13 @@ class GameNotifier extends StateNotifier<GameData> {
   bool sellItem(String itemIdOrInstanceId, {int quantity = 1}) {
     // 先尝试从装备实例存储中查找（用于掉落/购买的装备）
     Equipment? equipment = _equipmentInstances[itemIdOrInstanceId];
-    
+
     // 再尝试从普通物品查找
     final item = ShopDatabase.getById(itemIdOrInstanceId);
-    
+
     // 再尝试从装备数据库查找（兼容旧存档）
     equipment ??= EquipmentDatabase.getById(itemIdOrInstanceId);
-    
+
     final itemName = item?.name ?? equipment?.name ?? '物品';
     final itemPrice = item?.price ?? equipment?.price ?? 0;
 
@@ -757,7 +758,7 @@ class GameNotifier extends StateNotifier<GameData> {
     final inventoryCount = state.player.inventory.where(
       (id) => id == itemIdOrInstanceId || (equipId != null && id == equipId)
     ).length;
-    
+
     if (inventoryCount < quantity) {
       addLog('❌ 背包中 $itemName 数量不足', LogType.error);
       return false;
@@ -806,7 +807,7 @@ class GameNotifier extends StateNotifier<GameData> {
       addLog('❌ 名字不能为空', LogType.error);
       return false;
     }
-
+    
     if (newName.length > 10) {
       addLog('❌ 名字不能超过10个字符', LogType.error);
       return false;
@@ -818,6 +819,51 @@ class GameNotifier extends StateNotifier<GameData> {
     );
     addLog('✨ $oldName 改名为 $newName！', LogType.success);
     return true;
+  }
+
+  // 更新装备潜能
+  void updateEquipmentPotential(String equipmentInstanceId, EquipmentPotential potential) {
+    // 更新装备实例映射
+    final equipment = _equipmentInstances[equipmentInstanceId];
+    if (equipment != null) {
+      _equipmentInstances[equipmentInstanceId] = Equipment(
+        name: equipment.name,
+        id: equipment.id,
+        instanceId: equipment.instanceId,
+        emoji: equipment.emoji,
+        description: equipment.description,
+        slot: equipment.slot,
+        atk: equipment.atk,
+        def: equipment.def,
+        str: equipment.str,
+        dex: equipment.dex,
+        intBonus: equipment.intBonus,
+        luk: equipment.luk,
+        price: equipment.price,
+        levelReq: equipment.levelReq,
+        crit: equipment.crit,
+        avoid: equipment.avoid,
+        potential: potential,
+      );
+    }
+
+    // 如果装备当前已装备，更新玩家状态
+    final currentEquip = state.player.equipment.values
+        .firstWhere((e) => e?.instanceId == equipmentInstanceId, orElse: () => null);
+    
+    if (currentEquip != null) {
+      final newEquipment = Map<EquipmentSlot, Equipment?>.from(state.player.equipment);
+      for (final entry in newEquipment.entries) {
+        if (entry.value?.instanceId == equipmentInstanceId) {
+          newEquipment[entry.key] = _equipmentInstances[equipmentInstanceId];
+          break;
+        }
+      }
+      
+      state = state.copyWith(
+        player: state.player.copyWith(equipment: newEquipment),
+      );
+    }
   }
 
   // ========== 存档功能 ==========
