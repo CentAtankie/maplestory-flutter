@@ -86,52 +86,113 @@ class ActionPanel extends ConsumerWidget {
         ),
         content: SizedBox(
           width: double.maxFinite,
+          height: 400,
           child: ListView(
-            shrinkWrap: true,
             children: [
-              // 村庄
-              _buildMapCategory('村庄', [
-                _buildMapTile(context, ref, '射手村', 'henesys', '🏘️'),
-              ]),
-              const Divider(color: Colors.white24),
-              // 野外冒险区
-              _buildMapCategory('野外冒险区', [
-                _buildMapTile(context, ref, '彩虹村', 'rainbow', '🌈'),
-                _buildMapTile(context, ref, '蜗牛壳海滩', 'snail_beach', '🐚'),
-                _buildMapTile(context, ref, '蘑菇园', 'mushroom_farm', '🍄'),
-                _buildMapTile(context, ref, '魔法密林', 'magic_forest', '🌲'),
-                _buildMapTile(context, ref, '射手村北部山丘', 'henesys_hill', '⛰️'),
-              ]),
+              // 村庄分类 - 可展开
+              _buildExpandableCategory(
+                context, ref,
+                title: '🏘️ 安全区（村庄）',
+                maps: [
+                  _buildMapTile(context, ref, '射手村', 'henesys', '🏘️'),
+                ],
+              ),
+              const SizedBox(height: 8),
+              // 初级野外 - 可展开
+              _buildExpandableCategory(
+                context, ref,
+                title: '🌱 初级冒险区 (Lv.1-10)',
+                maps: [
+                  _buildMapTile(context, ref, '彩虹村', 'rainbow', '🌈'),
+                  _buildMapTile(context, ref, '蜗牛壳海滩', 'snail_beach', '🐚'),
+                  _buildMapTile(context, ref, '蘑菇园', 'mushroom_farm', '🍄'),
+                ],
+              ),
+              const SizedBox(height: 8),
+              // 中级野外 - 可展开
+              _buildExpandableCategory(
+                context, ref,
+                title: '🌲 中级冒险区 (Lv.10-20)',
+                maps: [
+                  _buildMapTile(context, ref, '魔法密林', 'magic_forest', '🌲'),
+                  _buildMapTile(context, ref, '射手村北部山丘', 'henesys_hill', '⛰️'),
+                ],
+              ),
             ],
           ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('取消'),
+            child: const Text('关闭'),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildMapCategory(String title, List<Widget> maps) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(vertical: 8),
-          child: Text(
-            title,
-            style: const TextStyle(
-              color: Colors.white70,
-              fontSize: 12,
-              fontWeight: FontWeight.bold,
-            ),
+  Widget _buildExpandableCategory(
+    BuildContext context,
+    WidgetRef ref, {
+    required String title,
+    required List<Widget> maps,
+  }) {
+    return StatefulBuilder(
+      builder: (context, setState) {
+        // 检查是否有地图在当前分类中
+        final isExpanded = true; // 默认展开，方便用户看到
+        
+        return Container(
+          decoration: BoxDecoration(
+            color: const Color(0xFF0F3460),
+            borderRadius: BorderRadius.circular(12),
           ),
-        ),
-        ...maps,
-      ],
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // 分类标题
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF533483).withOpacity(0.3),
+                  borderRadius: const BorderRadius.vertical(
+                    top: Radius.circular(12),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        title,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                    Text(
+                      '${maps.length}个地图',
+                      style: TextStyle(
+                        color: Colors.white.withOpacity(0.6),
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              // 地图列表
+              Padding(
+                padding: const EdgeInsets.all(8),
+                child: Column(
+                  children: maps,
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 
