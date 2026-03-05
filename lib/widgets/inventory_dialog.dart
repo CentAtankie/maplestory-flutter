@@ -324,12 +324,22 @@ class _InventoryDialogState extends ConsumerState<InventoryDialog> {
 
   /// 装备物品
   void _equip(String itemId) {
+    final equipment = EquipmentDatabase.getById(itemId);
     final success = ref.read(gameProvider.notifier).equipItem(itemId);
     if (success) {
       setState(() {}); // 刷新界面
+      // 显示装备成功提示
+      if (equipment != null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('✨ 已装备 ${equipment.name}'),
+            backgroundColor: Colors.purple,
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
     } else {
       // 装备失败（通常是等级不足），显示提示
-      final equipment = EquipmentDatabase.getById(itemId);
       if (equipment != null) {
         final levelReq = equipment.levelReq ?? 1;
         final playerLevel = ref.read(gameProvider).player.stats.level;
@@ -338,6 +348,7 @@ class _InventoryDialogState extends ConsumerState<InventoryDialog> {
             SnackBar(
               content: Text('❌ 等级不足！需要 Lv.$levelReq 才能装备 ${equipment.name}'),
               backgroundColor: Colors.red,
+              duration: const Duration(seconds: 2),
             ),
           );
         }
@@ -347,8 +358,17 @@ class _InventoryDialogState extends ConsumerState<InventoryDialog> {
 
   /// 卸下装备
   void _unequip(Equipment equipment) {
-    ref.read(gameProvider.notifier).unequipItem(equipment.slot);
-    setState(() {}); // 刷新界面
+    final success = ref.read(gameProvider.notifier).unequipItem(equipment.slot);
+    if (success) {
+      setState(() {}); // 刷新界面
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('📦 已卸下 ${equipment.name}'),
+          backgroundColor: Colors.orange,
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    }
   }
 
   /// 使用物品
@@ -359,7 +379,23 @@ class _InventoryDialogState extends ConsumerState<InventoryDialog> {
 
   /// 卖出物品
   void _sell(String itemId) {
-    ref.read(gameProvider.notifier).sellItem(itemId, quantity: 1);
-    setState(() {}); // 刷新界面
+    // 先获取物品信息用于提示
+    final item = ShopDatabase.getById(itemId);
+    final equipment = EquipmentDatabase.getById(itemId);
+    final itemName = item?.name ?? equipment?.name ?? '物品';
+    final itemPrice = item?.price ?? equipment?.price ?? 0;
+    final sellPrice = (itemPrice * 0.5).toInt();
+    
+    final success = ref.read(gameProvider.notifier).sellItem(itemId, quantity: 1);
+    if (success) {
+      setState(() {}); // 刷新界面
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('💰 卖出 $itemName，获得 $sellPrice 金币'),
+          backgroundColor: Colors.green,
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    }
   }
 }
