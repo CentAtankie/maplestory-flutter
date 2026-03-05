@@ -559,14 +559,15 @@ class GameNotifier extends StateNotifier<GameData> {
 
     // 生成新的装备实例（带唯一ID）
     final newEquipment = equipment.copyWithInstanceId();
+    final String newInstanceId = newEquipment.instanceId;  // 显式转换为非空
     
     // 将装备实例存入映射表
-    _equipmentInstances[newEquipment.instanceId] = newEquipment;
+    _equipmentInstances[newInstanceId] = newEquipment;
 
     // 扣除金币，装备直接进背包
     final newPlayer = state.player.copyWith(
       meso: state.player.meso - price,
-      inventory: [...state.player.inventory, newEquipment.instanceId],
+      inventory: [...state.player.inventory, newInstanceId],
     );
 
     state = state.copyWith(player: newPlayer);
@@ -588,8 +589,9 @@ class GameNotifier extends StateNotifier<GameData> {
     }
 
     // 检查背包中是否有该装备（匹配 instanceId 或 equipment.id）
+    final String? equipId = equipment.id;
     final itemIndex = state.player.inventory.indexWhere(
-      (id) => id == equipmentIdOrInstanceId || (equipment.id != null && id == equipment.id)
+      (id) => id == equipmentIdOrInstanceId || (equipId != null && id == equipId)
     );
     
     if (itemIndex == -1) {
@@ -614,7 +616,8 @@ class GameNotifier extends StateNotifier<GameData> {
     // 卸下当前装备（如果有）并放入背包
     if (currentEquip != null) {
       // 已装备的装备使用 instanceId 放回背包
-      newInventory.add(currentEquip.instanceId ?? currentEquip.id ?? currentEquip.name);
+      final String instanceToAdd = currentEquip.instanceId;  // 现在 instanceId 是非空的
+      newInventory.add(instanceToAdd);
       addLog('📦 自动卸下 ${currentEquip.name}', LogType.normal);
     }
 
