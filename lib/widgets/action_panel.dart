@@ -37,10 +37,10 @@ class ActionPanel extends ConsumerWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // 方向按钮（十字键）
-            _buildDirectionPad(context, ref, gameState),
+            // 地图按钮（替换方向键）
+            _buildMapButton(context, ref, gameState),
             
-            const SizedBox(height: 16),
+            const SizedBox(height: 12),
             
             // 功能按钮
             _buildActionButtons(context, ref, isTown),
@@ -55,121 +55,112 @@ class ActionPanel extends ConsumerWidget {
     );
   }
 
-  Widget _buildDirectionPad(BuildContext context, WidgetRef ref, GameData gameState) {
-    final exits = gameState.currentMap.exits;
-    
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        // 方向控制区
-        Container(
-          width: 160,
-          height: 160,
-          child: Stack(
-            alignment: Alignment.center,
+  Widget _buildMapButton(BuildContext context, WidgetRef ref, GameData gameState) {
+    return ElevatedButton.icon(
+      onPressed: () => _showMapSelector(context, ref),
+      icon: const Icon(Icons.map, color: Colors.white),
+      label: Text(
+        '地图: ${gameState.currentMap.name}',
+        style: const TextStyle(color: Colors.white),
+      ),
+      style: ElevatedButton.styleFrom(
+        backgroundColor: const Color(0xFF0F3460),
+        foregroundColor: Colors.white,
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+        minimumSize: const Size(double.infinity, 48),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+        ),
+      ),
+    );
+  }
+
+  void _showMapSelector(BuildContext context, WidgetRef ref) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xFF1A1A2E),
+        title: const Text(
+          '🗺️ 选择目的地',
+          style: TextStyle(color: Colors.white),
+        ),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: ListView(
+            shrinkWrap: true,
             children: [
-              // 上
-              Positioned(
-                top: 0,
-                child: _buildDirectionButton(
-                  icon: Icons.arrow_upward,
-                  label: exits['北'] != null ? '北' : '',
-                  onPressed: exits['北'] != null 
-                      ? () => ref.read(gameProvider.notifier).move('北')
-                      : null,
-                ),
-              ),
-              // 下
-              Positioned(
-                bottom: 0,
-                child: _buildDirectionButton(
-                  icon: Icons.arrow_downward,
-                  label: exits['南'] != null ? '南' : '',
-                  onPressed: exits['南'] != null 
-                      ? () => ref.read(gameProvider.notifier).move('南')
-                      : null,
-                ),
-              ),
-              // 左
-              Positioned(
-                left: 0,
-                child: _buildDirectionButton(
-                  icon: Icons.arrow_back,
-                  label: exits['西'] != null ? '西' : '',
-                  onPressed: exits['西'] != null 
-                      ? () => ref.read(gameProvider.notifier).move('西')
-                      : null,
-                ),
-              ),
-              // 右
-              Positioned(
-                right: 0,
-                child: _buildDirectionButton(
-                  icon: Icons.arrow_forward,
-                  label: exits['东'] != null ? '东' : '',
-                  onPressed: exits['东'] != null 
-                      ? () => ref.read(gameProvider.notifier).move('东')
-                      : null,
-                ),
-              ),
-              // 中心（当前位置）
-              Container(
-                width: 60,
-                height: 60,
-                decoration: BoxDecoration(
-                  color: const Color(0xFF533483).withOpacity(0.3),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: const Center(
-                  child: Text(
-                    '📍',
-                    style: TextStyle(fontSize: 24),
-                  ),
-                ),
-              ),
+              // 村庄
+              _buildMapCategory('村庄', [
+                _buildMapTile(context, ref, '射手村', 'henesys', '🏘️'),
+              ]),
+              const Divider(color: Colors.white24),
+              // 初级地图
+              _buildMapCategory('初级冒险区', [
+                _buildMapTile(context, ref, '彩虹村', 'rainbow', '🌈'),
+                _buildMapTile(context, ref, '蜗牛壳海滩', 'snail_beach', '🐚'),
+                _buildMapTile(context, ref, '蘑菇园', 'mushroom_farm', '🍄'),
+              ]),
+              const Divider(color: Colors.white24),
+              // 中级地图
+              _buildMapCategory('中级冒险区', [
+                _buildMapTile(context, ref, '魔法密林', 'magic_forest', '🌲'),
+                _buildMapTile(context, ref, '射手村北部山丘', 'henesys_hill', '⛰️'),
+              ]),
             ],
           ),
         ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('取消'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMapCategory(String title, List<Widget> maps) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          child: Text(
+            title,
+            style: const TextStyle(
+              color: Colors.white70,
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ),
+        ...maps,
       ],
     );
   }
 
-  Widget _buildDirectionButton({
-    required IconData icon,
-    required String label,
-    VoidCallback? onPressed,
-  }) {
-    final isEnabled = onPressed != null;
+  Widget _buildMapTile(BuildContext context, WidgetRef ref, String name, String mapId, String emoji) {
+    final currentMap = ref.read(gameProvider).currentMap.id;
+    final isCurrent = currentMap == mapId;
     
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        ElevatedButton(
-          onPressed: onPressed,
-          style: ElevatedButton.styleFrom(
-            backgroundColor: isEnabled 
-                ? const Color(0xFF0F3460) 
-                : Colors.grey[800],
-            foregroundColor: isEnabled ? Colors.white : Colors.grey,
-            padding: const EdgeInsets.all(12),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-            elevation: isEnabled ? 4 : 0,
-          ),
-          child: Icon(icon, size: 24),
+    return ListTile(
+      leading: Text(emoji, style: const TextStyle(fontSize: 24)),
+      title: Text(
+        name,
+        style: TextStyle(
+          color: isCurrent ? Colors.amber : Colors.white,
+          fontWeight: isCurrent ? FontWeight.bold : FontWeight.normal,
         ),
-        if (label.isNotEmpty) ...[
-          const SizedBox(height: 4),
-          Text(
-            label,
-            style: TextStyle(
-              color: isEnabled ? Colors.white70 : Colors.grey,
-              fontSize: 10,
-            ),
-          ),
-        ],
-      ],
+      ),
+      trailing: isCurrent
+          ? const Icon(Icons.location_on, color: Colors.amber)
+          : const Icon(Icons.arrow_forward_ios, color: Colors.white54, size: 16),
+      onTap: isCurrent
+          ? null
+          : () {
+              Navigator.pop(context);
+              ref.read(gameProvider.notifier).moveToMap(mapId);
+            },
     );
   }
 

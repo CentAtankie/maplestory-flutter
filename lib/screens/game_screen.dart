@@ -27,24 +27,17 @@ class GameScreen extends ConsumerWidget {
             // 地图信息
             _buildMapInfo(gameState),
             
-            // 游戏日志区域 - 设置最小高度确保可见
-            Expanded(
-              flex: 2,  // 日志占更多空间
+            // 游戏日志区域 - 固定高度，可滚动
+            SizedBox(
+              height: 180,  // 固定高度
               child: Container(
-                constraints: const BoxConstraints(
-                  minHeight: 200,
-                ),
+                margin: const EdgeInsets.symmetric(horizontal: 12),
                 child: const GameLog(),
               ),
             ),
             
-            // 操作面板 - 限制最大高度
-            const Flexible(
-              flex: 1,
-              child: SingleChildScrollView(
-                child: ActionPanel(),
-              ),
-            ),
+            // 操作面板
+            const ActionPanel(),
           ],
         ),
       ),
