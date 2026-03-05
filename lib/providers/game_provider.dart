@@ -235,6 +235,13 @@ class GameNotifier extends StateNotifier<GameData> {
         addLog('📦 获得掉落：${item.name}！', LogType.reward);
       }
     }
+    
+    // 装备掉落（5%概率）
+    final droppedEquip = EquipmentDatabase.getRandomDrop(player.stats.level);
+    if (droppedEquip != null) {
+      newInventory.add(droppedEquip.id);
+      addLog('✨ 稀有掉落：${droppedEquip.name}！', LogType.reward);
+    }
 
     // 升级检查
     var updatedPlayer = player.copyWith(
@@ -438,18 +445,23 @@ class GameNotifier extends StateNotifier<GameData> {
 
   // 卖出物品（支持批量）
   bool sellItem(String itemId, {int quantity = 1}) {
+    // 先尝试从普通物品查找
     final item = ShopDatabase.getById(itemId);
-    if (item == null) return false;
+    // 再尝试从装备查找
+    final equipment = EquipmentDatabase.getById(itemId);
+    
+    final itemName = item?.name ?? equipment?.name ?? '物品';
+    final itemPrice = item?.price ?? equipment?.price ?? 0;
 
     // 检查背包中是否有足够数量
     final inventoryCount = state.player.inventory.where((id) => id == itemId).length;
     if (inventoryCount < quantity) {
-      addLog('❌ 背包中 ${item.name} 数量不足', LogType.error);
+      addLog('❌ 背包中 $itemName 数量不足', LogType.error);
       return false;
     }
 
     // 卖出价格（原价的50%）
-    final sellPrice = (item.price * 0.5).toInt();
+    final sellPrice = (itemPrice * 0.5).toInt();
     final totalPrice = sellPrice * quantity;
     
     // 从背包中移除指定数量
@@ -471,7 +483,7 @@ class GameNotifier extends StateNotifier<GameData> {
       ),
     );
 
-    addLog('💰 卖出 ${item.name} x$quantity，获得 $totalPrice 金币', LogType.success);
+    addLog('💰 卖出 $itemName x$quantity，获得 $totalPrice 金币', LogType.success);
     return true;
   }
 
