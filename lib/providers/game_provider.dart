@@ -561,7 +561,7 @@ class GameNotifier extends StateNotifier<GameData> {
     final newEquipment = equipment.copyWithInstanceId();
     
     // 将装备实例存入映射表
-    _equipmentInstances[newEquipment.instanceId!] = newEquipment;
+    _equipmentInstances[newEquipment.instanceId] = newEquipment;
 
     // 扣除金币，装备直接进背包
     final newPlayer = state.player.copyWith(
@@ -589,7 +589,7 @@ class GameNotifier extends StateNotifier<GameData> {
 
     // 检查背包中是否有该装备（匹配 instanceId 或 equipment.id）
     final itemIndex = state.player.inventory.indexWhere(
-      (id) => id == equipmentIdOrInstanceId || id == equipment.id
+      (id) => id == equipmentIdOrInstanceId || (equipment.id != null && id == equipment.id)
     );
     
     if (itemIndex == -1) {

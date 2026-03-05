@@ -176,11 +176,11 @@ class Equipment {
 
   /// 生成简单的UUID
   static String _generateUuid() {
-    final random = math.Random();
+    final random = Random();
     return '${_randomHex(random, 8)}-${_randomHex(random, 4)}-${_randomHex(random, 4)}-${_randomHex(random, 4)}-${_randomHex(random, 12)}';
   }
 
-  static String _randomHex(math.Random random, int length) {
+  static String _randomHex(Random random, int length) {
     const chars = '0123456789abcdef';
     return List.generate(length, (_) => chars[random.nextInt(16)]).join();
   }
