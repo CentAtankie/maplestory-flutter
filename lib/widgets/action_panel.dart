@@ -354,7 +354,7 @@ class ActionPanel extends ConsumerWidget {
                 ),
                 if (isEquipment)
                   Text(
-                    equipment!.stats,
+                    equipment.stats,
                     style: TextStyle(
                       color: Colors.green.withOpacity(0.8),
                       fontSize: 10,
@@ -485,7 +485,6 @@ class ActionPanel extends ConsumerWidget {
               _buildEquippedItem('裤子', player.equipment[EquipmentSlot.pants]),
               _buildEquippedItem('鞋子', player.equipment[EquipmentSlot.shoes]),
               _buildEquippedItem('披风', player.equipment[EquipmentSlot.cape]),
-            ],
             ],
           ),
         ),
