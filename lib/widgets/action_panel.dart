@@ -851,45 +851,53 @@ class ActionPanel extends ConsumerWidget {
                 '重新开始',
                 style: TextStyle(color: Colors.white),
               ),
-              onTap: () {
+              onTap: () async {
                 Navigator.pop(context);
-                showDialog(
+                // 使用更简单的方式兼容微信
+                final confirmed = await showDialog<bool>(
                   context: context,
-                  builder: (context) => AlertDialog(
-                    backgroundColor: const Color(0xFF1A1A2E),
-                    title: const Text(
-                      '确认重新开始?',
-                      style: TextStyle(color: Colors.white),
-                    ),
-                    content: const Text(
-                      '当前进度将会丢失',
-                      style: TextStyle(color: Colors.white70),
-                    ),
-                    actions: [
-                      TextButton(
-                        onPressed: () => Navigator.pop(context),
-                        child: const Text('取消'),
+                  barrierDismissible: false, // 微信兼容：必须点击按钮关闭
+                  builder: (BuildContext ctx) {
+                    return AlertDialog(
+                      backgroundColor: const Color(0xFF1A1A2E),
+                      title: const Text(
+                        '确认重新开始?',
+                        style: TextStyle(color: Colors.white),
                       ),
-                      TextButton(
-                        onPressed: () {
-                          Navigator.pop(context); // 关闭确认对话框
-                          // 打开投骰子界面
-                          Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (context) => CreateCharacterScreen(
-                                playerName: ref.read(gameProvider).player.name,
-                              ),
-                            ),
-                          );
-                        },
-                        child: const Text(
-                          '确认',
-                          style: TextStyle(color: Colors.red),
+                      content: const Text(
+                        '当前进度将会丢失',
+                        style: TextStyle(color: Colors.white70),
+                      ),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.of(ctx).pop(false),
+                          child: const Text('取消'),
+                        ),
+                        TextButton(
+                          onPressed: () => Navigator.of(ctx).pop(true),
+                          child: const Text(
+                            '确认',
+                            style: TextStyle(color: Colors.red),
+                          ),
+                        ),
+                      ],
+                    );
+                  },
+                );
+                
+                if (confirmed == true && context.mounted) {
+                  // 延迟执行导航，避免微信兼容问题
+                  await Future.delayed(const Duration(milliseconds: 100));
+                  if (context.mounted) {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (context) => CreateCharacterScreen(
+                          playerName: ref.read(gameProvider).player.name,
                         ),
                       ),
-                    ],
-                  ),
-                );
+                    );
+                  }
+                }
               },
             ),
           ],

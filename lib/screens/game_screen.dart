@@ -7,6 +7,7 @@ import '../widgets/game_log.dart';
 import '../widgets/action_panel.dart';
 import 'battle_screen.dart';
 import 'shop_screen.dart';
+import 'create_character_screen.dart';
 
 class GameScreen extends ConsumerWidget {
   const GameScreen({super.key});
@@ -111,12 +112,57 @@ class GameScreen extends ConsumerWidget {
   }
 }
 
-// 游戏主界面包装器，处理状态切换
-class GameScreenWrapper extends ConsumerWidget {
+// 游戏主界面包装器，处理状态切换和首次进入游戏
+class GameScreenWrapper extends ConsumerStatefulWidget {
   const GameScreenWrapper({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<GameScreenWrapper> createState() => _GameScreenWrapperState();
+}
+
+class _GameScreenWrapperState extends ConsumerState<GameScreenWrapper> {
+  bool _hasCheckedSave = false;
+  bool _hasSave = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkSave();
+  }
+
+  Future<void> _checkSave() async {
+    final hasSave = await ref.read(gameProvider.notifier).hasSave();
+    setState(() {
+      _hasCheckedSave = true;
+      _hasSave = hasSave;
+    });
+    
+    // 如果没有存档，显示创建角色界面
+    if (!hasSave && mounted) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (context) => const CreateCharacterScreen(
+              playerName: '冒险家',
+            ),
+          ),
+        );
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // 等待检查完成
+    if (!_hasCheckedSave) {
+      return const Scaffold(
+        backgroundColor: Color(0xFF1A1A2E),
+        body: Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
+    }
+
     final gameState = ref.watch(gameProvider);
 
     // 根据游戏状态显示不同界面
