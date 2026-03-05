@@ -314,6 +314,8 @@ class ActionPanel extends ConsumerWidget {
               const Divider(color: Colors.white24),
               _buildInfoRow('攻击力', '${player.getAtk()}'),
               _buildInfoRow('防御力', '${player.getDef()}'),
+              _buildInfoRow('暴击率', '${player.getCritRate().toStringAsFixed(1)}%'),
+              _buildInfoRow('闪避率', '${player.getAvoidRate().toStringAsFixed(1)}%'),
               const Divider(color: Colors.white24),
               // 显示已装备的装备
               const Text(
