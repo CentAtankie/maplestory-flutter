@@ -60,6 +60,13 @@ class GameNotifier extends StateNotifier<GameData> {
 
   bool get isInitialized => _isInitialized;
 
+  /// 设置新玩家（用于创建角色）
+  void setNewPlayer(Player player) {
+    state = state.copyWith(player: player);
+    addLog('🎉 欢迎，${player.name}！冒险开始了！', LogType.success);
+    addLog('📝 初始属性: 力量${player.stats.str} 敏捷${player.stats.dex} 智力${player.stats.intStat} 运气${player.stats.luk}');
+  }
+
   /// 初始化 - 自动读取存档
   Future<void> _init() async {
     try {

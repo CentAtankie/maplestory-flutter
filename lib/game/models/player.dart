@@ -212,12 +212,33 @@ class Player {
         },
         inventory = inventory ?? [];
 
-  /// 创建新玩家
-  factory Player.create(String name) {
+  /// 创建新玩家 - 投骰子决定初始属性 (4-13点)
+  factory Player.create(String name, {Random? random}) {
+    final rnd = random ?? Random();
+    
+    // 投骰子决定初始属性 (4-13点)
+    final str = 4 + rnd.nextInt(10);  // 4-13
+    final dex = 4 + rnd.nextInt(10);  // 4-13
+    final intStat = 4 + rnd.nextInt(10);  // 4-13
+    final luk = 4 + rnd.nextInt(10);  // 4-13
+    
     return Player(
       name: name,
       job: Job.beginner,
-      stats: Stats(),
+      stats: Stats(
+        str: str,
+        dex: dex,
+        intStat: intStat,
+        luk: luk,
+        hp: 50,
+        maxHp: 50,
+        mp: 5,
+        maxMp: 5,
+        level: 1,
+        exp: 0,
+        maxExp: 15,
+        ap: 0,
+      ),
     );
   }
 

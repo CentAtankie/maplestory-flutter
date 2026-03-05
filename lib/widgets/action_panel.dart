@@ -6,6 +6,7 @@ import '../game/models/player.dart';
 import '../game/models/map.dart';
 import '../game/models/item.dart';
 import '../screens/shop_screen.dart';
+import '../screens/create_character_screen.dart';
 import 'inventory_dialog.dart';
 
 class ActionPanel extends ConsumerWidget {
@@ -744,8 +745,15 @@ class ActionPanel extends ConsumerWidget {
                       ),
                       TextButton(
                         onPressed: () {
-                          ref.read(gameProvider.notifier).restart();
-                          Navigator.pop(context);
+                          Navigator.pop(context); // 关闭确认对话框
+                          // 打开投骰子界面
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (context) => CreateCharacterScreen(
+                                playerName: ref.read(gameProvider).player.name,
+                              ),
+                            ),
+                          );
                         },
                         child: const Text(
                           '确认',
