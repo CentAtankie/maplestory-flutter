@@ -95,6 +95,7 @@ class ActionPanel extends ConsumerWidget {
                 title: '🏘️ 安全区（村庄）',
                 maps: [
                   _buildMapTile(context, ref, '射手村', 'henesys', '🏘️'),
+                  _buildMapTile(context, ref, '明珠港', 'lith', '⚓'),
                 ],
               ),
               const SizedBox(height: 8),
@@ -103,9 +104,9 @@ class ActionPanel extends ConsumerWidget {
                 context, ref,
                 title: '🌱 初级冒险区 (Lv.1-10)',
                 maps: [
-                  _buildMapTile(context, ref, '彩虹村', 'rainbow', '🌈'),
-                  _buildMapTile(context, ref, '蜗牛壳海滩', 'snail_beach', '🐚'),
-                  _buildMapTile(context, ref, '蘑菇园', 'mushroom_farm', '🍄'),
+                  _buildMapTile(context, ref, '射手村东部平原', 'farm', '🌾'),
+                  _buildMapTile(context, ref, '射手村北部小路', 'trail', '🌲'),
+                  _buildMapTile(context, ref, '绿水灵树洞', 'slime_tree', '🌳'),
                 ],
               ),
               const SizedBox(height: 8),
@@ -114,8 +115,7 @@ class ActionPanel extends ConsumerWidget {
                 context, ref,
                 title: '🌲 中级冒险区 (Lv.10-20)',
                 maps: [
-                  _buildMapTile(context, ref, '魔法密林', 'magic_forest', '🌲'),
-                  _buildMapTile(context, ref, '射手村北部山丘', 'henesys_hill', '⛰️'),
+                  _buildMapTile(context, ref, '树洞', 'cave', '🕳️'),
                 ],
               ),
             ],
