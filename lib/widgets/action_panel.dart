@@ -6,6 +6,7 @@ import '../game/models/player.dart';
 import '../game/models/map.dart';
 import '../game/models/item.dart';
 import '../screens/shop_screen.dart';
+import 'inventory_dialog.dart';
 
 class ActionPanel extends ConsumerWidget {
   const ActionPanel({super.key});
@@ -275,165 +276,9 @@ class ActionPanel extends ConsumerWidget {
   }
 
   void _showInventoryDialog(BuildContext context, WidgetRef ref) {
-    final player = ref.read(gameProvider).player;
-    
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF1A1A2E),
-        title: const Text(
-          '🎒 物品栏',
-          style: TextStyle(color: Colors.white),
-        ),
-        content: SizedBox(
-          width: double.maxFinite,
-          height: 400,
-          child: player.inventory.isEmpty
-              ? const Center(
-                  child: Text(
-                    '背包是空的\n去商店购买一些药水吧！',
-                    style: TextStyle(color: Colors.white54),
-                    textAlign: TextAlign.center,
-                  ),
-                )
-              : _buildInventoryList(context, ref, player),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('关闭'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildInventoryList(BuildContext context, WidgetRef ref, Player player) {
-    // 统计物品数量
-    final itemCounts = <String, int>{};
-    for (final itemId in player.inventory) {
-      itemCounts[itemId] = (itemCounts[itemId] ?? 0) + 1;
-    }
-
-    return ListView.builder(
-      shrinkWrap: true,
-      itemCount: itemCounts.length,
-      itemBuilder: (context, index) {
-        final entry = itemCounts.entries.elementAt(index);
-        final itemId = entry.key;
-        final count = entry.value;
-        
-        // 先尝试获取普通物品
-        final item = ShopDatabase.getById(itemId);
-        // 再尝试获取装备
-        final equipment = EquipmentDatabase.getById(itemId);
-        
-        // 获取显示信息
-        final String name = item?.name ?? equipment?.name ?? '未知物品';
-        final String emoji = item?.emoji ?? equipment?.emoji ?? '❓';
-        final String description = item?.description ?? equipment?.description ?? '';
-        final bool isMaterial = item?.type == ItemType.material;
-        final bool isEquipment = equipment != null;
-        final bool isConsumable = item?.type == ItemType.consumable || item?.type == ItemType.scroll;
-
-        return Card(
-          color: const Color(0xFF0F3460),
-          margin: const EdgeInsets.only(bottom: 8),
-          child: ListTile(
-            leading: Text(emoji, style: const TextStyle(fontSize: 24)),
-            title: Text(
-              name,
-              style: const TextStyle(color: Colors.white),
-            ),
-            subtitle: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  description,
-                  style: const TextStyle(color: Colors.white70, fontSize: 12),
-                ),
-                if (isEquipment)
-                  Text(
-                    equipment.stats,
-                    style: TextStyle(
-                      color: Colors.green.withOpacity(0.8),
-                      fontSize: 10,
-                    ),
-                  ),
-              ],
-            ),
-            trailing: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // 数量
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: Colors.blue.withOpacity(0.2),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Text(
-                    'x$count',
-                    style: const TextStyle(
-                      color: Colors.blue,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                // 根据类型显示不同按钮
-                if (isEquipment)
-                  ElevatedButton(
-                    onPressed: () {
-                      ref.read(gameProvider.notifier).equipItem(itemId);
-                      Navigator.pop(context);
-                      Future.delayed(const Duration(milliseconds: 100), () {
-                        _showInventoryDialog(context, ref);
-                      });
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.purple,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(horizontal: 12),
-                    ),
-                    child: const Text('装备'),
-                  )
-                else if (isMaterial)
-                  ElevatedButton(
-                    onPressed: () {
-                      ref.read(gameProvider.notifier).sellItem(itemId, quantity: 1);
-                      Navigator.pop(context);
-                      Future.delayed(const Duration(milliseconds: 100), () {
-                        _showInventoryDialog(context, ref);
-                      });
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.orange,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(horizontal: 12),
-                    ),
-                    child: const Text('卖出'),
-                  )
-                else if (isConsumable)
-                  ElevatedButton(
-                    onPressed: () {
-                      Navigator.pop(context);
-                      ref.read(gameProvider.notifier).useItem(itemId);
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.green,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(horizontal: 12),
-                    ),
-                    child: const Text('使用'),
-                  )
-                else
-                  const SizedBox.shrink(),
-              ],
-            ),
-          ),
-        );
-      },
+      builder: (context) => const InventoryDialog(),
     );
   }
 

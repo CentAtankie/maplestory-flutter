@@ -516,6 +516,34 @@ class GameNotifier extends StateNotifier<GameData> {
     return true;
   }
 
+  // 卸下装备
+  bool unequipItem(EquipmentSlot slot) {
+    final currentEquip = state.player.equipment[slot];
+    if (currentEquip == null) {
+      addLog('❌ 该位置没有装备', LogType.error);
+      return false;
+    }
+
+    // 从装备槽移除
+    final newEquipment = Map<EquipmentSlot, Equipment?>.from(state.player.equipment);
+    newEquipment[slot] = null;
+
+    // 将装备放回背包
+    final equipId = currentEquip.id ?? currentEquip.name;
+    final newInventory = List<String>.from(state.player.inventory);
+    newInventory.add(equipId);
+
+    // 更新玩家状态
+    final newPlayer = state.player.copyWith(
+      inventory: newInventory,
+      equipment: newEquipment,
+    );
+
+    state = state.copyWith(player: newPlayer);
+    addLog('📦 卸下了 ${currentEquip.name}', LogType.success);
+    return true;
+  }
+
   // 设置商店分类
   void setShopCategory(ShopCategory category) {
     state = state.copyWith(shopCategory: category);
