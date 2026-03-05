@@ -178,8 +178,7 @@ class ActionPanel extends ConsumerWidget {
               if (isTown) {
                 ref.read(gameProvider.notifier).rest();
               } else {
-                // 探索会触发随机遭遇，由 move 处理
-                ref.read(gameProvider.notifier).addLog('🔍 正在探索这片区域...');
+                ref.read(gameProvider.notifier).explore();
               }
             },
           ),
@@ -222,6 +221,19 @@ class ActionPanel extends ConsumerWidget {
             color: Colors.purple,
             onPressed: () {
               _showCharacterDialog(context, ref);
+            },
+          ),
+        ),
+        const SizedBox(width: 12),
+        
+        // 设置
+        Expanded(
+          child: _buildActionButton(
+            icon: Icons.settings,
+            label: '设置',
+            color: Colors.grey,
+            onPressed: () {
+              _showSettingsDialog(context, ref);
             },
           ),
         ),

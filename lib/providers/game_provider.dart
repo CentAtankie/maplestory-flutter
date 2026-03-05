@@ -64,14 +64,31 @@ class GameNotifier extends StateNotifier<GameData> {
     _checkRandomEncounter();
   }
 
-  // 检查随机遭遇
-  void _checkRandomEncounter() {
-    if (state.currentMap.mobs.isEmpty) return;
-    
-    final chance = state.currentMap.encounterChance;
-    if (state.random.nextDouble() < chance) {
+  // 探索（野外随机遭遇）
+  void explore() {
+    if (state.currentMap.isTown) {
+      addLog('⛔ 村庄里很安全，没有什么可探索的', LogType.normal);
+      return;
+    }
+
+    if (state.currentMap.mobs.isEmpty) {
+      addLog('🔍 这片区域很平静，没有发现怪物', LogType.normal);
+      return;
+    }
+
+    addLog('🔍 正在探索这片区域...', LogType.normal);
+
+    // 50% 概率遇到怪物
+    if (state.random.nextDouble() < 0.5) {
       final mobType = state.currentMap.mobs[state.random.nextInt(state.currentMap.mobs.length)];
       startBattle(mobType);
+    } else {
+      // 探索发现金币或其他东西
+      final findGold = state.random.nextInt(10) + 1;
+      state = state.copyWith(
+        player: state.player.copyWith(meso: state.player.meso + findGold),
+      );
+      addLog('💰 探索发现 $findGold 金币！', LogType.reward);
     }
   }
 
