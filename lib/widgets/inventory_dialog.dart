@@ -265,14 +265,29 @@ class _InventoryDialogState extends ConsumerState<InventoryDialog> {
                     child: const Text('卸下'),
                   )
                 else if (isEquipment)
-                  ElevatedButton(
-                    onPressed: () => _equip(itemId),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.purple,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(horizontal: 12),
-                    ),
-                    child: const Text('装备'),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      ElevatedButton(
+                        onPressed: () => _equip(itemId),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.purple,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(horizontal: 12),
+                        ),
+                        child: const Text('装备'),
+                      ),
+                      const SizedBox(width: 8),
+                      ElevatedButton(
+                        onPressed: () => _sell(itemId),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.orange,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(horizontal: 12),
+                        ),
+                        child: const Text('卖出'),
+                      ),
+                    ],
                   )
                 else if (item?.type == ItemType.material)
                   ElevatedButton(

@@ -514,12 +514,11 @@ class GameNotifier extends StateNotifier<GameData> {
     // 获取当前已装备的同类装备（如果有）
     final currentEquip = state.player.equipment[equipment.slot];
     
-    // 卸下当前装备（如果有）
+    // 卸下当前装备（如果有）并放入背包
     if (currentEquip != null) {
-      // 卸下旧装备，存入id
       final oldEquipId = currentEquip.id ?? currentEquip.name;
       newInventory.add(oldEquipId);
-      addLog('📦 卸下 ${currentEquip.name}', LogType.normal);
+      addLog('📦 自动卸下 ${currentEquip.name}', LogType.normal);
     }
 
     // 装备新装备
