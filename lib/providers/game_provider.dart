@@ -495,7 +495,9 @@ class GameNotifier extends StateNotifier<GameData> {
     
     // 卸下当前装备（如果有）
     if (currentEquip != null) {
-      newInventory.add(currentEquip.name); // 使用name作为id存入背包
+      // 卸下旧装备，存入id
+      final oldEquipId = currentEquip.id ?? currentEquip.name;
+      newInventory.add(oldEquipId);
       addLog('📦 卸下 ${currentEquip.name}', LogType.normal);
     }
 

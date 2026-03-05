@@ -469,6 +469,23 @@ class ActionPanel extends ConsumerWidget {
               const Divider(color: Colors.white24),
               _buildInfoRow('攻击力', '${player.getAtk()}'),
               _buildInfoRow('防御力', '${player.getDef()}'),
+              const Divider(color: Colors.white24),
+              // 显示已装备的装备
+              const Text(
+                '已装备',
+                style: TextStyle(
+                  color: Colors.white70,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 8),
+              _buildEquippedItem('武器', player.equipment[EquipmentSlot.weapon]),
+              _buildEquippedItem('头盔', player.equipment[EquipmentSlot.helmet]),
+              _buildEquippedItem('衣服', player.equipment[EquipmentSlot.armor]),
+              _buildEquippedItem('裤子', player.equipment[EquipmentSlot.pants]),
+              _buildEquippedItem('鞋子', player.equipment[EquipmentSlot.shoes]),
+              _buildEquippedItem('披风', player.equipment[EquipmentSlot.cape]),
+            ],
             ],
           ),
         ),
@@ -497,6 +514,54 @@ class ActionPanel extends ConsumerWidget {
             style: const TextStyle(
               color: Colors.white,
               fontWeight: FontWeight.bold,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEquippedItem(String slotName, Equipment? equipment) {
+    if (equipment == null) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 2),
+        child: Row(
+          children: [
+            Text(
+              '$slotName: ',
+              style: const TextStyle(color: Colors.white54, fontSize: 12),
+            ),
+            const Text(
+              '无',
+              style: TextStyle(color: Colors.grey, fontSize: 12),
+            ),
+          ],
+        ),
+      );
+    }
+    
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 2),
+      child: Row(
+        children: [
+          Text(
+            '$slotName: ',
+            style: const TextStyle(color: Colors.white54, fontSize: 12),
+          ),
+          Text(
+            equipment.name,
+            style: const TextStyle(
+              color: Colors.amber,
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(width: 4),
+          Text(
+            '(${equipment.stats})',
+            style: TextStyle(
+              color: Colors.green.withOpacity(0.8),
+              fontSize: 10,
             ),
           ),
         ],

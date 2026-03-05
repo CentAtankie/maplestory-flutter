@@ -132,27 +132,32 @@ class Equipment {
 
 /// 装备数据库
 final Map<String, Equipment> equipmentDb = {
-  '新手短剑': Equipment(
+  'beginner_sword': Equipment(
+    id: 'beginner_sword',
     name: '新手短剑',
     slot: EquipmentSlot.weapon,
     atk: 3,
   ),
-  '木质短杖': Equipment(
+  'wooden_staff': Equipment(
+    id: 'wooden_staff',
     name: '木质短杖',
     slot: EquipmentSlot.weapon,
     atk: 5,
   ),
-  '新手弓': Equipment(
+  'beginner_bow': Equipment(
+    id: 'beginner_bow',
     name: '新手弓',
     slot: EquipmentSlot.weapon,
     atk: 4,
   ),
-  '蜗牛壳': Equipment(
+  'snail_shell_helmet': Equipment(
+    id: 'snail_shell_helmet',
     name: '蜗牛壳',
     slot: EquipmentSlot.helmet,
     def: 1,
   ),
-  '旧披风': Equipment(
+  'old_cape': Equipment(
+    id: 'old_cape',
     name: '旧披风',
     slot: EquipmentSlot.cape,
     def: 1,
@@ -178,7 +183,7 @@ class Player {
     this.currentMap = 'henesys',
     this.meso = 0,
   })  : equipment = equipment ?? {
-          EquipmentSlot.weapon: equipmentDb['新手短剑'],
+          EquipmentSlot.weapon: equipmentDb['beginner_sword'],
           EquipmentSlot.helmet: null,
           EquipmentSlot.armor: null,
           EquipmentSlot.pants: null,
