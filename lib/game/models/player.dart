@@ -1,3 +1,4 @@
+import 'dart:math';
 import 'package:flutter/material.dart';
 
 /// 职业类型
@@ -244,18 +245,22 @@ class Player {
     // 先给每个属性分配最低4点 (共16点)
     var remaining = 9; // 25 - 16 = 9点需要分配
     
-    // 随机分配剩余点数
-    var strBonus = random.nextInt(remaining + 1).clamp(0, 9);
+    // 随机分配剩余点数，确保类型为int
+    var strBonus = random.nextInt(remaining + 1);
+    if (strBonus > 9) strBonus = 9;
     remaining -= strBonus;
     
-    var dexBonus = random.nextInt(remaining + 1).clamp(0, 9);
+    var dexBonus = random.nextInt(remaining + 1);
+    if (dexBonus > 9) dexBonus = 9;
     remaining -= dexBonus;
     
-    var intBonus = random.nextInt(remaining + 1).clamp(0, 9);
+    var intBonus = random.nextInt(remaining + 1);
+    if (intBonus > 9) intBonus = 9;
     remaining -= intBonus;
     
     // 剩余全给运气
-    var lukBonus = remaining.clamp(0, 9);
+    var lukBonus = remaining;
+    if (lukBonus > 9) lukBonus = 9;
     
     return [
       4 + strBonus,

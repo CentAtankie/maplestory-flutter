@@ -65,22 +65,22 @@ class _CreateCharacterScreenState extends ConsumerState<CreateCharacterScreen> {
     // 先给每个属性分配最低4点 (共16点)
     var remaining = 9; // 25 - 16 = 9点需要分配
     
-    // 随机分配剩余点数，每个属性最多再分配9点(达到13上限)
+    // 随机分配剩余点数
     var strBonus = random.nextInt(remaining + 1);
-    strBonus = strBonus.clamp(0, 9);
-    remaining -= strBonus;
+    if (strBonus > 9) strBonus = 9;
+    remaining = remaining - strBonus;
     
     var dexBonus = random.nextInt(remaining + 1);
-    dexBonus = dexBonus.clamp(0, 9);
-    remaining -= dexBonus;
+    if (dexBonus > 9) dexBonus = 9;
+    remaining = remaining - dexBonus;
     
     var intBonus = random.nextInt(remaining + 1);
-    intBonus = intBonus.clamp(0, 9);
-    remaining -= intBonus;
+    if (intBonus > 9) intBonus = 9;
+    remaining = remaining - intBonus;
     
     // 剩余全给运气
     var lukBonus = remaining;
-    lukBonus = lukBonus.clamp(0, 9);
+    if (lukBonus > 9) lukBonus = 9;
     
     // 如果还有剩余，重新随机分配
     if (strBonus + dexBonus + intBonus + lukBonus < 9) {
@@ -88,10 +88,10 @@ class _CreateCharacterScreenState extends ConsumerState<CreateCharacterScreen> {
     }
     
     return [
-      4 + strBonus,   // 4-13
-      4 + dexBonus,   // 4-13
-      4 + intBonus,   // 4-13
-      4 + lukBonus,   // 4-13
+      4 + strBonus,
+      4 + dexBonus,
+      4 + intBonus,
+      4 + lukBonus,
     ];
   }
   
