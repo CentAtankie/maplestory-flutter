@@ -212,24 +212,21 @@ class Player {
         },
         inventory = inventory ?? [];
 
-  /// 创建新玩家 - 投骰子决定初始属性 (4-13点)
+  /// 创建新玩家 - 投骰子决定初始属性 (总25点，每个4-13)
   factory Player.create(String name, {Random? random}) {
     final rnd = random ?? Random();
     
-    // 投骰子决定初始属性 (4-13点)
-    final str = 4 + rnd.nextInt(10);  // 4-13
-    final dex = 4 + rnd.nextInt(10);  // 4-13
-    final intStat = 4 + rnd.nextInt(10);  // 4-13
-    final luk = 4 + rnd.nextInt(10);  // 4-13
+    // 分配25点属性，每个属性4-13点
+    final stats = _distributeStats(rnd);
     
     return Player(
       name: name,
       job: Job.beginner,
       stats: Stats(
-        str: str,
-        dex: dex,
-        intStat: intStat,
-        luk: luk,
+        str: stats[0],
+        dex: stats[1],
+        intStat: stats[2],
+        luk: stats[3],
         hp: 50,
         maxHp: 50,
         mp: 5,
@@ -240,6 +237,32 @@ class Player {
         ap: 0,
       ),
     );
+  }
+  
+  /// 分配25点属性，每个属性4-13点
+  static List<int> _distributeStats(Random random) {
+    // 先给每个属性分配最低4点 (共16点)
+    var remaining = 9; // 25 - 16 = 9点需要分配
+    
+    // 随机分配剩余点数
+    var strBonus = random.nextInt(remaining + 1).clamp(0, 9);
+    remaining -= strBonus;
+    
+    var dexBonus = random.nextInt(remaining + 1).clamp(0, 9);
+    remaining -= dexBonus;
+    
+    var intBonus = random.nextInt(remaining + 1).clamp(0, 9);
+    remaining -= intBonus;
+    
+    // 剩余全给运气
+    var lukBonus = remaining.clamp(0, 9);
+    
+    return [
+      4 + strBonus,
+      4 + dexBonus,
+      4 + intBonus,
+      4 + lukBonus,
+    ];
   }
 
   /// 获取基础攻击力

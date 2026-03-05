@@ -39,11 +39,13 @@ class _CreateCharacterScreenState extends ConsumerState<CreateCharacterScreen> {
     const maxAnimations = 10;
     
     Timer.periodic(const Duration(milliseconds: 100), (timer) {
+      // 随机分配25点属性，每个属性4-13点
+      final stats = _distributeStats();
       setState(() {
-        _str = 4 + Random().nextInt(10);
-        _dex = 4 + Random().nextInt(10);
-        _int = 4 + Random().nextInt(10);
-        _luk = 4 + Random().nextInt(10);
+        _str = stats[0];
+        _dex = stats[1];
+        _int = stats[2];
+        _luk = stats[3];
       });
       
       animations++;
@@ -54,6 +56,43 @@ class _CreateCharacterScreenState extends ConsumerState<CreateCharacterScreen> {
         });
       }
     });
+  }
+  
+  /// 分配25点属性，每个属性4-13点
+  List<int> _distributeStats() {
+    final random = Random();
+    
+    // 先给每个属性分配最低4点 (共16点)
+    var remaining = 9; // 25 - 16 = 9点需要分配
+    
+    // 随机分配剩余点数，每个属性最多再分配9点(达到13上限)
+    var strBonus = random.nextInt(remaining + 1);
+    strBonus = strBonus.clamp(0, 9);
+    remaining -= strBonus;
+    
+    var dexBonus = random.nextInt(remaining + 1);
+    dexBonus = dexBonus.clamp(0, 9);
+    remaining -= dexBonus;
+    
+    var intBonus = random.nextInt(remaining + 1);
+    intBonus = intBonus.clamp(0, 9);
+    remaining -= intBonus;
+    
+    // 剩余全给运气
+    var lukBonus = remaining;
+    lukBonus = lukBonus.clamp(0, 9);
+    
+    // 如果还有剩余，重新随机分配
+    if (strBonus + dexBonus + intBonus + lukBonus < 9) {
+      return _distributeStats();
+    }
+    
+    return [
+      4 + strBonus,   // 4-13
+      4 + dexBonus,   // 4-13
+      4 + intBonus,   // 4-13
+      4 + lukBonus,   // 4-13
+    ];
   }
   
   void _confirm() {
@@ -154,13 +193,13 @@ class _CreateCharacterScreenState extends ConsumerState<CreateCharacterScreen> {
                         Text(
                           '$total',
                           style: TextStyle(
-                            color: total >= 32 ? Colors.green : Colors.amber,
+                            color: total >= 25 ? Colors.green : Colors.amber,
                             fontSize: 20,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
-                        Text(
-                          ' / 52',
+                        const Text(
+                          ' / 25',
                           style: TextStyle(
                             color: Colors.white54,
                             fontSize: 14,
@@ -231,7 +270,7 @@ class _CreateCharacterScreenState extends ConsumerState<CreateCharacterScreen> {
               
               // 提示
               const Text(
-                '每个属性随机 4-13 点\n可以重复投骰子直到满意为止',
+                '总属性25点随机分配\n每个属性4-13点，可以重复投骰子',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   color: Colors.white54,
