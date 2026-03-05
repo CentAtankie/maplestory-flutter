@@ -5,6 +5,7 @@ import '../game/models/player.dart';
 import '../game/models/mob.dart';
 import '../game/models/map.dart';
 import '../game/models/item.dart' hide Equipment;
+import '../game/models/potential.dart';
 import '../repositories/save_repository.dart';
 import '../repositories/hive_save_repository.dart';
 
