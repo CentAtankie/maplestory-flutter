@@ -59,9 +59,6 @@ class GameNotifier extends StateNotifier<GameData> {
     final nextMap = GameMaps.getMap(nextMapId);
     state = state.copyWith(currentMap: nextMap);
     addLog('🚶 你来到了 ${nextMap.name}');
-    
-    // 检查是否遇到怪物
-    _checkRandomEncounter();
   }
 
   // 探索（野外随机遭遇）
