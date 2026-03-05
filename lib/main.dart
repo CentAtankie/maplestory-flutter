@@ -2,12 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'repositories/hive_save_repository.dart';
 import 'screens/game_screen.dart';
+import 'services/audio_manager.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
   // 初始化 Hive 存档
   await HiveSaveRepository().init();
+  
+  // 初始化音频并播放背景音乐
+  await AudioManager().init();
+  await AudioManager().playHenesysBGM();
   
   runApp(
     const ProviderScope(

@@ -7,6 +7,7 @@ import '../game/models/map.dart';
 import '../game/models/item.dart';
 import '../screens/shop_screen.dart';
 import '../screens/create_character_screen.dart';
+import '../services/audio_manager.dart';
 import 'inventory_dialog.dart';
 
 class ActionPanel extends ConsumerWidget {
@@ -634,6 +635,74 @@ class ActionPanel extends ConsumerWidget {
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+            // 背景音乐控制
+            StatefulBuilder(
+              builder: (context, setState) {
+                final isPlaying = AudioManager().isPlaying;
+                final volume = AudioManager().volume;
+                
+                return Column(
+                  children: [
+                    ListTile(
+                      leading: Icon(
+                        isPlaying ? Icons.music_note : Icons.music_off,
+                        color: isPlaying ? Colors.green : Colors.grey,
+                      ),
+                      title: const Text(
+                        '背景音乐',
+                        style: TextStyle(color: Colors.white),
+                      ),
+                      subtitle: Text(
+                        isPlaying ? '正在播放: 射手村' : '已暂停',
+                        style: const TextStyle(color: Colors.white54, fontSize: 12),
+                      ),
+                      trailing: Switch(
+                        value: isPlaying,
+                        onChanged: (value) async {
+                          if (value) {
+                            await AudioManager().resume();
+                          } else {
+                            await AudioManager().pause();
+                          }
+                          setState(() {});
+                        },
+                        activeColor: Colors.green,
+                      ),
+                    ),
+                    if (isPlaying)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        child: Row(
+                          children: [
+                            const Icon(
+                              Icons.volume_down,
+                              color: Colors.white54,
+                              size: 20,
+                            ),
+                            Expanded(
+                              child: Slider(
+                                value: volume,
+                                onChanged: (value) async {
+                                  await AudioManager().setVolume(value);
+                                  setState(() {});
+                                },
+                                activeColor: Colors.green,
+                                inactiveColor: Colors.white24,
+                              ),
+                            ),
+                            const Icon(
+                              Icons.volume_up,
+                              color: Colors.white54,
+                              size: 20,
+                            ),
+                          ],
+                        ),
+                      ),
+                    const Divider(color: Colors.white24),
+                  ],
+                );
+              },
+            ),
             // 修改名字
             ListTile(
               leading: const Icon(Icons.edit, color: Colors.orange),
