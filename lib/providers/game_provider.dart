@@ -614,7 +614,7 @@ class GameNotifier extends StateNotifier<GameData> {
     // 卸下当前装备（如果有）并放入背包
     if (currentEquip != null) {
       // 已装备的装备使用 instanceId 放回背包
-      newInventory.add(currentEquip.instanceId);
+      newInventory.add(currentEquip.instanceId ?? currentEquip.id ?? currentEquip.name);
       addLog('📦 自动卸下 ${currentEquip.name}', LogType.normal);
     }
 
@@ -729,8 +729,9 @@ class GameNotifier extends StateNotifier<GameData> {
     final itemPrice = item?.price ?? equipment?.price ?? 0;
 
     // 检查背包中是否有足够数量（匹配 instanceId 或 equipment.id）
+    final equipId = equipment?.id;
     final inventoryCount = state.player.inventory.where(
-      (id) => id == itemIdOrInstanceId || id == equipment?.id
+      (id) => id == itemIdOrInstanceId || (equipId != null && id == equipId)
     ).length;
     
     if (inventoryCount < quantity) {
@@ -746,7 +747,7 @@ class GameNotifier extends StateNotifier<GameData> {
     final newInventory = List<String>.from(state.player.inventory);
     int removed = 0;
     newInventory.removeWhere((id) {
-      if ((id == itemIdOrInstanceId || id == equipment?.id) && removed < quantity) {
+      if ((id == itemIdOrInstanceId || (equipId != null && id == equipId)) && removed < quantity) {
         removed++;
         // 如果是装备实例，从映射表中移除
         if (_equipmentInstances.containsKey(id)) {

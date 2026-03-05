@@ -104,7 +104,7 @@ enum EquipmentSlot {
 class Equipment {
   String name;
   String? id;           // 装备类型ID
-  String? instanceId;   // 装备实例唯一ID (UUID)
+  String instanceId;    // 装备实例唯一ID (UUID) - 必须有值
   String? emoji;
   String? description;
   EquipmentSlot slot;
@@ -122,7 +122,7 @@ class Equipment {
   Equipment({
     required this.name,
     this.id,
-    this.instanceId,  // 可选，如未提供则使用id
+    String? instanceId,  // 可选参数，不传则自动生成
     this.emoji,
     this.description,
     required this.slot,
@@ -136,7 +136,7 @@ class Equipment {
     this.levelReq,
     this.crit,
     this.avoid,
-  });
+  }) : instanceId = instanceId ?? _generateUuid();  // 自动分配UUID
 
   /// 获取装备属性描述
   String get stats {
