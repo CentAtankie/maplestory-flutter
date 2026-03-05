@@ -383,7 +383,59 @@ class ActionPanel extends ConsumerWidget {
                 const SizedBox(width: 8),
                 // 根据类型显示不同按钮
                 if (isEquipment)
-                  // 装备 - 显示
+                  ElevatedButton(
+                    onPressed: () {
+                      ref.read(gameProvider.notifier).equipItem(itemId);
+                      Navigator.pop(context);
+                      Future.delayed(const Duration(milliseconds: 100), () {
+                        _showInventoryDialog(context, ref);
+                      });
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.purple,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                    ),
+                    child: const Text('装备'),
+                  )
+                else if (isMaterial)
+                  ElevatedButton(
+                    onPressed: () {
+                      ref.read(gameProvider.notifier).sellItem(itemId, quantity: 1);
+                      Navigator.pop(context);
+                      Future.delayed(const Duration(milliseconds: 100), () {
+                        _showInventoryDialog(context, ref);
+                      });
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.orange,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                    ),
+                    child: const Text('卖出'),
+                  )
+                else if (isConsumable)
+                  ElevatedButton(
+                    onPressed: () {
+                      Navigator.pop(context);
+                      ref.read(gameProvider.notifier).useItem(itemId);
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.green,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                    ),
+                    child: const Text('使用'),
+                  )
+                else
+                  const SizedBox.shrink(),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
 
   void _showCharacterDialog(BuildContext context, WidgetRef ref) {
     final player = ref.read(gameProvider).player;
