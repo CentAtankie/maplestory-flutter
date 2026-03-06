@@ -1,4 +1,4 @@
-import '../game/models/player.dart';
+import 'player.dart';
 
 /// 邮件附件类型
 enum MailAttachmentType {
