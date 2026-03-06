@@ -15,8 +15,7 @@ class CharacterDialog extends ConsumerStatefulWidget {
 class _CharacterDialogState extends ConsumerState<CharacterDialog> {
   @override
   Widget build(BuildContext context) {
-    final gameData = ref.watch(gameProvider);
-    final player = gameData.player;
+    final player = ref.watch(gameProvider).player;
 
     return AlertDialog(
       backgroundColor: const Color(0xFF1A1A2E),
@@ -41,7 +40,7 @@ class _CharacterDialogState extends ConsumerState<CharacterDialog> {
               const SizedBox(height: 8),
               const Text('⚔️ 已装备', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
               const SizedBox(height: 12),
-              _buildEquipmentList(gameData),
+              _buildEquipmentList(player),
             ],
           ),
         ),
@@ -56,6 +55,12 @@ class _CharacterDialogState extends ConsumerState<CharacterDialog> {
     final equipDex = player.equipment.values.where((e) => e != null).fold(0, (s, e) => s + (e!.dex));
     final equipInt = player.equipment.values.where((e) => e != null).fold(0, (s, e) => s + (e!.intBonus));
     final equipLuk = player.equipment.values.where((e) => e != null).fold(0, (s, e) => s + (e!.luk));
+    
+    // 计算总属性
+    final totalStr = player.stats.str + equipStr;
+    final totalDex = player.stats.dex + equipDex;
+    final totalInt = player.stats.intStat + equipInt;
+    final totalLuk = player.stats.luk + equipLuk;
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -86,10 +91,10 @@ class _CharacterDialogState extends ConsumerState<CharacterDialog> {
             ],
           ),
           const SizedBox(height: 12),
-          _buildStatRow('💪 力量', player.stats.str, equipStr, player.getStr()),
-          _buildStatRow('🏃 敏捷', player.stats.dex, equipDex, player.getDex()),
-          _buildStatRow('🧠 智力', player.stats.intStat, equipInt, player.getIntStat()),
-          _buildStatRow('🍀 运气', player.stats.luk, equipLuk, player.getLuk()),
+          _buildStatRow('💪 力量', player.stats.str, equipStr, totalStr),
+          _buildStatRow('🏃 敏捷', player.stats.dex, equipDex, totalDex),
+          _buildStatRow('🧠 智力', player.stats.intStat, equipInt, totalInt),
+          _buildStatRow('🍀 运气', player.stats.luk, equipLuk, totalLuk),
           const Divider(color: Colors.white24),
           _buildSimpleStatRow('⚔️ 攻击', player.getAtk()),
           _buildSimpleStatRow('🛡️ 防御', player.getDef()),
@@ -132,8 +137,7 @@ class _CharacterDialogState extends ConsumerState<CharacterDialog> {
     );
   }
 
-  Widget _buildEquipmentList(GameData gameData) {
-    final player = gameData.player;
+  Widget _buildEquipmentList(Player player) {
     final slots = [
       (EquipmentSlot.weapon, '🗡️', '武器'),
       (EquipmentSlot.helmet, '🪖', '头盔'),
@@ -147,12 +151,12 @@ class _CharacterDialogState extends ConsumerState<CharacterDialog> {
     return Column(
       children: slots.map((slot) {
         final equip = player.equipment[slot.$1];
-        return _buildEquipmentSlot(gameData, slot.$1, slot.$2, slot.$3, equip);
+        return _buildEquipmentSlot(slot.$1, slot.$2, slot.$3, equip);
       }).toList(),
     );
   }
 
-  Widget _buildEquipmentSlot(GameData gameData, EquipmentSlot slot, String emoji, String name, Equipment? equip) {
+  Widget _buildEquipmentSlot(EquipmentSlot slot, String emoji, String name, Equipment? equip) {
     return Card(
       color: equip != null ? const Color(0xFF533483) : const Color(0xFF0F3460),
       margin: const EdgeInsets.only(bottom: 8),
@@ -175,7 +179,7 @@ class _CharacterDialogState extends ConsumerState<CharacterDialog> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   IconButton(
-                    onPressed: () => _showEquipmentDetail(context, gameData, equip),
+                    onPressed: () => _showEquipmentDetail(context, equip),
                     icon: const Icon(Icons.info, color: Colors.blue),
                   ),
                   ElevatedButton(
@@ -204,13 +208,12 @@ class _CharacterDialogState extends ConsumerState<CharacterDialog> {
     final notifier = ref.read(gameProvider.notifier);
     final success = notifier.unequipItem(slot);
     if (success) {
-      // 强制刷新
       setState(() {});
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('📦 装备已卸下'), backgroundColor: Colors.green));
     }
   }
 
-  void _showEquipmentDetail(BuildContext context, GameData gameData, Equipment equip) {
+  void _showEquipmentDetail(BuildContext context, Equipment equip) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -301,6 +304,24 @@ class _CharacterDialogState extends ConsumerState<CharacterDialog> {
       case Job.thief: return '🗡️';
       case Job.pirate: return '⚓';
       default: return '🙂';
+    }
+  }
+  
+  Color _getGradeColor(PotentialGrade grade) {
+    switch (grade) {
+      case PotentialGrade.rare: return Colors.blue;
+      case PotentialGrade.epic: return Colors.purple;
+      case PotentialGrade.unique: return Colors.green;
+      default: return Colors.grey;
+    }
+  }
+
+  String _getGradeName(PotentialGrade grade) {
+    switch (grade) {
+      case PotentialGrade.rare: return '稀有';
+      case PotentialGrade.epic: return '史诗';
+      case PotentialGrade.unique: return '传说';
+      default: return '普通';
     }
   }
 }
