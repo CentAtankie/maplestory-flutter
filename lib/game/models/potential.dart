@@ -8,6 +8,28 @@ enum PotentialGrade {
   unique,   // 绿色 - S级 (1条SS + 2条S)
 }
 
+/// PotentialGrade 扩展方法
+extension PotentialGradeExtension on PotentialGrade {
+  /// 获取潜能颜色
+  String get gradeColor {
+    switch (this) {
+      case PotentialGrade.none: return '#808080';
+      case PotentialGrade.rare: return '#9B59B6'; // 紫色
+      case PotentialGrade.epic: return '#F39C12'; // 黄色
+      case PotentialGrade.unique: return '#27AE60'; // 绿色
+    }
+  }
+
+  String get gradeName {
+    switch (this) {
+      case PotentialGrade.none: return '无潜能';
+      case PotentialGrade.rare: return '稀有(A)';
+      case PotentialGrade.epic: return '史诗(S)';
+      case PotentialGrade.unique: return '传说(SS)';
+    }
+  }
+}
+
 /// 潜能属性类型
 enum PotentialType {
   str,      // 力量
@@ -183,22 +205,9 @@ class EquipmentPotential {
     }
   }
 
-  /// 获取潜能颜色
-  String get gradeColor {
-    switch (grade) {
-      case PotentialGrade.none: return '#808080';
-      case PotentialGrade.rare: return '#9B59B6'; // 紫色
-      case PotentialGrade.epic: return '#F39C12'; // 黄色
-      case PotentialGrade.unique: return '#27AE60'; // 绿色
-    }
-  }
+  /// 获取潜能颜色 (使用扩展方法)
+  String get gradeColor => grade.gradeColor;
 
-  String get gradeName {
-    switch (grade) {
-      case PotentialGrade.none: return '无潜能';
-      case PotentialGrade.rare: return '稀有(A)';
-      case PotentialGrade.epic: return '史诗(S)';
-      case PotentialGrade.unique: return '传说(SS)';
-    }
-  }
+  /// 获取潜能名称 (使用扩展方法)
+  String get gradeName => grade.gradeName;
 }
