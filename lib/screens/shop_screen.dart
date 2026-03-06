@@ -288,6 +288,8 @@ class ShopScreen extends ConsumerWidget {
         return Colors.orange;
       case ItemType.material:
         return Colors.blue;
+      case ItemType.special:
+        return Colors.amber;
     }
   }
 
