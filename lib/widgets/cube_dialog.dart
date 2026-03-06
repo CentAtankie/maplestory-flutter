@@ -476,15 +476,25 @@ class _CubeDialogState extends ConsumerState<CubeDialog> {
 /// 选择装备使用魔方的对话框
 class CubeEquipmentSelector extends ConsumerWidget {
   final String cubeType;
+  final Equipment? initialEquipment;
 
   const CubeEquipmentSelector({
     super.key,
     required this.cubeType,
+    this.initialEquipment,
   });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final player = ref.watch(gameProvider).player;
+    
+    // 如果有初始装备，直接使用
+    if (initialEquipment != null) {
+      return CubeDialog(
+        equipment: initialEquipment!,
+        cubeType: cubeType,
+      );
+    }
     
     // 获取已装备的装备
     final equippedItems = player.equipment.values
