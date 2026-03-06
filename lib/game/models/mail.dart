@@ -11,6 +11,7 @@ enum MailAttachmentType {
 class MailAttachment {
   final MailAttachmentType type;
   final String? itemId;      // 物品ID（物品类型）
+  final String? equipmentId; // 装备类型ID（用于生成装备实例）
   final String? instanceId;  // 装备实例ID（装备类型）
   final int? count;          // 数量
   final int? meso;           // 金币数量
@@ -18,6 +19,7 @@ class MailAttachment {
   MailAttachment({
     required this.type,
     this.itemId,
+    this.equipmentId,
     this.instanceId,
     this.count,
     this.meso,
@@ -40,11 +42,11 @@ class MailAttachment {
     );
   }
 
-  /// 创建装备附件
-  factory MailAttachment.equipment(String instanceId) {
+  /// 创建装备附件（通过装备ID生成实例）
+  factory MailAttachment.equipment(String equipmentId) {
     return MailAttachment(
       type: MailAttachmentType.equipment,
-      instanceId: instanceId,
+      equipmentId: equipmentId,
     );
   }
 }
@@ -124,15 +126,33 @@ class MailTemplates {
 🔷 高级神奇魔方 × 100
 💎 超级神奇魔方 × 100
 
-使用魔方可以重塑装备潜能，获得更强大的属性加成！
+🎁 1级新手装备一套：
+• 🪖 冒险家头盔
+• 👕 冒险家铠甲
+• 👖 冒险家护腿
+• 👢 冒险家战靴
+• 🧤 冒险家手套
+• ⚔️ 冒险家之剑
+• 🧣 冒险家披风
+
+记得打开邮件领取附件！
 
 祝你游戏愉快！''',
       sender: '冒险岛管理员',
       sentAt: DateTime.now(),
       attachments: [
+        // 魔方
         MailAttachment.item('cube_normal', 100),
         MailAttachment.item('cube_advanced', 100),
         MailAttachment.item('cube_super', 100),
+        // 1级装备
+        MailAttachment.equipment('gift_lvl1_helmet'),
+        MailAttachment.equipment('gift_lvl1_armor'),
+        MailAttachment.equipment('gift_lvl1_pants'),
+        MailAttachment.equipment('gift_lvl1_shoes'),
+        MailAttachment.equipment('gift_lvl1_gloves'),
+        MailAttachment.equipment('gift_lvl1_weapon'),
+        MailAttachment.equipment('gift_lvl1_cape'),
       ],
     );
   }
