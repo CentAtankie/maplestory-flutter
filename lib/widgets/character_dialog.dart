@@ -15,34 +15,44 @@ class CharacterDialog extends ConsumerStatefulWidget {
 class _CharacterDialogState extends ConsumerState<CharacterDialog> {
   @override
   Widget build(BuildContext context) {
-    final player = ref.watch(gameProvider).player;
-
     return AlertDialog(
       backgroundColor: const Color(0xFF1A1A2E),
       title: Row(
         children: [
           const Text('👤 角色', style: TextStyle(color: Colors.white)),
           const Spacer(),
-          Text('${player.job.displayName} Lv.${player.stats.level}', 
-               style: TextStyle(color: _getJobColor(player.job), fontSize: 14)),
+          // 使用 Consumer 监听等级变化
+          Consumer(
+            builder: (context, ref, child) {
+              final player = ref.watch(gameProvider).player;
+              return Text('${player.job.displayName} Lv.${player.stats.level}', 
+                   style: TextStyle(color: _getJobColor(player.job), fontSize: 14));
+            }
+          ),
         ],
       ),
       content: SizedBox(
         width: 350,
         height: 500,
-        child: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildCharacterInfo(player),
-              const SizedBox(height: 16),
-              const Divider(color: Colors.white24),
-              const SizedBox(height: 8),
-              const Text('⚔️ 已装备', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 12),
-              _buildEquipmentList(player),
-            ],
-          ),
+        child: StatefulBuilder(
+          builder: (context, setDialogState) {
+            // 每次重建都获取最新 player
+            final player = ref.watch(gameProvider).player;
+            return SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildCharacterInfo(player),
+                  const SizedBox(height: 16),
+                  const Divider(color: Colors.white24),
+                  const SizedBox(height: 8),
+                  const Text('⚔️ 已装备', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 12),
+                  _buildEquipmentList(player, setDialogState),
+                ],
+              ),
+            );
+          }
         ),
       ),
       actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('关闭'))],
@@ -137,7 +147,7 @@ class _CharacterDialogState extends ConsumerState<CharacterDialog> {
     );
   }
 
-  Widget _buildEquipmentList(Player player) {
+  Widget _buildEquipmentList(Player player, StateSetter setDialogState) {
     final slots = [
       (EquipmentSlot.weapon, '🗡️', '武器'),
       (EquipmentSlot.helmet, '🪖', '头盔'),
@@ -151,12 +161,12 @@ class _CharacterDialogState extends ConsumerState<CharacterDialog> {
     return Column(
       children: slots.map((slot) {
         final equip = player.equipment[slot.$1];
-        return _buildEquipmentSlot(slot.$1, slot.$2, slot.$3, equip);
+        return _buildEquipmentSlot(slot.$1, slot.$2, slot.$3, equip, setDialogState);
       }).toList(),
     );
   }
 
-  Widget _buildEquipmentSlot(EquipmentSlot slot, String emoji, String name, Equipment? equip) {
+  Widget _buildEquipmentSlot(EquipmentSlot slot, String emoji, String name, Equipment? equip, StateSetter setDialogState) {
     return Card(
       color: equip != null ? const Color(0xFF533483) : const Color(0xFF0F3460),
       margin: const EdgeInsets.only(bottom: 8),
@@ -183,7 +193,7 @@ class _CharacterDialogState extends ConsumerState<CharacterDialog> {
                     icon: const Icon(Icons.info, color: Colors.blue),
                   ),
                   ElevatedButton(
-                    onPressed: () => _unequip(slot),
+                    onPressed: () => _unequip(slot, setDialogState),
                     style: ElevatedButton.styleFrom(backgroundColor: Colors.orange, foregroundColor: Colors.white),
                     child: const Text('卸下'),
                   ),
@@ -204,11 +214,11 @@ class _CharacterDialogState extends ConsumerState<CharacterDialog> {
     );
   }
 
-  void _unequip(EquipmentSlot slot) {
+  void _unequip(EquipmentSlot slot, StateSetter setDialogState) {
     final notifier = ref.read(gameProvider.notifier);
     final success = notifier.unequipItem(slot);
     if (success) {
-      setState(() {});
+      setDialogState(() {});
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('📦 装备已卸下'), backgroundColor: Colors.green));
     }
   }
