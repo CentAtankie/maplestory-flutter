@@ -437,6 +437,7 @@ class MailAttachmentAdapter extends TypeAdapter<MailAttachment> {
     return MailAttachment(
       type: MailAttachmentType.values[reader.readInt()],
       itemId: reader.readString(),
+      equipmentId: reader.readString(),
       instanceId: reader.readString(),
       count: reader.readInt(),
       meso: reader.readInt(),
@@ -447,6 +448,7 @@ class MailAttachmentAdapter extends TypeAdapter<MailAttachment> {
   void write(BinaryWriter writer, MailAttachment obj) {
     writer.writeInt(obj.type.index);
     writer.writeString(obj.itemId ?? '');
+    writer.writeString(obj.equipmentId ?? '');
     writer.writeString(obj.instanceId ?? '');
     writer.writeInt(obj.count ?? 0);
     writer.writeInt(obj.meso ?? 0);
