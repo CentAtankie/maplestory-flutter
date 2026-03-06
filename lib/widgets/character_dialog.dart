@@ -131,22 +131,21 @@ class _CharacterDialogState extends ConsumerState<CharacterDialog> {
           ),
           const SizedBox(height: 12),
           // 属性
-          _buildStatRow('💪 力量', player.stats.str, player.getStr()),
-          _buildStatRow('🏃 敏捷', player.stats.dex, player.getDex()),
-          _buildStatRow('🧠 智力', player.stats.intStat, player.getIntStat()),
-          _buildStatRow('🍀 运气', player.stats.luk, player.getLuk()),
+          _buildStatRow('💪 力量', player.stats.str),
+          _buildStatRow('🏃 敏捷', player.stats.dex),
+          _buildStatRow('🧠 智力', player.stats.intStat),
+          _buildStatRow('🍀 运气', player.stats.luk),
           const Divider(color: Colors.white24),
-          _buildStatRow('⚔️ 攻击', 0, player.getAtk()),
-          _buildStatRow('🛡️ 防御', 0, player.getDef()),
-          _buildStatRow('💥 暴击', 0, player.getCritRate().toInt(), suffix: '%'),
-          _buildStatRow('💨 闪避', 0, player.getAvoidRate().toInt(), suffix: '%'),
+          _buildStatRow('⚔️ 攻击', player.getAtk()),
+          _buildStatRow('🛡️ 防御', player.getDef()),
+          _buildStatRow('💥 暴击', player.getCritRate().toInt(), suffix: '%'),
+          _buildStatRow('💨 闪避', player.getAvoidRate().toInt(), suffix: '%'),
         ],
       ),
     );
   }
 
-  Widget _buildStatRow(String label, int base, int total, {String suffix = ''}) {
-    final isBuffed = total > base;
+  Widget _buildStatRow(String label, int value, {String suffix = ''}) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
@@ -156,17 +155,10 @@ class _CharacterDialogState extends ConsumerState<CharacterDialog> {
             style: const TextStyle(color: Colors.white70, fontSize: 14),
           ),
           const Spacer(),
-          if (base > 0) ...[
-            Text(
-              '$base',
-              style: const TextStyle(color: Colors.white54, fontSize: 14),
-            ),
-            const Text(' → ', style: TextStyle(color: Colors.white54)),
-          ],
           Text(
-            '$total$suffix',
-            style: TextStyle(
-              color: isBuffed ? Colors.green : Colors.white,
+            '$value$suffix',
+            style: const TextStyle(
+              color: Colors.white,
               fontSize: 14,
               fontWeight: FontWeight.bold,
             ),
@@ -253,23 +245,50 @@ class _CharacterDialogState extends ConsumerState<CharacterDialog> {
 
   /// 构建潜能预览
   Widget _buildPotentialPreview(EquipmentPotential potential) {
+    final gradeColor = _getGradeColor(potential.grade);
     return Container(
       margin: const EdgeInsets.only(top: 4),
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: potential.grade.gradeColor.withOpacity(0.2),
+        color: gradeColor.withOpacity(0.2),
         borderRadius: BorderRadius.circular(4),
-        border: Border.all(color: potential.grade.gradeColor.withOpacity(0.5)),
+        border: Border.all(color: gradeColor.withOpacity(0.5)),
       ),
       child: Text(
-        '${potential.grade.gradeName} ${potential.lines.length}条',
+        '${_getGradeName(potential.grade)} 潜能',
         style: TextStyle(
-          color: potential.grade.gradeColor,
+          color: gradeColor,
           fontSize: 10,
           fontWeight: FontWeight.bold,
         ),
       ),
     );
+  }
+
+  Color _getGradeColor(PotentialGrade grade) {
+    switch (grade) {
+      case PotentialGrade.rare:
+        return Colors.blue;
+      case PotentialGrade.epic:
+        return Colors.purple;
+      case PotentialGrade.unique:
+        return Colors.green;
+      default:
+        return Colors.grey;
+    }
+  }
+
+  String _getGradeName(PotentialGrade grade) {
+    switch (grade) {
+      case PotentialGrade.rare:
+        return '稀有';
+      case PotentialGrade.epic:
+        return '史诗';
+      case PotentialGrade.unique:
+        return '传说';
+      default:
+        return '普通';
+    }
   }
 
   /// 显示装备详情
@@ -395,41 +414,7 @@ class EquipmentDetailDialog extends StatelessWidget {
               
               // 潜能属性
               if (equipment.potential != null) ...[
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: equipment.potential!.grade.gradeColor.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(
-                      color: equipment.potential!.grade.gradeColor.withOpacity(0.5),
-                    ),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Text(
-                            '✨ ${equipment.potential!.grade.gradeName}潜能',
-                            style: TextStyle(
-                              color: equipment.potential!.grade.gradeColor,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 16,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      ...equipment.potential!.lines.map((line) => Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 2),
-                        child: Text(
-                          '• ${line.description}',
-                          style: const TextStyle(color: Colors.white70),
-                        ),
-                      )),
-                    ],
-                  ),
-                ),
+                _buildPotentialSection(equipment.potential!),
                 const SizedBox(height: 16),
               ],
               
@@ -474,10 +459,76 @@ class EquipmentDetailDialog extends StatelessWidget {
     );
   }
 
+  Widget _buildPotentialSection(EquipmentPotential potential) {
+    final gradeColor = _getGradeColor(potential.grade);
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: gradeColor.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: gradeColor.withOpacity(0.5)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Text(
+                '✨ ${_getGradeName(potential.grade)}潜能',
+                style: TextStyle(
+                  color: gradeColor,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          ...potential.stats.map((stat) => Padding(
+            padding: const EdgeInsets.symmetric(vertical: 2),
+            child: Text(
+              '• ${stat.displayText}',
+              style: const TextStyle(color: Colors.white70),
+            ),
+          )),
+        ],
+      ),
+    );
+  }
+
+  Color _getGradeColor(PotentialGrade grade) {
+    switch (grade) {
+      case PotentialGrade.rare:
+        return Colors.blue;
+      case PotentialGrade.epic:
+        return Colors.purple;
+      case PotentialGrade.unique:
+        return Colors.green;
+      default:
+        return Colors.grey;
+    }
+  }
+
+  String _getGradeName(PotentialGrade grade) {
+    switch (grade) {
+      case PotentialGrade.rare:
+        return '稀有';
+      case PotentialGrade.epic:
+        return '史诗';
+      case PotentialGrade.unique:
+        return '传说';
+      default:
+        return '普通';
+    }
+  }
+
   void _showCubeSelector(BuildContext context) {
     showDialog(
       context: context,
-      builder: (context) => CubeEquipmentSelector(initialEquipment: equipment),
+      builder: (context) => CubeEquipmentSelector(
+        cubeType: 'normal',
+        initialEquipment: equipment,
+      ),
     );
   }
 }
