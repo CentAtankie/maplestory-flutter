@@ -11,6 +11,7 @@ enum InventoryCategory {
   all,       // 全部
   equipment, // 装备
   consumable,// 消耗品
+  special,   // 特殊（魔方）
   material,  // 材料/其他
 }
 
@@ -231,6 +232,7 @@ class _InventoryDialogState extends ConsumerState<InventoryDialog> {
       InventoryCategory.all: [],
       InventoryCategory.equipment: [],
       InventoryCategory.consumable: [],
+      InventoryCategory.special: [],
       InventoryCategory.material: [],
     };
 
@@ -264,6 +266,8 @@ class _InventoryDialogState extends ConsumerState<InventoryDialog> {
       if (item != null) {
         if (item.type == ItemType.consumable || item.type == ItemType.scroll) {
           result[InventoryCategory.consumable]!.add(entry);
+        } else if (item.type == ItemType.special) {
+          result[InventoryCategory.special]!.add(entry);
         } else if (item.type == ItemType.material) {
           result[InventoryCategory.material]!.add(entry);
         }
@@ -293,6 +297,7 @@ class _InventoryDialogState extends ConsumerState<InventoryDialog> {
           _buildTab('全部', InventoryCategory.all),
           _buildTab('装备', InventoryCategory.equipment),
           _buildTab('消耗', InventoryCategory.consumable),
+          _buildTab('特殊', InventoryCategory.special),
           _buildTab('其他', InventoryCategory.material),
         ],
       ),
