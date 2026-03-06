@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/game_provider.dart';
 import '../game/models/player.dart';
 import '../widgets/mail_dialog.dart';
+import '../widgets/character_dialog.dart';
 
 class StatusBar extends ConsumerWidget {
   const StatusBar({super.key});
@@ -86,6 +87,20 @@ class StatusBar extends ConsumerWidget {
                         ),
                       ),
                     ],
+                  ),
+                ),
+                
+                // 角色按钮
+                IconButton(
+                  onPressed: () {
+                    showDialog(
+                      context: context,
+                      builder: (context) => const CharacterDialog(),
+                    );
+                  },
+                  icon: const Icon(
+                    Icons.person,
+                    color: Colors.white70,
                   ),
                 ),
                 
