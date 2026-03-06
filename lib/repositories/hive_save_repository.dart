@@ -70,18 +70,25 @@ class HiveSaveRepository implements SaveRepository {
   Future<GameData?> loadGame() async {
     if (_box == null) await init();
     
-    final saveData = _box!.get(_saveKey) as _GameSaveData?;
-    if (saveData == null) return null;
-    
-    return GameData(
-      player: saveData.player,
-      currentMap: GameMaps.getMap(saveData.currentMapId),
-      gameState: GameState.exploring,
-      logs: saveData.logs,
-      random: Random(),
-      shopCategory: ShopCategory.all,
-      mails: saveData.mails,
-    );
+    try {
+      final saveData = _box!.get(_saveKey) as _GameSaveData?;
+      if (saveData == null) return null;
+      
+      return GameData(
+        player: saveData.player,
+        currentMap: GameMaps.getMap(saveData.currentMapId),
+        gameState: GameState.exploring,
+        logs: saveData.logs,
+        random: Random(),
+        shopCategory: ShopCategory.all,
+        mails: saveData.mails,
+      );
+    } catch (e) {
+      // 旧存档格式不兼容，删除旧存档
+      print('存档格式不兼容，重置存档: $e');
+      await _box!.delete(_saveKey);
+      return null;
+    }
   }
   
   @override
