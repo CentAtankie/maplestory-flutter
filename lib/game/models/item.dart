@@ -7,6 +7,7 @@ enum ItemType {
   scroll,      // 卷轴
   equipment,   // 装备
   material,    // 材料
+  special,     // 特殊（魔方等）
 }
 
 /// 物品效果
@@ -128,7 +129,7 @@ class ShopDatabase {
       id: 'cube_normal',
       name: '神奇魔方',
       emoji: '🎲',
-      type: ItemType.consumable,
+      type: ItemType.special,
       description: '重塑装备潜能属性',
       price: 10000,
     ),
@@ -137,7 +138,7 @@ class ShopDatabase {
       id: 'cube_advanced',
       name: '高级神奇魔方',
       emoji: '🔷',
-      type: ItemType.consumable,
+      type: ItemType.special,
       description: '重塑潜能，30%概率升级为黄色(史诗)',
       price: 50000,
     ),
@@ -146,7 +147,7 @@ class ShopDatabase {
       id: 'cube_super',
       name: '超级神奇魔方',
       emoji: '💎',
-      type: ItemType.consumable,
+      type: ItemType.special,
       description: '重塑潜能，20%概率升级为绿色(传说)',
       price: 200000,
     ),
