@@ -208,7 +208,7 @@ class _MailDialogState extends ConsumerState<MailDialog> {
           ],
         ),
         const Divider(color: Colors.white24),
-        // 内容 - 限制最大高度
+        // 内容
         Flexible(
           child: SingleChildScrollView(
             child: Text(
@@ -227,13 +227,47 @@ class _MailDialogState extends ConsumerState<MailDialog> {
               fontWeight: FontWeight.bold,
             ),
           ),
-          const SizedBox(height: 8),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: mail.attachments.map((attachment) {
-              return _buildAttachmentItem(attachment);
-            }).toList(),
+          const SizedBox(height: 12),
+          // 显示大礼包
+          InkWell(
+            onTap: () => _showGiftDetail(mail),
+            child: Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: const Color(0xFF533483),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.amber.withOpacity(0.5)),
+              ),
+              child: Row(
+                children: [
+                  const Text('🎁', style: TextStyle(fontSize: 32)),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          '新手冒险大礼包',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        Text(
+                          '共 ${mail.attachments.length} 件物品',
+                          style: const TextStyle(
+                            color: Colors.white70,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const Icon(Icons.chevron_right, color: Colors.white54),
+                ],
+              ),
+            ),
           ),
           const SizedBox(height: 12),
           // 领取按钮
@@ -291,7 +325,109 @@ class _MailDialogState extends ConsumerState<MailDialog> {
     );
   }
 
-  /// 构建附件项
+  /// 显示礼包详情
+  void _showGiftDetail(GameMail mail) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xFF1A1A2E),
+        title: const Row(
+          children: [
+            Text('🎁', style: TextStyle(fontSize: 28)),
+            SizedBox(width: 12),
+            Text(
+              '礼包详情',
+              style: TextStyle(color: Colors.white),
+            ),
+          ],
+        ),
+        content: SizedBox(
+          width: double.maxFinite,
+          height: 400,
+          child: Column(
+            children: [
+              const Text(
+                '礼包内含以下物品：',
+                style: TextStyle(color: Colors.white70),
+              ),
+              const SizedBox(height: 12),
+              Expanded(
+                child: ListView.builder(
+                  itemCount: mail.attachments.length,
+                  itemBuilder: (context, index) {
+                    return _buildAttachmentDetailItem(mail.attachments[index]);
+                  },
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('关闭'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// 构建附件详情项
+  Widget _buildAttachmentDetailItem(MailAttachment attachment) {
+    String emoji = '📦';
+    String name = '未知物品';
+    String subtitle = '';
+
+    switch (attachment.type) {
+      case MailAttachmentType.item:
+        final item = ShopDatabase.getById(attachment.itemId ?? '');
+        if (item != null) {
+          emoji = item.emoji;
+          name = item.name;
+          subtitle = '×${attachment.count}';
+        }
+        break;
+      case MailAttachmentType.meso:
+        emoji = '💰';
+        name = '金币';
+        subtitle = '${attachment.meso}';
+        break;
+      case MailAttachmentType.equipment:
+        final equip = EquipmentDatabase.getById(attachment.equipmentId ?? '');
+        if (equip != null) {
+          emoji = equip.emoji ?? '⚔️';
+          name = equip.name;
+          subtitle = equip.stats;
+        } else {
+          emoji = '⚔️';
+          name = '装备';
+        }
+        break;
+    }
+
+    return Card(
+      color: const Color(0xFF0F3460),
+      margin: const EdgeInsets.only(bottom: 8),
+      child: ListTile(
+        leading: Text(emoji, style: const TextStyle(fontSize: 28)),
+        title: Text(
+          name,
+          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        ),
+        subtitle: subtitle.isNotEmpty
+            ? Text(
+                subtitle,
+                style: TextStyle(
+                  color: Colors.amber.withOpacity(0.8),
+                  fontSize: 12,
+                ),
+              )
+            : null,
+      ),
+    );
+  }
+
+  /// 构建附件项（旧方法，保留但不使用）
   Widget _buildAttachmentItem(MailAttachment attachment) {
     String emoji = '📦';
     String name = '未知物品';
