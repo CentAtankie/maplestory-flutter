@@ -996,7 +996,16 @@ class GameNotifier extends StateNotifier<GameData> {
           }
           break;
         case MailAttachmentType.equipment:
-          if (attachment.instanceId != null) {
+          if (attachment.equipmentId != null) {
+            // 通过装备ID生成装备实例
+            final equipment = EquipmentDatabase.getById(attachment.equipmentId!);
+            if (equipment != null) {
+              final equipInstance = equipment.copyWithInstanceId();
+              final instanceId = equipInstance.instanceId;
+              _equipmentInstances[instanceId] = equipInstance;
+              newInventory.add(instanceId);
+            }
+          } else if (attachment.instanceId != null) {
             newInventory.add(attachment.instanceId!);
           }
           break;
