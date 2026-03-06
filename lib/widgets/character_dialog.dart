@@ -5,7 +5,6 @@ import '../game/models/player.dart';
 import '../game/models/potential.dart';
 import 'cube_dialog.dart';
 
-/// 角色面板对话框
 class CharacterDialog extends ConsumerStatefulWidget {
   const CharacterDialog({super.key});
 
@@ -16,160 +15,125 @@ class CharacterDialog extends ConsumerStatefulWidget {
 class _CharacterDialogState extends ConsumerState<CharacterDialog> {
   @override
   Widget build(BuildContext context) {
-    final player = ref.watch(gameProvider).player;
+    final gameData = ref.watch(gameProvider);
+    final player = gameData.player;
 
     return AlertDialog(
       backgroundColor: const Color(0xFF1A1A2E),
       title: Row(
         children: [
-          const Text(
-            '👤 角色',
-            style: TextStyle(color: Colors.white),
-          ),
+          const Text('👤 角色', style: TextStyle(color: Colors.white)),
           const Spacer(),
-          Text(
-            '${player.job.displayName} Lv.${player.stats.level}',
-            style: TextStyle(
-              color: _getJobColor(player.job),
-              fontSize: 14,
-            ),
-          ),
+          Text('${player.job.displayName} Lv.${player.stats.level}', 
+               style: TextStyle(color: _getJobColor(player.job), fontSize: 14)),
         ],
       ),
       content: SizedBox(
-        width: double.maxFinite,
+        width: 350,
         height: 500,
         child: SingleChildScrollView(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // 角色信息
               _buildCharacterInfo(player),
               const SizedBox(height: 16),
               const Divider(color: Colors.white24),
               const SizedBox(height: 8),
-              
-              // 装备栏
-              const Text(
-                '⚔️ 已装备',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
+              const Text('⚔️ 已装备', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
               const SizedBox(height: 12),
-              _buildEquipmentList(player),
+              _buildEquipmentList(gameData),
             ],
           ),
         ),
       ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text('关闭'),
-        ),
-      ],
+      actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('关闭'))],
     );
   }
 
-  /// 构建角色信息
   Widget _buildCharacterInfo(Player player) {
+    // 计算装备加成
+    final equipStr = player.equipment.values.where((e) => e != null).fold(0, (s, e) => s + (e!.str));
+    final equipDex = player.equipment.values.where((e) => e != null).fold(0, (s, e) => s + (e!.dex));
+    final equipInt = player.equipment.values.where((e) => e != null).fold(0, (s, e) => s + (e!.intBonus));
+    final equipLuk = player.equipment.values.where((e) => e != null).fold(0, (s, e) => s + (e!.luk));
+
     return Container(
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: const Color(0xFF0F3460),
-        borderRadius: BorderRadius.circular(12),
-      ),
+      decoration: BoxDecoration(color: const Color(0xFF0F3460), borderRadius: BorderRadius.circular(12)),
       child: Column(
         children: [
-          // 头像和名字
           Row(
             children: [
               Container(
-                width: 64,
-                height: 64,
+                width: 64, height: 64,
                 decoration: BoxDecoration(
                   color: _getJobColor(player.job).withOpacity(0.3),
                   borderRadius: BorderRadius.circular(32),
-                  border: Border.all(
-                    color: _getJobColor(player.job),
-                    width: 2,
-                  ),
+                  border: Border.all(color: _getJobColor(player.job), width: 2),
                 ),
-                child: Center(
-                  child: Text(
-                    _getJobEmoji(player.job),
-                    style: const TextStyle(fontSize: 32),
-                  ),
-                ),
+                child: Center(child: Text(_getJobEmoji(player.job), style: const TextStyle(fontSize: 32))),
               ),
               const SizedBox(width: 16),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      player.name,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    Text(
-                      'AP: ${player.stats.ap}',
-                      style: const TextStyle(
-                        color: Colors.amber,
-                        fontSize: 14,
-                      ),
-                    ),
+                    Text(player.name, style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)),
+                    Text('AP: ${player.stats.ap}', style: const TextStyle(color: Colors.amber, fontSize: 14)),
                   ],
                 ),
               ),
             ],
           ),
           const SizedBox(height: 12),
-          // 属性
-          _buildStatRow('💪 力量', player.stats.str),
-          _buildStatRow('🏃 敏捷', player.stats.dex),
-          _buildStatRow('🧠 智力', player.stats.intStat),
-          _buildStatRow('🍀 运气', player.stats.luk),
+          _buildStatRow('💪 力量', player.stats.str, equipStr, player.getStr()),
+          _buildStatRow('🏃 敏捷', player.stats.dex, equipDex, player.getDex()),
+          _buildStatRow('🧠 智力', player.stats.intStat, equipInt, player.getIntStat()),
+          _buildStatRow('🍀 运气', player.stats.luk, equipLuk, player.getLuk()),
           const Divider(color: Colors.white24),
-          _buildStatRow('⚔️ 攻击', player.getAtk()),
-          _buildStatRow('🛡️ 防御', player.getDef()),
-          _buildStatRow('💥 暴击', player.getCritRate().toInt(), suffix: '%'),
-          _buildStatRow('💨 闪避', player.getAvoidRate().toInt(), suffix: '%'),
+          _buildSimpleStatRow('⚔️ 攻击', player.getAtk()),
+          _buildSimpleStatRow('🛡️ 防御', player.getDef()),
+          _buildSimpleStatRow('💥 暴击', player.getCritRate().toInt(), suffix: '%'),
+          _buildSimpleStatRow('💨 闪避', player.getAvoidRate().toInt(), suffix: '%'),
         ],
       ),
     );
   }
 
-  Widget _buildStatRow(String label, int value, {String suffix = ''}) {
+  Widget _buildStatRow(String label, int base, int equipBonus, int total) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
         children: [
-          Text(
-            label,
-            style: const TextStyle(color: Colors.white70, fontSize: 14),
-          ),
+          Text(label, style: const TextStyle(color: Colors.white70, fontSize: 14)),
           const Spacer(),
-          Text(
-            '$value$suffix',
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 14,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
+          if (equipBonus > 0)
+            Text('$base', style: const TextStyle(color: Colors.white54, fontSize: 14)),
+          if (equipBonus > 0)
+            Text(' +$equipBonus', style: const TextStyle(color: Colors.green, fontSize: 14)),
+          if (equipBonus > 0)
+            const Text(' = ', style: TextStyle(color: Colors.white54)),
+          Text('$total', style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold)),
         ],
       ),
     );
   }
 
-  /// 构建装备列表
-  Widget _buildEquipmentList(Player player) {
+  Widget _buildSimpleStatRow(String label, int value, {String suffix = ''}) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        children: [
+          Text(label, style: const TextStyle(color: Colors.white70, fontSize: 14)),
+          const Spacer(),
+          Text('$value$suffix', style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEquipmentList(GameData gameData) {
+    final player = gameData.player;
     final slots = [
       (EquipmentSlot.weapon, '🗡️', '武器'),
       (EquipmentSlot.helmet, '🪖', '头盔'),
@@ -183,37 +147,26 @@ class _CharacterDialogState extends ConsumerState<CharacterDialog> {
     return Column(
       children: slots.map((slot) {
         final equip = player.equipment[slot.$1];
-        return _buildEquipmentSlot(slot.$1, slot.$2, slot.$3, equip);
+        return _buildEquipmentSlot(gameData, slot.$1, slot.$2, slot.$3, equip);
       }).toList(),
     );
   }
 
-  Widget _buildEquipmentSlot(EquipmentSlot slot, String emoji, String name, Equipment? equip) {
+  Widget _buildEquipmentSlot(GameData gameData, EquipmentSlot slot, String emoji, String name, Equipment? equip) {
     return Card(
       color: equip != null ? const Color(0xFF533483) : const Color(0xFF0F3460),
       margin: const EdgeInsets.only(bottom: 8),
       child: ListTile(
         leading: Text(equip?.emoji ?? emoji, style: const TextStyle(fontSize: 24)),
-        title: Text(
-          equip?.name ?? '$name (未装备)',
-          style: TextStyle(
-            color: equip != null ? Colors.white : Colors.white54,
-            fontWeight: equip != null ? FontWeight.bold : FontWeight.normal,
-          ),
-        ),
+        title: Text(equip?.name ?? '$name (未装备)', 
+          style: TextStyle(color: equip != null ? Colors.white : Colors.white54, 
+                          fontWeight: equip != null ? FontWeight.bold : FontWeight.normal)),
         subtitle: equip != null
             ? Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    equip.stats,
-                    style: TextStyle(
-                      color: Colors.green.withOpacity(0.8),
-                      fontSize: 12,
-                    ),
-                  ),
-                  if (equip.potential != null)
-                    _buildPotentialPreview(equip.potential!),
+                  Text(equip.stats, style: TextStyle(color: Colors.green.withOpacity(0.8), fontSize: 12)),
+                  if (equip.potential != null) _buildPotentialPreview(equip.potential!),
                 ],
               )
             : null,
@@ -221,19 +174,13 @@ class _CharacterDialogState extends ConsumerState<CharacterDialog> {
             ? Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  // 详情按钮
                   IconButton(
-                    onPressed: () => _showEquipmentDetail(equip),
+                    onPressed: () => _showEquipmentDetail(context, gameData, equip),
                     icon: const Icon(Icons.info, color: Colors.blue),
                   ),
-                  // 卸下按钮
                   ElevatedButton(
                     onPressed: () => _unequip(slot),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.orange,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(horizontal: 12),
-                    ),
+                    style: ElevatedButton.styleFrom(backgroundColor: Colors.orange, foregroundColor: Colors.white),
                     child: const Text('卸下'),
                   ),
                 ],
@@ -243,292 +190,117 @@ class _CharacterDialogState extends ConsumerState<CharacterDialog> {
     );
   }
 
-  /// 构建潜能预览
   Widget _buildPotentialPreview(EquipmentPotential potential) {
     final gradeColor = _getGradeColor(potential.grade);
     return Container(
       margin: const EdgeInsets.only(top: 4),
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: gradeColor.withOpacity(0.2),
-        borderRadius: BorderRadius.circular(4),
-        border: Border.all(color: gradeColor.withOpacity(0.5)),
-      ),
-      child: Text(
-        '${_getGradeName(potential.grade)} 潜能',
-        style: TextStyle(
-          color: gradeColor,
-          fontSize: 10,
-          fontWeight: FontWeight.bold,
-        ),
-      ),
+      decoration: BoxDecoration(color: gradeColor.withOpacity(0.2), borderRadius: BorderRadius.circular(4), border: Border.all(color: gradeColor.withOpacity(0.5))),
+      child: Text('${_getGradeName(potential.grade)} 潜能', style: TextStyle(color: gradeColor, fontSize: 10, fontWeight: FontWeight.bold)),
     );
   }
 
-  Color _getGradeColor(PotentialGrade grade) {
-    switch (grade) {
-      case PotentialGrade.rare:
-        return Colors.blue;
-      case PotentialGrade.epic:
-        return Colors.purple;
-      case PotentialGrade.unique:
-        return Colors.green;
-      default:
-        return Colors.grey;
+  void _unequip(EquipmentSlot slot) {
+    final notifier = ref.read(gameProvider.notifier);
+    final success = notifier.unequipItem(slot);
+    if (success) {
+      // 强制刷新
+      setState(() {});
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('📦 装备已卸下'), backgroundColor: Colors.green));
     }
   }
 
-  String _getGradeName(PotentialGrade grade) {
-    switch (grade) {
-      case PotentialGrade.rare:
-        return '稀有';
-      case PotentialGrade.epic:
-        return '史诗';
-      case PotentialGrade.unique:
-        return '传说';
-      default:
-        return '普通';
-    }
-  }
-
-  /// 显示装备详情
-  void _showEquipmentDetail(Equipment equip) {
+  void _showEquipmentDetail(BuildContext context, GameData gameData, Equipment equip) {
     showDialog(
       context: context,
-      builder: (context) => EquipmentDetailDialog(equipment: equip),
-    );
-  }
-
-  /// 卸下装备
-  void _unequip(EquipmentSlot slot) {
-    final success = ref.read(gameProvider.notifier).unequipItem(slot);
-    if (success) {
-      setState(() {});
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('📦 装备已卸下'),
-          backgroundColor: Colors.green,
-        ),
-      );
-    }
-  }
-
-  Color _getJobColor(Job job) {
-    switch (job) {
-      case Job.warrior:
-        return Colors.red;
-      case Job.magician:
-        return Colors.blue;
-      case Job.bowman:
-        return Colors.green;
-      case Job.thief:
-        return Colors.purple;
-      case Job.pirate:
-        return Colors.orange;
-      default:
-        return Colors.grey;
-    }
-  }
-
-  String _getJobEmoji(Job job) {
-    switch (job) {
-      case Job.warrior:
-        return '⚔️';
-      case Job.magician:
-        return '🔮';
-      case Job.bowman:
-        return '🏹';
-      case Job.thief:
-        return '🗡️';
-      case Job.pirate:
-        return '⚓';
-      default:
-        return '🙂';
-    }
-  }
-}
-
-/// 装备详情对话框
-class EquipmentDetailDialog extends StatelessWidget {
-  final Equipment equipment;
-
-  const EquipmentDetailDialog({
-    super.key,
-    required this.equipment,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return AlertDialog(
-      backgroundColor: const Color(0xFF1A1A2E),
-      title: Row(
-        children: [
-          Text(equipment.emoji ?? '⚔️', style: const TextStyle(fontSize: 28)),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              equipment.name,
-              style: const TextStyle(color: Colors.white),
-            ),
-          ),
-        ],
-      ),
-      content: SizedBox(
-        width: double.maxFinite,
-        child: SingleChildScrollView(
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xFF1A1A2E),
+        title: Row(children: [Text(equip.emoji ?? '⚔️', style: const TextStyle(fontSize: 28)), const SizedBox(width: 12), Expanded(child: Text(equip.name, style: const TextStyle(color: Colors.white)))]),
+        content: SizedBox(
+          width: 300,
           child: Column(
+            mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // 基础属性
               Container(
                 padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF0F3460),
-                  borderRadius: BorderRadius.circular(8),
-                ),
+                decoration: BoxDecoration(color: const Color(0xFF0F3460), borderRadius: BorderRadius.circular(8)),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      '📊 基础属性',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
+                    const Text('📊 基础属性', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
                     const SizedBox(height: 8),
-                    _buildStatText('攻击力', equipment.atk),
-                    _buildStatText('防御力', equipment.def),
-                    _buildStatText('力量', equipment.str),
-                    _buildStatText('敏捷', equipment.dex),
-                    _buildStatText('智力', equipment.intBonus),
-                    _buildStatText('运气', equipment.luk),
-                    if (equipment.crit != null)
-                      _buildStatText('暴击率', equipment.crit!, suffix: '%'),
-                    if (equipment.avoid != null)
-                      _buildStatText('闪避率', equipment.avoid!, suffix: '%'),
+                    if (equip.atk > 0) Text('攻击力: +${equip.atk}', style: const TextStyle(color: Colors.white70)),
+                    if (equip.def > 0) Text('防御力: +${equip.def}', style: const TextStyle(color: Colors.white70)),
+                    if (equip.str > 0) Text('力量: +${equip.str}', style: const TextStyle(color: Colors.white70)),
+                    if (equip.dex > 0) Text('敏捷: +${equip.dex}', style: const TextStyle(color: Colors.white70)),
+                    if (equip.intBonus > 0) Text('智力: +${equip.intBonus}', style: const TextStyle(color: Colors.white70)),
+                    if (equip.luk > 0) Text('运气: +${equip.luk}', style: const TextStyle(color: Colors.white70)),
                   ],
                 ),
               ),
               const SizedBox(height: 16),
-              
-              // 潜能属性
-              if (equipment.potential != null) ...[
-                _buildPotentialSection(equipment.potential!),
+              if (equip.potential != null) ...[
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(color: _getGradeColor(equip.potential!.grade).withOpacity(0.1), borderRadius: BorderRadius.circular(8), border: Border.all(color: _getGradeColor(equip.potential!.grade))),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('✨ ${_getGradeName(equip.potential!.grade)}潜能', style: TextStyle(color: _getGradeColor(equip.potential!.grade), fontWeight: FontWeight.bold)),
+                      const SizedBox(height: 8),
+                      ...equip.potential!.stats.map((s) => Text('• ${s.displayText}', style: const TextStyle(color: Colors.white70))),
+                    ],
+                  ),
+                ),
                 const SizedBox(height: 16),
               ],
-              
-              // 使用魔方按钮
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton.icon(
                   onPressed: () {
                     Navigator.pop(context);
-                    _showCubeSelector(context);
+                    _showCubeDialog(context, equip);
                   },
                   icon: const Text('🎲'),
                   label: const Text('使用魔方重塑潜能'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.purple,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                  ),
+                  style: ElevatedButton.styleFrom(backgroundColor: Colors.purple, foregroundColor: Colors.white),
                 ),
               ),
             ],
           ),
         ),
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text('关闭'),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildStatText(String label, int value, {String suffix = ''}) {
-    if (value == 0) return const SizedBox.shrink();
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 2),
-      child: Text(
-        '$label: +$value$suffix',
-        style: const TextStyle(color: Colors.white70),
+        actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('关闭'))],
       ),
     );
   }
 
-  Widget _buildPotentialSection(EquipmentPotential potential) {
-    final gradeColor = _getGradeColor(potential.grade);
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: gradeColor.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: gradeColor.withOpacity(0.5)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Text(
-                '✨ ${_getGradeName(potential.grade)}潜能',
-                style: TextStyle(
-                  color: gradeColor,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 16,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          ...potential.stats.map((stat) => Padding(
-            padding: const EdgeInsets.symmetric(vertical: 2),
-            child: Text(
-              '• ${stat.displayText}',
-              style: const TextStyle(color: Colors.white70),
-            ),
-          )),
-        ],
-      ),
-    );
-  }
-
-  Color _getGradeColor(PotentialGrade grade) {
-    switch (grade) {
-      case PotentialGrade.rare:
-        return Colors.blue;
-      case PotentialGrade.epic:
-        return Colors.purple;
-      case PotentialGrade.unique:
-        return Colors.green;
-      default:
-        return Colors.grey;
-    }
-  }
-
-  String _getGradeName(PotentialGrade grade) {
-    switch (grade) {
-      case PotentialGrade.rare:
-        return '稀有';
-      case PotentialGrade.epic:
-        return '史诗';
-      case PotentialGrade.unique:
-        return '传说';
-      default:
-        return '普通';
-    }
-  }
-
-  void _showCubeSelector(BuildContext context) {
+  void _showCubeDialog(BuildContext context, Equipment equip) {
     showDialog(
       context: context,
-      builder: (context) => CubeEquipmentSelector(
-        cubeType: 'normal',
-        initialEquipment: equipment,
-      ),
+      builder: (context) => CubeEquipmentSelector(cubeType: 'normal', initialEquipment: equip),
     );
+  }
+
+  Color _getJobColor(Job job) {
+    switch (job) {
+      case Job.warrior: return Colors.red;
+      case Job.magician: return Colors.blue;
+      case Job.bowman: return Colors.green;
+      case Job.thief: return Colors.purple;
+      case Job.pirate: return Colors.orange;
+      default: return Colors.grey;
+    }
+  }
+
+  String _getJobEmoji(Job job) {
+    switch (job) {
+      case Job.warrior: return '⚔️';
+      case Job.magician: return '🔮';
+      case Job.bowman: return '🏹';
+      case Job.thief: return '🗡️';
+      case Job.pirate: return '⚓';
+      default: return '🙂';
+    }
   }
 }
