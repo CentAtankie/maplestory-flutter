@@ -10,7 +10,7 @@ import 'save_repository.dart';
 
 /// Hive 本地存档实现
 class HiveSaveRepository implements SaveRepository {
-  static const String _boxName = 'game_saves_v2';
+  static const String _boxName = 'game_saves_v3';
   static const String _saveKey = 'current_save';
   
   Box? _box;
