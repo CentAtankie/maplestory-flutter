@@ -723,6 +723,9 @@ class GameNotifier extends StateNotifier<GameData> {
     // 将装备放回背包
     final newInventory = List<String>.from(state.player.inventory);
     newInventory.add(currentEquip.instanceId);
+    
+    // 确保装备实例在映射表中
+    _equipmentInstances[currentEquip.instanceId] = currentEquip;
 
     // 更新玩家状态
     final newPlayer = state.player.copyWith(
