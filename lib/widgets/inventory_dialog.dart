@@ -236,6 +236,12 @@ class _InventoryDialogState extends ConsumerState<InventoryDialog> {
       InventoryCategory.material: [],
     };
 
+    // 获取已装备的instanceId集合
+    final equippedInstanceIds = player.equipment.values
+        .where((e) => e != null)
+        .map((e) => e!.instanceId)
+        .toSet();
+
     // 统计物品数量
     final itemCounts = <String, int>{};
     for (final itemId in player.inventory) {
@@ -248,8 +254,11 @@ class _InventoryDialogState extends ConsumerState<InventoryDialog> {
       // 首先尝试通过instanceId获取装备实例（新系统）
       final equipInstance = ref.read(gameProvider.notifier).getEquipmentByInstanceId(itemId);
       if (equipInstance != null) {
-        result[InventoryCategory.equipment]!.add(entry);
-        result[InventoryCategory.all]!.add(entry);
+        // 检查是否已装备，已装备的不显示在背包
+        if (!equippedInstanceIds.contains(itemId)) {
+          result[InventoryCategory.equipment]!.add(entry);
+          result[InventoryCategory.all]!.add(entry);
+        }
         continue;
       }
       
