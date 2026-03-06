@@ -6,6 +6,7 @@ import '../game/models/mob.dart';
 import '../game/models/map.dart';
 import '../game/models/item.dart' hide Equipment;
 import '../game/models/potential.dart';
+import '../game/models/mail.dart';
 import '../repositories/save_repository.dart';
 import '../repositories/hive_save_repository.dart';
 
@@ -952,6 +953,84 @@ class GameNotifier extends StateNotifier<GameData> {
     }
     state = state.copyWith(logs: newLogs);
   }
+
+  // ========== 邮件系统 ==========
+
+  /// 标记邮件为已读
+  void markMailAsRead(String mailId) {
+    final newMails = state.mails.map((mail) {
+      if (mail.id == mailId) {
+        return mail.copyWith(isRead: true);
+      }
+      return mail;
+    }).toList();
+    state = state.copyWith(mails: newMails);
+  }
+
+  /// 领取邮件附件
+  bool claimMailAttachments(String mailId) {
+    final mail = state.mails.firstWhere((m) => m.id == mailId);
+    if (mail.isClaimed || mail.attachments.isEmpty) {
+      return false;
+    }
+
+    // 添加附件到背包
+    final newInventory = [...state.player.inventory];
+    for (final attachment in mail.attachments) {
+      switch (attachment.type) {
+        case MailAttachmentType.item:
+          if (attachment.itemId != null && attachment.count != null) {
+            for (int i = 0; i < attachment.count!; i++) {
+              newInventory.add(attachment.itemId!);
+            }
+          }
+          break;
+        case MailAttachmentType.meso:
+          // 金币直接加到玩家身上
+          if (attachment.meso != null) {
+            state = state.copyWith(
+              player: state.player.copyWith(
+                meso: state.player.meso + attachment.meso!,
+              ),
+            );
+          }
+          break;
+        case MailAttachmentType.equipment:
+          if (attachment.instanceId != null) {
+            newInventory.add(attachment.instanceId!);
+          }
+          break;
+      }
+    }
+
+    // 更新玩家背包和邮件状态
+    state = state.copyWith(
+      player: state.player.copyWith(inventory: newInventory),
+      mails: state.mails.map((m) {
+        if (m.id == mailId) {
+          return m.copyWith(isClaimed: true, isRead: true);
+        }
+        return m;
+      }).toList(),
+    );
+
+    addLog('📧 已领取邮件附件', LogType.success);
+    return true;
+  }
+
+  /// 删除邮件
+  void deleteMail(String mailId) {
+    final newMails = state.mails.where((m) => m.id != mailId).toList();
+    state = state.copyWith(mails: newMails);
+  }
+
+  /// 发送邮件（用于系统邮件）
+  void sendSystemMail(GameMail mail) {
+    state = state.copyWith(
+      mails: [...state.mails, mail],
+    );
+    addLog('📧 收到新邮件：${mail.title}', LogType.success);
+  }
 }
 
 // 游戏数据
@@ -963,6 +1042,7 @@ class GameData {
   final List<LogEntry> logs;
   final Random random;
   final ShopCategory shopCategory;  // 当前商店分类
+  final List<GameMail> mails;       // 邮件列表
 
   GameData({
     required this.player,
@@ -972,18 +1052,34 @@ class GameData {
     required this.logs,
     required this.random,
     this.shopCategory = ShopCategory.all,  // 默认全部
+    this.mails = const [],                 // 默认空邮件列表
   });
 
   factory GameData.initial() {
+    // 创建新玩家并发送新手邮件
+    final newPlayer = Player.create('冒险家');
+    final welcomeMails = [
+      MailTemplates.welcomeMail(),
+      MailTemplates.newPlayerGift(),
+    ];
+    
     return GameData(
-      player: Player.create('冒险家'),
+      player: newPlayer,
       currentMap: GameMaps.getMap('henesys'),
       gameState: GameState.exploring,
       currentMob: null,
       logs: [LogEntry(message: '🎮 欢迎来到冒险岛世界！')],
       random: Random(),
+      mails: welcomeMails,
     );
   }
+
+  /// 获取未读邮件数量
+  int get unreadMailCount => mails.where((m) => !m.isRead).length;
+
+  /// 获取有未领取附件的邮件数量
+  int get unclaimedAttachmentCount => 
+      mails.where((m) => m.hasUnclaimedAttachments).length;
 
   GameData copyWith({
     Player? player,
@@ -992,6 +1088,7 @@ class GameData {
     Mob? currentMob,
     List<LogEntry>? logs,
     ShopCategory? shopCategory,
+    List<GameMail>? mails,
   }) {
     return GameData(
       player: player ?? this.player,
@@ -1001,6 +1098,7 @@ class GameData {
       logs: logs ?? this.logs,
       random: random,
       shopCategory: shopCategory ?? this.shopCategory,
+      mails: mails ?? this.mails,
     );
   }
 }
