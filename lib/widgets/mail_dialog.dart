@@ -208,8 +208,8 @@ class _MailDialogState extends ConsumerState<MailDialog> {
           ],
         ),
         const Divider(color: Colors.white24),
-        // 内容
-        Expanded(
+        // 内容 - 限制最大高度
+        Flexible(
           child: SingleChildScrollView(
             child: Text(
               mail.content,
