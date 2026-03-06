@@ -4,6 +4,7 @@ import '../game/models/item.dart';
 import '../game/models/map.dart';
 import '../game/models/mob.dart';
 import '../game/models/player.dart';
+import '../game/models/mail.dart';
 import '../providers/game_provider.dart';
 import 'save_repository.dart';
 
@@ -37,6 +38,15 @@ class HiveSaveRepository implements SaveRepository {
     if (!Hive.isAdapterRegistered(5)) {
       Hive.registerAdapter(LogTypeAdapter());
     }
+    if (!Hive.isAdapterRegistered(6)) {
+      Hive.registerAdapter(GameMailAdapter());
+    }
+    if (!Hive.isAdapterRegistered(7)) {
+      Hive.registerAdapter(MailAttachmentAdapter());
+    }
+    if (!Hive.isAdapterRegistered(8)) {
+      Hive.registerAdapter(MailAttachmentTypeAdapter());
+    }
     
     _box = await Hive.openBox(_boxName);
   }
@@ -49,6 +59,7 @@ class HiveSaveRepository implements SaveRepository {
       player: data.player,
       currentMapId: data.currentMap.id,
       logs: data.logs,
+      mails: data.mails,
       timestamp: DateTime.now(),
     );
     
@@ -69,6 +80,7 @@ class HiveSaveRepository implements SaveRepository {
       logs: saveData.logs,
       random: Random(),
       shopCategory: ShopCategory.all,
+      mails: saveData.mails,
     );
   }
   
@@ -97,6 +109,22 @@ class HiveSaveRepository implements SaveRepository {
         'type': log.type.index,
         'timestamp': log.timestamp.toIso8601String(),
       }).toList(),
+      'mails': data.mails.map((mail) => {
+        'id': mail.id,
+        'title': mail.title,
+        'content': mail.content,
+        'sender': mail.sender,
+        'sentAt': mail.sentAt.toIso8601String(),
+        'isRead': mail.isRead,
+        'isClaimed': mail.isClaimed,
+        'attachments': mail.attachments.map((a) => {
+          'type': a.type.index,
+          'itemId': a.itemId,
+          'instanceId': a.instanceId,
+          'count': a.count,
+          'meso': a.meso,
+        }).toList(),
+      }).toList(),
       'exportedAt': DateTime.now().toIso8601String(),
     };
     
@@ -113,11 +141,15 @@ class HiveSaveRepository implements SaveRepository {
       message: log['message'] as String,
       type: LogType.values[log['type'] as int],
     )).toList();
+    final mails = data['mails'] != null 
+        ? (data['mails'] as List).map((m) => _mailFromJson(m as Map<String, dynamic>)).toList()
+        : <GameMail>[];
     
     final saveData = _GameSaveData(
       player: player,
       currentMapId: currentMapId,
       logs: logs,
+      mails: mails,
       timestamp: DateTime.now(),
     );
     
@@ -172,6 +204,32 @@ class HiveSaveRepository implements SaveRepository {
       currentMap: json['currentMap'] as String,
     );
   }
+  
+  // 邮件 JSON 序列化辅助方法
+  GameMail _mailFromJson(Map<String, dynamic> json) {
+    return GameMail(
+      id: json['id'] as String,
+      title: json['title'] as String,
+      content: json['content'] as String,
+      sender: json['sender'] as String,
+      sentAt: DateTime.parse(json['sentAt'] as String),
+      isRead: json['isRead'] as bool? ?? false,
+      isClaimed: json['isClaimed'] as bool? ?? false,
+      attachments: (json['attachments'] as List? ?? [])
+          .map((a) => _attachmentFromJson(a as Map<String, dynamic>))
+          .toList(),
+    );
+  }
+  
+  MailAttachment _attachmentFromJson(Map<String, dynamic> json) {
+    return MailAttachment(
+      type: MailAttachmentType.values[json['type'] as int],
+      itemId: json['itemId'] as String?,
+      instanceId: json['instanceId'] as String?,
+      count: json['count'] as int?,
+      meso: json['meso'] as int?,
+    );
+  }
 }
 
 /// 存档数据类（用于 Hive 存储）
@@ -179,12 +237,14 @@ class _GameSaveData {
   final Player player;
   final String currentMapId;
   final List<LogEntry> logs;
+  final List<GameMail> mails;
   final DateTime timestamp;
 
   _GameSaveData({
     required this.player,
     required this.currentMapId,
     required this.logs,
+    required this.mails,
     required this.timestamp,
   });
 }
@@ -200,6 +260,7 @@ class GameDataAdapter extends TypeAdapter<_GameSaveData> {
       player: reader.read() as Player,
       currentMapId: reader.readString(),
       logs: reader.readList().cast<LogEntry>(),
+      mails: reader.readList().cast<GameMail>(),
       timestamp: DateTime.parse(reader.readString()),
     );
   }
@@ -209,6 +270,7 @@ class GameDataAdapter extends TypeAdapter<_GameSaveData> {
     writer.write(obj.player);
     writer.writeString(obj.currentMapId);
     writer.writeList(obj.logs);
+    writer.writeList(obj.mails);
     writer.writeString(obj.timestamp.toIso8601String());
   }
 }
@@ -322,6 +384,79 @@ class LogTypeAdapter extends TypeAdapter<LogType> {
 
   @override
   void write(BinaryWriter writer, LogType obj) {
+    writer.writeInt(obj.index);
+  }
+}
+
+// ========== 邮件系统适配器 ==========
+
+class GameMailAdapter extends TypeAdapter<GameMail> {
+  @override
+  final int typeId = 6;
+
+  @override
+  GameMail read(BinaryReader reader) {
+    return GameMail(
+      id: reader.readString(),
+      title: reader.readString(),
+      content: reader.readString(),
+      sender: reader.readString(),
+      sentAt: DateTime.parse(reader.readString()),
+      isRead: reader.readBool(),
+      isClaimed: reader.readBool(),
+      attachments: reader.readList().cast<MailAttachment>(),
+    );
+  }
+
+  @override
+  void write(BinaryWriter writer, GameMail obj) {
+    writer.writeString(obj.id);
+    writer.writeString(obj.title);
+    writer.writeString(obj.content);
+    writer.writeString(obj.sender);
+    writer.writeString(obj.sentAt.toIso8601String());
+    writer.writeBool(obj.isRead);
+    writer.writeBool(obj.isClaimed);
+    writer.writeList(obj.attachments);
+  }
+}
+
+class MailAttachmentAdapter extends TypeAdapter<MailAttachment> {
+  @override
+  final int typeId = 7;
+
+  @override
+  MailAttachment read(BinaryReader reader) {
+    return MailAttachment(
+      type: MailAttachmentType.values[reader.readInt()],
+      itemId: reader.readString(),
+      instanceId: reader.readString(),
+      count: reader.readInt(),
+      meso: reader.readInt(),
+    );
+  }
+
+  @override
+  void write(BinaryWriter writer, MailAttachment obj) {
+    writer.writeInt(obj.type.index);
+    writer.writeString(obj.itemId ?? '');
+    writer.writeString(obj.instanceId ?? '');
+    writer.writeInt(obj.count ?? 0);
+    writer.writeInt(obj.meso ?? 0);
+  }
+}
+
+class MailAttachmentTypeAdapter extends TypeAdapter<MailAttachmentType> {
+  @override
+  final int typeId = 8;
+
+  @override
+  MailAttachmentType read(BinaryReader reader) {
+    return MailAttachmentType.values[reader.readInt()];
+  }
+
+  @override
+  void write(BinaryWriter writer, MailAttachmentType obj) {
     writer.writeInt(obj.index);
   }
 }
