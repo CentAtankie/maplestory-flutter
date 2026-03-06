@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/game_provider.dart';
 import '../game/models/player.dart';
+import '../widgets/mail_dialog.dart';
 
 class StatusBar extends ConsumerWidget {
   const StatusBar({super.key});
@@ -10,10 +11,15 @@ class StatusBar extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final player = ref.watch(gameProvider).player;
     final stats = player.stats;
+    final gameData = ref.watch(gameProvider);
 
     final hpPercent = stats.hp / stats.maxHp;
     final mpPercent = stats.mp / stats.maxMp;
     final expPercent = stats.exp / stats.maxExp;
+
+    // 计算未读邮件和未领取附件数量
+    final unreadMails = gameData.mails.where((m) => !m.isRead).length;
+    final unclaimedAttachments = gameData.mails.where((m) => m.hasUnclaimedAttachments).length;
 
     return Container(
       padding: const EdgeInsets.all(12),
@@ -81,6 +87,45 @@ class StatusBar extends ConsumerWidget {
                       ),
                     ],
                   ),
+                ),
+                
+                // 邮件按钮
+                Stack(
+                  children: [
+                    IconButton(
+                      onPressed: () {
+                        showDialog(
+                          context: context,
+                          builder: (context) => const MailDialog(),
+                        );
+                      },
+                      icon: const Icon(
+                        Icons.email,
+                        color: Colors.white70,
+                      ),
+                    ),
+                    // 未读邮件标记
+                    if (unreadMails > 0 || unclaimedAttachments > 0)
+                      Positioned(
+                        right: 4,
+                        top: 4,
+                        child: Container(
+                          padding: const EdgeInsets.all(4),
+                          decoration: BoxDecoration(
+                            color: unclaimedAttachments > 0 ? Colors.red : Colors.blue,
+                            shape: BoxShape.circle,
+                          ),
+                          child: Text(
+                            '${unreadMails > 0 ? unreadMails : unclaimedAttachments}',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
                 ),
                 
                 // 金币
