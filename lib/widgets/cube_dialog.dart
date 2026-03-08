@@ -59,9 +59,8 @@ class _CubeDialogState extends ConsumerState<CubeDialog> {
     final player = ref.read(gameProvider).player;
     final cubeCount = player.inventory.where((id) => id == cubeId).length;
 
-    // 如果已经洗过（有预览），需要额外检查一个魔方
-    final requiredCubes = _previewStats != null ? _cubeUsedCount + 1 : 1;
-    if (cubeCount < requiredCubes) {
+    // 检查是否至少有一个魔方
+    if (cubeCount < 1) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('❌ 魔方不足！'),
@@ -70,6 +69,9 @@ class _CubeDialogState extends ConsumerState<CubeDialog> {
       );
       return;
     }
+
+    // 消耗一个魔方
+    ref.read(gameProvider.notifier).useItem(cubeId);
 
     setState(() {
       _isRolling = true;

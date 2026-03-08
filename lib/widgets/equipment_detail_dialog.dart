@@ -602,15 +602,7 @@ class CubeSelectorDialog extends ConsumerWidget {
   }
 
   void _useCube(BuildContext context, WidgetRef ref, String cubeType) {
-    // 消耗魔方
-    final cubeId = cubeType == 'advanced' 
-        ? 'cube_advanced' 
-        : cubeType == 'super' 
-            ? 'cube_super' 
-            : 'cube_normal';
-    
-    ref.read(gameProvider.notifier).useItem(cubeId);
-    
+    // 不在这里消耗魔方，由 CubeDialog 统一处理
     Navigator.pop(context);
     
     // 打开洗潜能对话框
