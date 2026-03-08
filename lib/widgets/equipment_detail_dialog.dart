@@ -604,18 +604,23 @@ class CubeSelectorDialog extends ConsumerWidget {
   void _useCube(BuildContext context, WidgetRef ref, String cubeType) {
     // 检查装备等级是否符合魔方使用要求
     if (!_canUseCubeOnEquipment(cubeType, equipment)) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('❌ 该装备不能使用${_getCubeName(cubeType)}！${_getCubeLimitDescription(cubeType)}'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      // 先关闭弹窗，再显示错误提示，避免被挡住
+      Navigator.pop(context);
+      Future.microtask(() {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('❌ 该装备不能使用${_getCubeName(cubeType)}！${_getCubeLimitDescription(cubeType)}'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      });
       return;
     }
-    
+
     // 不在这里消耗魔方，由 CubeDialog 统一处理
     Navigator.pop(context);
-    
+
     // 打开洗潜能对话框
     showDialog(
       context: context,
