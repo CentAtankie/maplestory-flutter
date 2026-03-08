@@ -314,15 +314,34 @@ class Player {
 
   /// 获取总攻击力
   int getAtk() {
-    final weaponAtk = equipment[EquipmentSlot.weapon]?.atk ?? 0;
-    return baseAtk + weaponAtk;
+    int total = baseAtk;
+    // 加上武器基础攻击
+    total += equipment[EquipmentSlot.weapon]?.atk ?? 0;
+    // 加上所有装备的潜能攻击加成
+    for (final equip in equipment.values.where((e) => e != null)) {
+      final potentialAtk = equip!.potential?.stats
+          .where((s) => s.type == PotentialType.atk)
+          .fold(0, (sum, s) => sum + s.value) ?? 0;
+      total += potentialAtk;
+    }
+    return total;
   }
 
   /// 获取总防御力
   int getDef() {
-    return equipment.values
+    int total = 0;
+    // 加上所有装备基础防御
+    total += equipment.values
         .where((e) => e != null)
         .fold(0, (sum, e) => sum + e!.def);
+    // 加上所有装备的潜能防御加成
+    for (final equip in equipment.values.where((e) => e != null)) {
+      final potentialDef = equip!.potential?.stats
+          .where((s) => s.type == PotentialType.def)
+          .fold(0, (sum, s) => sum + s.value) ?? 0;
+      total += potentialDef;
+    }
+    return total;
   }
 
   /// 获取暴击率 (基础 + 装备加成, 最高50%)
