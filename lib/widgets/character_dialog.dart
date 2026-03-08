@@ -4,6 +4,7 @@ import '../providers/game_provider.dart';
 import '../game/models/player.dart';
 import '../game/models/potential.dart';
 import 'cube_dialog.dart';
+import 'equipment_detail_dialog.dart';
 
 class CharacterDialog extends ConsumerStatefulWidget {
   const CharacterDialog({super.key});
@@ -291,7 +292,7 @@ class _CharacterDialogState extends ConsumerState<CharacterDialog> {
   void _showCubeDialog(BuildContext context, Equipment equip) {
     showDialog(
       context: context,
-      builder: (context) => CubeEquipmentSelector(cubeType: 'normal', initialEquipment: equip),
+      builder: (context) => CubeSelectorDialog(equipment: equip),
     );
   }
 

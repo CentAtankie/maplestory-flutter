@@ -602,6 +602,17 @@ class CubeSelectorDialog extends ConsumerWidget {
   }
 
   void _useCube(BuildContext context, WidgetRef ref, String cubeType) {
+    // 检查装备等级是否符合魔方使用要求
+    if (!_canUseCubeOnEquipment(cubeType, equipment)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('❌ 该装备不能使用${_getCubeName(cubeType)}！${_getCubeLimitDescription(cubeType)}'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+    
     // 不在这里消耗魔方，由 CubeDialog 统一处理
     Navigator.pop(context);
     
@@ -613,5 +624,59 @@ class CubeSelectorDialog extends ConsumerWidget {
         cubeType: cubeType,
       ),
     );
+  }
+}
+
+/// 获取魔方可用的最高潜能等级
+PotentialGrade? _getMaxGradeForCube(String cubeType) {
+  switch (cubeType) {
+    case 'normal':
+      return PotentialGrade.rare; // 神奇魔方只能用于A级
+    case 'advanced':
+      return PotentialGrade.epic; // 高级神奇魔方只能用于S级及以下
+    case 'super':
+      return PotentialGrade.unique; // 超级神奇魔方能用于SS级及以下
+    default:
+      return null;
+  }
+}
+
+/// 检查装备是否可以使用该魔方
+bool _canUseCubeOnEquipment(String cubeType, Equipment? equipment) {
+  if (equipment == null) return false;
+  final maxGrade = _getMaxGradeForCube(cubeType);
+  if (maxGrade == null) return false;
+
+  final currentGrade = equipment.potential?.grade ?? PotentialGrade.none;
+  // 无潜能的装备也不能用魔方
+  if (currentGrade == PotentialGrade.none) return false;
+
+  // 检查当前等级是否不超过魔方支持的最高等级
+  return currentGrade.index <= maxGrade.index;
+}
+
+/// 获取魔方限制的描述文本
+String _getCubeLimitDescription(String cubeType) {
+  switch (cubeType) {
+    case 'normal':
+      return '仅可用于A级(稀有)装备';
+    case 'advanced':
+      return '仅可用于S级(史诗)及以下装备';
+    case 'super':
+      return '可用于SS级(传说)及以下装备';
+    default:
+      return '';
+  }
+}
+
+/// 获取魔方名称
+String _getCubeName(String cubeType) {
+  switch (cubeType) {
+    case 'advanced':
+      return '高级神奇魔方';
+    case 'super':
+      return '超级神奇魔方';
+    default:
+      return '神奇魔方';
   }
 }
