@@ -5,13 +5,15 @@ import '../game/models/map.dart';
 import '../game/models/mob.dart';
 import '../game/models/player.dart';
 import '../game/models/mail.dart';
+import '../game/models/potential.dart';
 import '../providers/game_provider.dart';
 import 'save_repository.dart';
 
 /// Hive 本地存档实现
 class HiveSaveRepository implements SaveRepository {
-  static const String _boxName = 'game_saves_v3';
+  static const String _boxName = 'game_saves_v4';  // 升级版本号，避免旧存档冲突
   static const String _saveKey = 'current_save';
+  static const String _equipmentKey = 'equipment_instances';
   
   Box? _box;
   
@@ -52,7 +54,7 @@ class HiveSaveRepository implements SaveRepository {
   }
   
   @override
-  Future<void> saveGame(GameData data) async {
+  Future<void> saveGame(GameData data, {Map<String, Equipment>? equipmentInstances}) async {
     if (_box == null) await init();
     
     final saveData = _GameSaveData(
@@ -64,6 +66,12 @@ class HiveSaveRepository implements SaveRepository {
     );
     
     await _box!.put(_saveKey, saveData);
+    
+    // 保存装备实例
+    if (equipmentInstances != null) {
+      final equipmentJson = _equipmentInstancesToJson(equipmentInstances);
+      await _box!.put(_equipmentKey, equipmentJson);
+    }
   }
   
   @override
@@ -84,9 +92,23 @@ class HiveSaveRepository implements SaveRepository {
         mails: saveData.mails,
       );
     } catch (e) {
-      // 旧存档格式不兼容，删除旧存档
       print('存档格式不兼容，重置存档: $e');
       await _box!.delete(_saveKey);
+      return null;
+    }
+  }
+  
+  @override
+  Future<Map<String, Equipment>?> loadEquipmentInstances() async {
+    if (_box == null) await init();
+    
+    try {
+      final equipmentJson = _box!.get(_equipmentKey) as String?;
+      if (equipmentJson == null) return null;
+      
+      return _equipmentInstancesFromJson(equipmentJson);
+    } catch (e) {
+      print('装备实例加载失败: $e');
       return null;
     }
   }
@@ -95,6 +117,7 @@ class HiveSaveRepository implements SaveRepository {
   Future<void> deleteSave() async {
     if (_box == null) await init();
     await _box!.delete(_saveKey);
+    await _box!.delete(_equipmentKey);
   }
   
   @override
@@ -104,7 +127,7 @@ class HiveSaveRepository implements SaveRepository {
   }
   
   @override
-  Future<String> exportToJson() async {
+  Future<String> exportToJson(Map<String, Equipment> equipmentInstances) async {
     final data = await loadGame();
     if (data == null) throw Exception('没有存档可导出');
     
@@ -127,11 +150,13 @@ class HiveSaveRepository implements SaveRepository {
         'attachments': mail.attachments.map((a) => {
           'type': a.type.index,
           'itemId': a.itemId,
+          'equipmentId': a.equipmentId,
           'instanceId': a.instanceId,
           'count': a.count,
           'meso': a.meso,
         }).toList(),
       }).toList(),
+      'equipmentInstances': _equipmentInstancesToJson(equipmentInstances),
       'exportedAt': DateTime.now().toIso8601String(),
     };
     
@@ -162,6 +187,109 @@ class HiveSaveRepository implements SaveRepository {
     
     if (_box == null) await init();
     await _box!.put(_saveKey, saveData);
+    
+    // 导入装备实例
+    if (data['equipmentInstances'] != null) {
+      await _box!.put(_equipmentKey, data['equipmentInstances'] as String);
+    }
+  }
+  
+  // ========== 装备实例序列化 ==========
+  
+  String _equipmentInstancesToJson(Map<String, Equipment> instances) {
+    final Map<String, dynamic> jsonMap = {};
+    for (final entry in instances.entries) {
+      jsonMap[entry.key] = _equipmentToJson(entry.value);
+    }
+    return jsonEncode(jsonMap);
+  }
+  
+  Map<String, Equipment> _equipmentInstancesFromJson(String json) {
+    final Map<String, dynamic> jsonMap = jsonDecode(json) as Map<String, dynamic>;
+    final Map<String, Equipment> instances = {};
+    
+    for (final entry in jsonMap.entries) {
+      final equip = _equipmentFromJson(entry.value as Map<String, dynamic>);
+      if (equip != null) {
+        instances[entry.key] = equip;
+      }
+    }
+    return instances;
+  }
+  
+  Map<String, dynamic> _equipmentToJson(Equipment equipment) {
+    return {
+      'name': equipment.name,
+      'id': equipment.id,
+      'instanceId': equipment.instanceId,
+      'emoji': equipment.emoji,
+      'description': equipment.description,
+      'slot': equipment.slot.index,
+      'atk': equipment.atk,
+      'def': equipment.def,
+      'str': equipment.str,
+      'dex': equipment.dex,
+      'intBonus': equipment.intBonus,
+      'luk': equipment.luk,
+      'price': equipment.price,
+      'levelReq': equipment.levelReq,
+      'crit': equipment.crit,
+      'avoid': equipment.avoid,
+      'potential': equipment.potential != null ? _potentialToJson(equipment.potential!) : null,
+    };
+  }
+  
+  Equipment? _equipmentFromJson(Map<String, dynamic> json) {
+    try {
+      return Equipment(
+        name: json['name'] as String,
+        id: json['id'] as String?,
+        instanceId: json['instanceId'] as String,
+        emoji: json['emoji'] as String?,
+        description: json['description'] as String?,
+        slot: EquipmentSlot.values[json['slot'] as int],
+        atk: json['atk'] as int? ?? 0,
+        def: json['def'] as int? ?? 0,
+        str: json['str'] as int? ?? 0,
+        dex: json['dex'] as int? ?? 0,
+        intBonus: json['intBonus'] as int? ?? 0,
+        luk: json['luk'] as int? ?? 0,
+        price: json['price'] as int?,
+        levelReq: json['levelReq'] as int?,
+        crit: json['crit'] as int?,
+        avoid: json['avoid'] as int?,
+        potential: json['potential'] != null 
+            ? _potentialFromJson(json['potential'] as Map<String, dynamic>)
+            : null,
+      );
+    } catch (e) {
+      print('装备解析失败: $e');
+      return null;
+    }
+  }
+  
+  Map<String, dynamic> _potentialToJson(EquipmentPotential potential) {
+    return {
+      'grade': potential.grade.index,
+      'stats': potential.stats.map((s) => {
+        return {
+          'type': s.type.index,
+          'value': s.value,
+          'grade': s.grade,
+        };
+      }).toList(),
+    };
+  }
+  
+  EquipmentPotential _potentialFromJson(Map<String, dynamic> json) {
+    return EquipmentPotential(
+      grade: PotentialGrade.values[json['grade'] as int],
+      stats: (json['stats'] as List).map((s) => PotentialStat(
+        type: PotentialType.values[s['type'] as int],
+        value: s['value'] as int,
+        grade: s['grade'] as String,
+      )).toList(),
+    );
   }
   
   // JSON 序列化辅助方法
@@ -232,6 +360,7 @@ class HiveSaveRepository implements SaveRepository {
     return MailAttachment(
       type: MailAttachmentType.values[json['type'] as int],
       itemId: json['itemId'] as String?,
+      equipmentId: json['equipmentId'] as String?,
       instanceId: json['instanceId'] as String?,
       count: json['count'] as int?,
       meso: json['meso'] as int?,

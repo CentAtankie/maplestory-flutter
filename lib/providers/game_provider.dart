@@ -141,14 +141,23 @@ class GameNotifier extends StateNotifier<GameData> {
     addLog('📝 初始属性: 力量${player.stats.str} 敏捷${player.stats.dex} 智力${player.stats.intStat} 运气${player.stats.luk}');
   }
 
-  /// 初始化 - 自动读取存档
+  /// 初始化 - 自动读取存档（包含装备实例）
   Future<void> _init() async {
     try {
       final hasSave = await _saveRepository.hasSave();
       if (hasSave) {
         final savedData = await _saveRepository.loadGame();
+        final equipmentInstances = await _saveRepository.loadEquipmentInstances();
+        
         if (savedData != null) {
           state = savedData;
+          
+          // 恢复装备实例
+          if (equipmentInstances != null) {
+            _equipmentInstances.clear();
+            _equipmentInstances.addAll(equipmentInstances);
+          }
+          
           addLog('📂 欢迎回来，${state.player.name}！', LogType.success);
         }
       }
@@ -872,10 +881,10 @@ class GameNotifier extends StateNotifier<GameData> {
 
   // ========== 存档功能 ==========
 
-  /// 保存游戏
+  /// 保存游戏（包含装备实例）
   Future<bool> saveGame() async {
     try {
-      await _saveRepository.saveGame(state);
+      await _saveRepository.saveGame(state, equipmentInstances: _equipmentInstances);
       addLog('💾 游戏已保存', LogType.success);
       return true;
     } catch (e) {
@@ -884,12 +893,21 @@ class GameNotifier extends StateNotifier<GameData> {
     }
   }
 
-  /// 读取存档
+  /// 读取存档（包含装备实例）
   Future<bool> loadGame() async {
     try {
       final savedData = await _saveRepository.loadGame();
+      final equipmentInstances = await _saveRepository.loadEquipmentInstances();
+      
       if (savedData != null) {
         state = savedData;
+        
+        // 恢复装备实例
+        if (equipmentInstances != null) {
+          _equipmentInstances.clear();
+          _equipmentInstances.addAll(equipmentInstances);
+        }
+        
         addLog('📂 存档已读取', LogType.success);
         return true;
       } else {
@@ -919,10 +937,10 @@ class GameNotifier extends StateNotifier<GameData> {
     }
   }
 
-  /// 导出存档为 JSON
+  /// 导出存档为 JSON（包含装备实例）
   Future<String?> exportToJson() async {
     try {
-      return await _saveRepository.exportToJson();
+      return await _saveRepository.exportToJson(_equipmentInstances);
     } catch (e) {
       addLog('❌ 导出失败: $e', LogType.error);
       return null;
