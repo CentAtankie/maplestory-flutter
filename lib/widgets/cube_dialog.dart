@@ -84,27 +84,39 @@ class _CubeDialogState extends ConsumerState<CubeDialog> {
 
       setState(() {
         // 判断是否升级潜能
-        if (widget.cubeType == 'advanced' && currentPotential?.grade == PotentialGrade.rare) {
-          // 高级魔方：30%概率升级到黄色
+        final currentGrade = currentPotential?.grade ?? PotentialGrade.rare;
+        
+        // 超级魔方洗A级物品时，应用高级魔方的效果（30%概率变S）
+        if (widget.cubeType == 'super' && currentGrade == PotentialGrade.rare) {
+          // 超级魔方洗A级 → 按高级魔方逻辑：30%概率升级到S级
           if (random < 30) {
             _previewGrade = PotentialGrade.epic;
             _previewStats = EquipmentPotential.generateEpic().stats;
           } else {
-            _previewGrade = currentPotential?.grade ?? PotentialGrade.rare;
+            _previewGrade = currentGrade;
             _previewStats = EquipmentPotential.generateRare().stats;
           }
-        } else if (widget.cubeType == 'super' && currentPotential?.grade == PotentialGrade.epic) {
-          // 超级魔方：20%概率升级到绿色
+        } else if (widget.cubeType == 'advanced' && currentGrade == PotentialGrade.rare) {
+          // 高级魔方洗A级：30%概率升级到S级
+          if (random < 30) {
+            _previewGrade = PotentialGrade.epic;
+            _previewStats = EquipmentPotential.generateEpic().stats;
+          } else {
+            _previewGrade = currentGrade;
+            _previewStats = EquipmentPotential.generateRare().stats;
+          }
+        } else if (widget.cubeType == 'super' && currentGrade == PotentialGrade.epic) {
+          // 超级魔方洗S级：20%概率升级到SS级
           if (random < 20) {
             _previewGrade = PotentialGrade.unique;
             _previewStats = EquipmentPotential.generateUnique().stats;
           } else {
-            _previewGrade = currentPotential?.grade ?? PotentialGrade.epic;
+            _previewGrade = currentGrade;
             _previewStats = EquipmentPotential.generateEpic().stats;
           }
         } else {
-          // 普通魔方或已最高级：只重新随机属性
-          _previewGrade = currentPotential?.grade ?? PotentialGrade.rare;
+          // 同等级或已达上限：只重新随机属性
+          _previewGrade = currentGrade;
           switch (_previewGrade) {
             case PotentialGrade.rare:
               _previewStats = EquipmentPotential.generateRare().stats;
@@ -446,20 +458,36 @@ class _CubeDialogState extends ConsumerState<CubeDialog> {
             // 提示信息
             if (widget.cubeType == 'advanced')
               const Text(
-                '💡 有30%概率将潜能升级为黄色(史诗)',
+                '💡 有30%概率将潜能升级为S级(史诗)',
                 style: TextStyle(
                   color: Colors.amber,
                   fontSize: 11,
                 ),
               )
             else if (widget.cubeType == 'super')
-              const Text(
-                '💡 有20%概率将潜能升级为绿色(传说)',
-                style: TextStyle(
-                  color: Colors.green,
-                  fontSize: 11,
-                ),
-              ),
+              Builder(builder: (context) {
+                final currentGrade = widget.equipment.potential?.grade;
+                if (currentGrade == PotentialGrade.rare) {
+                  // 超级魔方洗A级，按高级魔方效果
+                  return const Text(
+                    '💡 洗A级装备时：30%概率升级为S级(史诗)',
+                    style: TextStyle(
+                      color: Colors.amber,
+                      fontSize: 11,
+                    ),
+                  );
+                } else if (currentGrade == PotentialGrade.epic) {
+                  // 超级魔方洗S级
+                  return const Text(
+                    '💡 洗S级装备时：20%概率升级为SS级(传说)',
+                    style: TextStyle(
+                      color: Colors.green,
+                      fontSize: 11,
+                    ),
+                  );
+                }
+                return const SizedBox.shrink();
+              }),
           ],
         ),
       ),
@@ -537,6 +565,48 @@ class _CubeDialogState extends ConsumerState<CubeDialog> {
   }
 }
 
+/// 获取魔方可用的最高潜能等级
+PotentialGrade? _getMaxGradeForCube(String cubeType) {
+  switch (cubeType) {
+    case 'normal':
+      return PotentialGrade.rare; // 神奇魔方只能用于A级
+    case 'advanced':
+      return PotentialGrade.epic; // 高级神奇魔方只能用于S级以下
+    case 'super':
+      return PotentialGrade.unique; // 超级神奇魔方能用于SS级以下
+    default:
+      return null;
+  }
+}
+
+/// 检查装备是否可以使用该魔方
+bool _canUseCubeOnEquipment(String cubeType, Equipment? equipment) {
+  if (equipment == null) return false;
+  final maxGrade = _getMaxGradeForCube(cubeType);
+  if (maxGrade == null) return false;
+  
+  final currentGrade = equipment.potential?.grade ?? PotentialGrade.none;
+  // 无潜能的装备也不能用魔方
+  if (currentGrade == PotentialGrade.none) return false;
+  
+  // 检查当前等级是否不超过魔方支持的最高等级
+  return currentGrade.index <= maxGrade.index;
+}
+
+/// 获取魔方限制的描述文本
+String _getCubeLimitDescription(String cubeType) {
+  switch (cubeType) {
+    case 'normal':
+      return '仅可用于A级(稀有)装备';
+    case 'advanced':
+      return '仅可用于S级(史诗)及以下装备';
+    case 'super':
+      return '可用于SS级(传说)及以下装备';
+    default:
+      return '';
+  }
+}
+
 /// 选择装备使用魔方的对话框
 class CubeEquipmentSelector extends ConsumerWidget {
   final String cubeType;
@@ -552,56 +622,64 @@ class CubeEquipmentSelector extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final player = ref.watch(gameProvider).player;
     
-    // 如果有初始装备，直接使用
+    // 如果有初始装备，检查是否可以使用
     if (initialEquipment != null) {
+      if (!_canUseCubeOnEquipment(cubeType, initialEquipment)) {
+        // 显示错误提示并返回
+        Future.microtask(() {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('❌ 该装备不能使用${_getCubeName(cubeType)}！${_getCubeLimitDescription(cubeType)}'),
+              backgroundColor: Colors.red,
+            ),
+          );
+          Navigator.pop(context);
+        });
+        return const SizedBox.shrink();
+      }
       return CubeDialog(
         equipment: initialEquipment!,
         cubeType: cubeType,
       );
     }
     
-    // 获取已装备的装备
+    // 获取已装备的装备，并过滤掉不符合等级的
+    final maxGrade = _getMaxGradeForCube(cubeType);
     final equippedItems = player.equipment.values
-        .where((e) => e != null)
+        .where((e) => e != null && _canUseCubeOnEquipment(cubeType, e))
         .toList();
-
-    String cubeName;
-    String cubeEmoji;
-    switch (cubeType) {
-      case 'advanced':
-        cubeName = '高级神奇魔方';
-        cubeEmoji = '🔷';
-        break;
-      case 'super':
-        cubeName = '超级神奇魔方';
-        cubeEmoji = '💎';
-        break;
-      default:
-        cubeName = '神奇魔方';
-        cubeEmoji = '🎲';
-    }
 
     return AlertDialog(
       backgroundColor: const Color(0xFF1A1A2E),
       title: Row(
         children: [
-          Text(cubeEmoji, style: const TextStyle(fontSize: 28)),
+          Text(_getCubeEmoji(cubeType), style: const TextStyle(fontSize: 28)),
           const SizedBox(width: 12),
           Expanded(
-            child: Text(
-              '选择要洗潜能的装备\n($cubeName)',
-              style: const TextStyle(color: Colors.white, fontSize: 16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '选择要洗潜能的装备',
+                  style: const TextStyle(color: Colors.white, fontSize: 16),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  '(${_getCubeName(cubeType)} - ${_getCubeLimitDescription(cubeType)})',
+                  style: const TextStyle(color: Colors.amber, fontSize: 11),
+                ),
+              ],
             ),
           ),
         ],
       ),
       content: SizedBox(
         width: double.maxFinite,
-        height: 300,
+        height: 350,
         child: equippedItems.isEmpty
             ? const Center(
                 child: Text(
-                  '没有已装备的装备\n请先装备物品',
+                  '没有符合条件的装备\n该魔方只能用于特定等级的装备',
                   style: TextStyle(color: Colors.white54),
                   textAlign: TextAlign.center,
                 ),
@@ -683,5 +761,29 @@ class CubeEquipmentSelector extends ConsumerWidget {
         ),
       ],
     );
+  }
+}
+
+/// 获取魔方名称
+String _getCubeName(String cubeType) {
+  switch (cubeType) {
+    case 'advanced':
+      return '高级神奇魔方';
+    case 'super':
+      return '超级神奇魔方';
+    default:
+      return '神奇魔方';
+  }
+}
+
+/// 获取魔方emoji
+String _getCubeEmoji(String cubeType) {
+  switch (cubeType) {
+    case 'advanced':
+      return '🔷';
+    case 'super':
+      return '💎';
+    default:
+      return '🎲';
   }
 }
