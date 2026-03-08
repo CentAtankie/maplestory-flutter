@@ -344,6 +344,78 @@ class Player {
     return total;
   }
 
+  /// 获取基础力量
+  int get baseStr => stats.str;
+  
+  /// 获取装备力量加成（基础+潜能）
+  int get equipStr {
+    int bonus = 0;
+    for (final equip in equipment.values.where((e) => e != null)) {
+      bonus += equip!.str;
+      bonus += equip.potential?.stats
+          .where((s) => s.type == PotentialType.str)
+          .fold(0, (sum, s) => sum + s.value) ?? 0;
+    }
+    return bonus;
+  }
+  
+  /// 获取总力量
+  int get totalStr => baseStr + equipStr;
+  
+  /// 获取基础敏捷
+  int get baseDex => stats.dex;
+  
+  /// 获取装备敏捷加成
+  int get equipDex {
+    int bonus = 0;
+    for (final equip in equipment.values.where((e) => e != null)) {
+      bonus += equip!.dex;
+      bonus += equip.potential?.stats
+          .where((s) => s.type == PotentialType.dex)
+          .fold(0, (sum, s) => sum + s.value) ?? 0;
+    }
+    return bonus;
+  }
+  
+  /// 获取总敏捷
+  int get totalDex => baseDex + equipDex;
+  
+  /// 获取基础智力
+  int get baseInt => stats.intStat;
+  
+  /// 获取装备智力加成
+  int get equipInt {
+    int bonus = 0;
+    for (final equip in equipment.values.where((e) => e != null)) {
+      bonus += equip!.intBonus;
+      bonus += equip.potential?.stats
+          .where((s) => s.type == PotentialType.intelligence)
+          .fold(0, (sum, s) => sum + s.value) ?? 0;
+    }
+    return bonus;
+  }
+  
+  /// 获取总智力
+  int get totalInt => baseInt + equipInt;
+  
+  /// 获取基础运气
+  int get baseLuk => stats.luk;
+  
+  /// 获取装备运气加成
+  int get equipLuk {
+    int bonus = 0;
+    for (final equip in equipment.values.where((e) => e != null)) {
+      bonus += equip!.luk;
+      bonus += equip.potential?.stats
+          .where((s) => s.type == PotentialType.luk)
+          .fold(0, (sum, s) => sum + s.value) ?? 0;
+    }
+    return bonus;
+  }
+  
+  /// 获取总运气
+  int get totalLuk => baseLuk + equipLuk;
+
   /// 获取暴击率 (基础 + 装备加成, 最高50%)
   double getCritRate() {
     final baseCrit = stats.getCritRate();

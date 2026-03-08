@@ -486,10 +486,10 @@ class ActionPanel extends ConsumerWidget {
                   _buildInfoRow('MP', '${stats.mp}/${stats.maxMp}'),
                   _buildInfoRow('EXP', '${stats.exp}/${stats.maxExp}'),
                   const Divider(color: Colors.white24),
-                  _buildInfoRow('力量', '${stats.str}'),
-                  _buildInfoRow('敏捷', '${stats.dex}'),
-                  _buildInfoRow('智力', '${stats.intStat}'),
-                  _buildInfoRow('运气', '${stats.luk}'),
+                  _buildStatRow('力量', player.baseStr, player.equipStr, Colors.orange),
+                  _buildStatRow('敏捷', player.baseDex, player.equipDex, Colors.green),
+                  _buildStatRow('智力', player.baseInt, player.equipInt, Colors.blue),
+                  _buildStatRow('运气', player.baseLuk, player.equipLuk, Colors.purple),
                   const Divider(color: Colors.white24),
                   _buildInfoRow('攻击力', '${player.getAtk()}'),
                   _buildInfoRow('防御力', '${player.getDef()}'),
@@ -591,6 +591,66 @@ class ActionPanel extends ConsumerWidget {
               color: Colors.white,
               fontWeight: FontWeight.bold,
             ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatRow(String label, int baseValue, int equipValue, Color color) {
+    final total = baseValue + equipValue;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            label,
+            style: const TextStyle(color: Colors.white70),
+          ),
+          Row(
+            children: [
+              // 基础值
+              Text(
+                '$baseValue',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              // 装备加成（如果有）
+              if (equipValue > 0) ...[
+                Text(
+                  ' + ',
+                  style: TextStyle(
+                    color: color.withOpacity(0.7),
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                Text(
+                  '$equipValue',
+                  style: TextStyle(
+                    color: color,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                Text(
+                  ' = ',
+                  style: TextStyle(
+                    color: Colors.white54,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                Text(
+                  '$total',
+                  style: TextStyle(
+                    color: color,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                  ),
+                ),
+              ],
+            ],
           ),
         ],
       ),
