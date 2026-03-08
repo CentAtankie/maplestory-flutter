@@ -321,7 +321,7 @@ class Player {
     for (final equip in equipment.values.where((e) => e != null)) {
       final potentialAtk = equip!.potential?.stats
           .where((s) => s.type == PotentialType.atk)
-          .fold(0, (sum, s) => sum + s.value) ?? 0;
+          .fold<int>(0, (sum, s) => sum + (s.value ?? 0)) ?? 0;
       total += potentialAtk;
     }
     return total;
@@ -333,12 +333,12 @@ class Player {
     // 加上所有装备基础防御
     total += equipment.values
         .where((e) => e != null)
-        .fold(0, (sum, e) => sum + e!.def);
+        .fold<int>(0, (sum, e) => sum + (e!.def));
     // 加上所有装备的潜能防御加成
     for (final equip in equipment.values.where((e) => e != null)) {
       final potentialDef = equip!.potential?.stats
           .where((s) => s.type == PotentialType.def)
-          .fold(0, (sum, s) => sum + s.value) ?? 0;
+          .fold<int>(0, (sum, s) => sum + (s.value ?? 0)) ?? 0;
       total += potentialDef;
     }
     return total;
@@ -416,22 +416,38 @@ class Player {
   /// 获取总运气
   int get totalLuk => baseLuk + equipLuk;
 
-  /// 获取暴击率 (基础 + 装备加成, 最高50%)
+  /// 获取暴击率 (基础 + 装备加成 + 潜能加成, 最高50%)
   double getCritRate() {
     final baseCrit = stats.getCritRate();
+    // 装备基础暴击
     final equipCrit = equipment.values
         .where((e) => e != null)
-        .fold(0, (sum, e) => sum + (e!.crit ?? 0));
-    return (baseCrit + equipCrit).clamp(0, 50);
+        .fold<int>(0, (sum, e) => sum + (e!.crit ?? 0));
+    // 潜能暴击加成
+    int potentialCrit = 0;
+    for (final equip in equipment.values.where((e) => e != null)) {
+      potentialCrit += equip!.potential?.stats
+          .where((s) => s.type == PotentialType.critRate)
+          .fold<int>(0, (sum, s) => sum + (s.value ?? 0)) ?? 0;
+    }
+    return (baseCrit + equipCrit + potentialCrit).clamp(0, 50);
   }
 
-  /// 获取闪避率 (基础 + 装备加成, 最高50%)
+  /// 获取闪避率 (基础 + 装备加成 + 潜能加成, 最高50%)
   double getAvoidRate() {
     final baseAvoid = stats.getAvoidRate();
+    // 装备基础闪避
     final equipAvoid = equipment.values
         .where((e) => e != null)
-        .fold(0, (sum, e) => sum + (e!.avoid ?? 0));
-    return (baseAvoid + equipAvoid).clamp(0, 50);
+        .fold<int>(0, (sum, e) => sum + (e!.avoid ?? 0));
+    // 潜能闪避加成
+    int potentialAvoid = 0;
+    for (final equip in equipment.values.where((e) => e != null)) {
+      potentialAvoid += equip!.potential?.stats
+          .where((s) => s.type == PotentialType.avoidRate)
+          .fold<int>(0, (sum, s) => sum + (s.value ?? 0)) ?? 0;
+    }
+    return (baseAvoid + equipAvoid + potentialAvoid).clamp(0, 50);
   }
 
   /// 复制玩家
