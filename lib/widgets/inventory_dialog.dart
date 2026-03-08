@@ -388,10 +388,12 @@ class _InventoryDialogState extends ConsumerState<InventoryDialog> {
                     });
                   }
                 : null,
-            child: ListTile(
-              leading: Row(
-                mainAxisSize: MainAxisSize.min,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
+                  // 左侧图标区域
                   if (_isBatchMode)
                     Padding(
                       padding: const EdgeInsets.only(right: 8),
@@ -401,59 +403,77 @@ class _InventoryDialogState extends ConsumerState<InventoryDialog> {
                       ),
                     ),
                   Text(emoji, style: const TextStyle(fontSize: 24)),
-                ],
-              ),
-              title: Row(
-                children: [
+                  const SizedBox(width: 12),
+                  
+                  // 中间信息区域（自适应宽度）
                   Expanded(
-                    child: Text(
-                      name,
-                      style: const TextStyle(color: Colors.white),
-                    ),
-                  ),
-                  if (hasEquipped)
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: Colors.green.withOpacity(0.3),
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      child: const Text(
-                        '已装备同类型',
-                        style: TextStyle(
-                          color: Colors.green,
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        // 名称行
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                name,
+                                style: const TextStyle(color: Colors.white, fontSize: 14),
+                                overflow: TextOverflow.ellipsis,
+                                maxLines: 1,
+                              ),
+                            ),
+                            if (hasEquipped)
+                              Container(
+                                margin: const EdgeInsets.only(left: 8),
+                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: Colors.green.withOpacity(0.3),
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                                child: const Text(
+                                  '已装备同类型',
+                                  style: TextStyle(
+                                    color: Colors.green,
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                          ],
                         ),
-                      ),
+                        // 描述行
+                        Text(
+                          description,
+                          style: const TextStyle(color: Colors.white70, fontSize: 11),
+                          overflow: TextOverflow.ellipsis,
+                          maxLines: 1,
+                        ),
+                        // 属性行
+                        if (isEquipment)
+                          Text(
+                            equipment!.stats,
+                            style: TextStyle(
+                              color: Colors.green.withOpacity(0.8),
+                              fontSize: 10,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                            maxLines: 1,
+                          ),
+                      ],
                     ),
-                ],
-              ),
-              subtitle: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    description,
-                    style: const TextStyle(color: Colors.white70, fontSize: 12),
                   ),
-                  if (isEquipment)
-                    Text(
-                      equipment!.stats,
-                      style: TextStyle(
-                        color: Colors.green.withOpacity(0.8),
-                        fontSize: 10,
-                      ),
-                    ),
-                ],
-              ),
-              trailing: _isBatchMode
-                  ? null
-                  : Row(
+                  
+                  const SizedBox(width: 8),
+                  
+                  // 右侧按钮区域（固定宽度）
+                  if (!_isBatchMode)
+                    Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         // 数量
                         if (count > 1)
                           Container(
+                            margin: const EdgeInsets.only(right: 8),
                             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                             decoration: BoxDecoration(
                               color: Colors.blue.withOpacity(0.2),
@@ -464,69 +484,96 @@ class _InventoryDialogState extends ConsumerState<InventoryDialog> {
                               style: const TextStyle(
                                 color: Colors.blue,
                                 fontWeight: FontWeight.bold,
+                                fontSize: 12,
                               ),
                             ),
                           ),
-                        const SizedBox(width: 8),
-                        // 操作按钮 - 背包里的装备都显示详情、装备和卖出
+                        // 操作按钮
                         if (isEquipment)
                           Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               // 详情按钮
-                              ElevatedButton(
-                                onPressed: () => _showEquipmentDetail(itemId, equipment!, player),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.blue,
-                                  foregroundColor: Colors.white,
-                                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                              SizedBox(
+                                width: 50,
+                                height: 32,
+                                child: ElevatedButton(
+                                  onPressed: () => _showEquipmentDetail(itemId, equipment!, player),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.blue,
+                                    foregroundColor: Colors.white,
+                                    padding: EdgeInsets.zero,
+                                    textStyle: const TextStyle(fontSize: 12),
+                                  ),
+                                  child: const Text('详情'),
                                 ),
-                                child: const Text('详情'),
                               ),
-                              const SizedBox(width: 8),
-                              ElevatedButton(
-                                onPressed: () => _equip(itemId),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.purple,
-                                  foregroundColor: Colors.white,
-                                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                              const SizedBox(width: 4),
+                              SizedBox(
+                                width: 50,
+                                height: 32,
+                                child: ElevatedButton(
+                                  onPressed: () => _equip(itemId),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.purple,
+                                    foregroundColor: Colors.white,
+                                    padding: EdgeInsets.zero,
+                                    textStyle: const TextStyle(fontSize: 12),
+                                  ),
+                                  child: const Text('装备'),
                                 ),
-                                child: const Text('装备'),
                               ),
-                              const SizedBox(width: 8),
-                              ElevatedButton(
-                                onPressed: () => _sell(itemId),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.orange,
-                                  foregroundColor: Colors.white,
-                                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                              const SizedBox(width: 4),
+                              SizedBox(
+                                width: 50,
+                                height: 32,
+                                child: ElevatedButton(
+                                  onPressed: () => _sell(itemId),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.orange,
+                                    foregroundColor: Colors.white,
+                                    padding: EdgeInsets.zero,
+                                    textStyle: const TextStyle(fontSize: 12),
+                                  ),
+                                  child: const Text('卖出'),
                                 ),
-                                child: const Text('卖出'),
                               ),
                             ],
                           )
                         else if (item?.type == ItemType.material)
-                          ElevatedButton(
-                            onPressed: () => _sell(itemId),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.orange,
-                              foregroundColor: Colors.white,
-                              padding: const EdgeInsets.symmetric(horizontal: 12),
+                          SizedBox(
+                            width: 60,
+                            height: 32,
+                            child: ElevatedButton(
+                              onPressed: () => _sell(itemId),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.orange,
+                                foregroundColor: Colors.white,
+                                padding: EdgeInsets.zero,
+                                textStyle: const TextStyle(fontSize: 12),
+                              ),
+                              child: const Text('卖出'),
                             ),
-                            child: const Text('卖出'),
                           )
                         else if (isConsumable)
-                          ElevatedButton(
-                            onPressed: () => _use(itemId),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.green,
-                              foregroundColor: Colors.white,
-                              padding: const EdgeInsets.symmetric(horizontal: 12),
+                          SizedBox(
+                            width: 60,
+                            height: 32,
+                            child: ElevatedButton(
+                              onPressed: () => _use(itemId),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.green,
+                                foregroundColor: Colors.white,
+                                padding: EdgeInsets.zero,
+                                textStyle: const TextStyle(fontSize: 12),
+                              ),
+                              child: const Text('使用'),
                             ),
-                            child: const Text('使用'),
                           ),
                       ],
                     ),
+                ],
+              ),
             ),
           ),
         );
