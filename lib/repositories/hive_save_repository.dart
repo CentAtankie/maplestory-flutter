@@ -272,11 +272,9 @@ class HiveSaveRepository implements SaveRepository {
     return {
       'grade': potential.grade.index,
       'stats': potential.stats.map((s) => {
-        return {
-          'type': s.type.index,
-          'value': s.value,
-          'grade': s.grade,
-        };
+        'type': s.type.index,
+        'value': s.value,
+        'grade': s.grade,
       }).toList(),
     };
   }
