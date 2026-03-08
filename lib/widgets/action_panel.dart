@@ -460,113 +460,117 @@ class ActionPanel extends ConsumerWidget {
   }
 
   void _showCharacterDialog(BuildContext context, WidgetRef ref) {
-    final player = ref.read(gameProvider).player;
-    final stats = player.stats;
-
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF1A1A2E),
-        title: Text(
-          '${player.job.emoji} 角色信息',
-          style: const TextStyle(color: Colors.white),
-        ),
-        content: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              _buildInfoRow('名字', player.name),
-              _buildInfoRow('职业', player.job.displayName),
-              _buildInfoRow('等级', 'Lv.${stats.level}'),
-              const Divider(color: Colors.white24),
-              _buildInfoRow('HP', '${stats.hp}/${stats.maxHp}'),
-              _buildInfoRow('MP', '${stats.mp}/${stats.maxMp}'),
-              _buildInfoRow('EXP', '${stats.exp}/${stats.maxExp}'),
-              const Divider(color: Colors.white24),
-              _buildInfoRow('力量', '${stats.str}'),
-              _buildInfoRow('敏捷', '${stats.dex}'),
-              _buildInfoRow('智力', '${stats.intStat}'),
-              _buildInfoRow('运气', '${stats.luk}'),
-              const Divider(color: Colors.white24),
-              _buildInfoRow('攻击力', '${player.getAtk()}'),
-              _buildInfoRow('防御力', '${player.getDef()}'),
-              _buildInfoRow('暴击率', '${player.getCritRate().toStringAsFixed(1)}%'),
-              _buildInfoRow('闪避率', '${player.getAvoidRate().toStringAsFixed(1)}%'),
-              const Divider(color: Colors.white24),
-              // 属性点区域 - 始终显示
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: stats.ap > 0 ? Colors.amber.withOpacity(0.1) : Colors.grey.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: stats.ap > 0 ? Colors.amber.withOpacity(0.3) : Colors.grey.withOpacity(0.3)),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) {
+          final player = ref.watch(gameProvider).player;
+          final stats = player.stats;
+
+          return AlertDialog(
+            backgroundColor: const Color(0xFF1A1A2E),
+            title: Text(
+              '${player.job.emoji} 角色信息',
+              style: const TextStyle(color: Colors.white),
+            ),
+            content: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _buildInfoRow('名字', player.name),
+                  _buildInfoRow('职业', player.job.displayName),
+                  _buildInfoRow('等级', 'Lv.${stats.level}'),
+                  const Divider(color: Colors.white24),
+                  _buildInfoRow('HP', '${stats.hp}/${stats.maxHp}'),
+                  _buildInfoRow('MP', '${stats.mp}/${stats.maxMp}'),
+                  _buildInfoRow('EXP', '${stats.exp}/${stats.maxExp}'),
+                  const Divider(color: Colors.white24),
+                  _buildInfoRow('力量', '${stats.str}'),
+                  _buildInfoRow('敏捷', '${stats.dex}'),
+                  _buildInfoRow('智力', '${stats.intStat}'),
+                  _buildInfoRow('运气', '${stats.luk}'),
+                  const Divider(color: Colors.white24),
+                  _buildInfoRow('攻击力', '${player.getAtk()}'),
+                  _buildInfoRow('防御力', '${player.getDef()}'),
+                  _buildInfoRow('暴击率', '${player.getCritRate().toStringAsFixed(1)}%'),
+                  _buildInfoRow('闪避率', '${player.getAvoidRate().toStringAsFixed(1)}%'),
+                  const Divider(color: Colors.white24),
+                  // 属性点区域 - 始终显示
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: stats.ap > 0 ? Colors.amber.withOpacity(0.1) : Colors.grey.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: stats.ap > 0 ? Colors.amber.withOpacity(0.3) : Colors.grey.withOpacity(0.3)),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Icon(
-                          Icons.star,
-                          color: stats.ap > 0 ? Colors.amber : Colors.grey,
-                          size: 20,
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.star,
+                              color: stats.ap > 0 ? Colors.amber : Colors.grey,
+                              size: 20,
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              '可用属性点: ${stats.ap}',
+                              style: TextStyle(
+                                color: stats.ap > 0 ? Colors.amber : Colors.grey,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
                         ),
-                        const SizedBox(width: 8),
-                        Text(
-                          '可用属性点: ${stats.ap}',
-                          style: TextStyle(
-                            color: stats.ap > 0 ? Colors.amber : Colors.grey,
-                            fontWeight: FontWeight.bold,
+                        if (stats.ap > 0) ...[
+                          const SizedBox(height: 8),
+                          const Text(
+                            '点击分配：',
+                            style: TextStyle(color: Colors.white54, fontSize: 12),
                           ),
-                        ),
+                          const SizedBox(height: 8),
+                          Wrap(
+                            spacing: 8,
+                            children: [
+                              _buildStatButton(context, '力量', 'str', ref, setDialogState),
+                              _buildStatButton(context, '敏捷', 'dex', ref, setDialogState),
+                              _buildStatButton(context, '智力', 'int', ref, setDialogState),
+                              _buildStatButton(context, '运气', 'luk', ref, setDialogState),
+                            ],
+                          ),
+                        ],
                       ],
                     ),
-                    if (stats.ap > 0) ...[
-                      const SizedBox(height: 8),
-                      const Text(
-                        '点击分配：',
-                        style: TextStyle(color: Colors.white54, fontSize: 12),
-                      ),
-                      const SizedBox(height: 8),
-                      Wrap(
-                        spacing: 8,
-                        children: [
-                          _buildStatButton(context, '力量', 'str', ref),
-                          _buildStatButton(context, '敏捷', 'dex', ref),
-                          _buildStatButton(context, '智力', 'int', ref),
-                          _buildStatButton(context, '运气', 'luk', ref),
-                        ],
-                      ),
-                    ],
-                  ],
-                ),
+                  ),
+                  const Divider(color: Colors.white24),
+                  // 显示已装备的装备
+                  const Text(
+                    '已装备',
+                    style: TextStyle(
+                      color: Colors.white70,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  _buildEquippedItem('武器', player.equipment[EquipmentSlot.weapon]),
+                  _buildEquippedItem('头盔', player.equipment[EquipmentSlot.helmet]),
+                  _buildEquippedItem('衣服', player.equipment[EquipmentSlot.armor]),
+                  _buildEquippedItem('裤子', player.equipment[EquipmentSlot.pants]),
+                  _buildEquippedItem('鞋子', player.equipment[EquipmentSlot.shoes]),
+                  _buildEquippedItem('披风', player.equipment[EquipmentSlot.cape]),
+                ],
               ),
-              const Divider(color: Colors.white24),
-              // 显示已装备的装备
-              const Text(
-                '已装备',
-                style: TextStyle(
-                  color: Colors.white70,
-                  fontWeight: FontWeight.bold,
-                ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('关闭'),
               ),
-              const SizedBox(height: 8),
-              _buildEquippedItem('武器', player.equipment[EquipmentSlot.weapon]),
-              _buildEquippedItem('头盔', player.equipment[EquipmentSlot.helmet]),
-              _buildEquippedItem('衣服', player.equipment[EquipmentSlot.armor]),
-              _buildEquippedItem('裤子', player.equipment[EquipmentSlot.pants]),
-              _buildEquippedItem('鞋子', player.equipment[EquipmentSlot.shoes]),
-              _buildEquippedItem('披风', player.equipment[EquipmentSlot.cape]),
             ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('关闭'),
-          ),
-        ],
+          );
+        },
       ),
     );
   }
@@ -593,16 +597,13 @@ class ActionPanel extends ConsumerWidget {
     );
   }
 
-  Widget _buildStatButton(BuildContext context, String label, String statType, WidgetRef ref) {
+  Widget _buildStatButton(BuildContext context, String label, String statType, WidgetRef ref, StateSetter setDialogState) {
     return ElevatedButton(
       onPressed: () {
         final success = ref.read(gameProvider.notifier).allocateStat(statType);
         if (success) {
-          // 刷新对话框
-          Navigator.pop(context);
-          Future.delayed(const Duration(milliseconds: 100), () {
-            _showCharacterDialog(context, ref);
-          });
+          // 使用 setDialogState 刷新对话框，不关闭
+          setDialogState(() {});
         }
       },
       style: ElevatedButton.styleFrom(
