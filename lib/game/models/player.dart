@@ -311,38 +311,45 @@ class Player {
 
   /// 获取基础攻击力
   int get baseAtk => stats.str ~/ 5 + stats.dex ~/ 5;
-
-  /// 获取总攻击力
-  int getAtk() {
-    int total = baseAtk;
-    // 加上武器基础攻击
-    total += equipment[EquipmentSlot.weapon]?.atk ?? 0;
-    // 加上所有装备的潜能攻击加成
+  
+  /// 获取装备攻击加成（武器基础+潜能）
+  int get equipAtk {
+    int bonus = 0;
+    // 武器基础攻击
+    bonus += equipment[EquipmentSlot.weapon]?.atk ?? 0;
+    // 所有装备潜能攻击加成
     for (final equip in equipment.values.where((e) => e != null)) {
-      final potentialAtk = equip!.potential?.stats
+      bonus += equip!.potential?.stats
           .where((s) => s.type == PotentialType.atk)
           .fold<int>(0, (sum, s) => sum + (s.value ?? 0)) ?? 0;
-      total += potentialAtk;
     }
-    return total;
+    return bonus;
+  }
+
+  /// 获取总攻击力
+  int getAtk() => baseAtk + equipAtk;
+
+  /// 获取基础防御力
+  int get baseDef => 0;
+  
+  /// 获取装备防御加成（基础+潜能）
+  int get equipDef {
+    int bonus = 0;
+    // 装备基础防御
+    bonus += equipment.values
+        .where((e) => e != null)
+        .fold<int>(0, (sum, e) => sum + (e!.def));
+    // 潜能防御加成
+    for (final equip in equipment.values.where((e) => e != null)) {
+      bonus += equip!.potential?.stats
+          .where((s) => s.type == PotentialType.def)
+          .fold<int>(0, (sum, s) => sum + (s.value ?? 0)) ?? 0;
+    }
+    return bonus;
   }
 
   /// 获取总防御力
-  int getDef() {
-    int total = 0;
-    // 加上所有装备基础防御
-    total += equipment.values
-        .where((e) => e != null)
-        .fold<int>(0, (sum, e) => sum + (e!.def));
-    // 加上所有装备的潜能防御加成
-    for (final equip in equipment.values.where((e) => e != null)) {
-      final potentialDef = equip!.potential?.stats
-          .where((s) => s.type == PotentialType.def)
-          .fold<int>(0, (sum, s) => sum + (s.value ?? 0)) ?? 0;
-      total += potentialDef;
-    }
-    return total;
-  }
+  int getDef() => baseDef + equipDef;
 
   /// 获取基础力量
   int get baseStr => stats.str;
@@ -416,39 +423,49 @@ class Player {
   /// 获取总运气
   int get totalLuk => baseLuk + equipLuk;
 
-  /// 获取暴击率 (基础 + 装备加成 + 潜能加成, 最高50%)
-  double getCritRate() {
-    final baseCrit = stats.getCritRate();
+  /// 获取基础暴击率
+  double get baseCritRate => stats.getCritRate();
+  
+  /// 获取装备暴击率加成
+  int get equipCritRate {
+    int bonus = 0;
     // 装备基础暴击
-    final equipCrit = equipment.values
+    bonus += equipment.values
         .where((e) => e != null)
         .fold<int>(0, (sum, e) => sum + (e!.crit ?? 0));
     // 潜能暴击加成
-    int potentialCrit = 0;
     for (final equip in equipment.values.where((e) => e != null)) {
-      potentialCrit += equip!.potential?.stats
+      bonus += equip!.potential?.stats
           .where((s) => s.type == PotentialType.critRate)
           .fold<int>(0, (sum, s) => sum + (s.value ?? 0)) ?? 0;
     }
-    return (baseCrit + equipCrit + potentialCrit).clamp(0, 50);
+    return bonus;
   }
 
-  /// 获取闪避率 (基础 + 装备加成 + 潜能加成, 最高50%)
-  double getAvoidRate() {
-    final baseAvoid = stats.getAvoidRate();
+  /// 获取总暴击率 (最高50%)
+  double getCritRate() => (baseCritRate + equipCritRate).clamp(0, 50);
+
+  /// 获取基础闪避率
+  double get baseAvoidRate => stats.getAvoidRate();
+  
+  /// 获取装备闪避率加成
+  int get equipAvoidRate {
+    int bonus = 0;
     // 装备基础闪避
-    final equipAvoid = equipment.values
+    bonus += equipment.values
         .where((e) => e != null)
         .fold<int>(0, (sum, e) => sum + (e!.avoid ?? 0));
     // 潜能闪避加成
-    int potentialAvoid = 0;
     for (final equip in equipment.values.where((e) => e != null)) {
-      potentialAvoid += equip!.potential?.stats
+      bonus += equip!.potential?.stats
           .where((s) => s.type == PotentialType.avoidRate)
           .fold<int>(0, (sum, s) => sum + (s.value ?? 0)) ?? 0;
     }
-    return (baseAvoid + equipAvoid + potentialAvoid).clamp(0, 50);
+    return bonus;
   }
+
+  /// 获取总闪避率 (最高50%)
+  double getAvoidRate() => (baseAvoidRate + equipAvoidRate).clamp(0, 50);
 
   /// 复制玩家
   Player copyWith({
