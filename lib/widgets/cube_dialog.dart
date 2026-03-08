@@ -23,6 +23,7 @@ class _CubeDialogState extends ConsumerState<CubeDialog> {
   bool _isRolling = false;
   List<PotentialStat>? _previewStats;
   PotentialGrade? _previewGrade;
+  int _cubeUsedCount = 1; // 第一个魔方已在 CubeSelectorDialog 中消耗
 
   String get _cubeName {
     switch (widget.cubeType) {
@@ -47,6 +48,28 @@ class _CubeDialogState extends ConsumerState<CubeDialog> {
   }
 
   void _rollPotential() {
+    // 检查是否还有足够的魔方
+    final cubeId = widget.cubeType == 'advanced'
+        ? 'cube_advanced'
+        : widget.cubeType == 'super'
+            ? 'cube_super'
+            : 'cube_normal';
+
+    final player = ref.read(gameProvider).player;
+    final cubeCount = player.inventory.where((id) => id == cubeId).length;
+
+    // 如果已经洗过（有预览），需要额外检查一个魔方
+    final requiredCubes = _previewStats != null ? _cubeUsedCount + 1 : 1;
+    if (cubeCount < requiredCubes) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('❌ 魔方不足！'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
     setState(() {
       _isRolling = true;
     });
@@ -94,6 +117,7 @@ class _CubeDialogState extends ConsumerState<CubeDialog> {
           }
         }
         _isRolling = false;
+        _cubeUsedCount++; // 增加已使用魔方计数
       });
     });
   }
@@ -152,9 +176,26 @@ class _CubeDialogState extends ConsumerState<CubeDialog> {
         children: [
           Text(_cubeEmoji, style: const TextStyle(fontSize: 28)),
           const SizedBox(width: 12),
-          Text(
-            _cubeName,
-            style: const TextStyle(color: Colors.white, fontSize: 18),
+          Expanded(
+            child: Text(
+              _cubeName,
+              style: const TextStyle(color: Colors.white, fontSize: 18),
+            ),
+          ),
+          // 显示已使用魔方数量
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              color: Colors.purple.withOpacity(0.3),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Text(
+              '已用: $_cubeUsedCount个',
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 12,
+              ),
+            ),
           ),
         ],
       ),
@@ -424,7 +465,27 @@ class _CubeDialogState extends ConsumerState<CubeDialog> {
           onPressed: () => Navigator.pop(context),
           child: const Text('退出'),
         ),
-        if (hasRolled)
+        if (hasRolled) ...[
+          // 洗出潜能后显示两个按钮：继续洗 和 应用
+          ElevatedButton.icon(
+            onPressed: _isRolling ? null : _rollPotential,
+            icon: _isRolling
+                ? const SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Colors.white,
+                    ),
+                  )
+                : const Icon(Icons.casino),
+            label: Text(_isRolling ? '洗潜能中...' : '继续洗'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.purple,
+              foregroundColor: Colors.white,
+            ),
+          ),
+          const SizedBox(width: 8),
           ElevatedButton.icon(
             onPressed: _applyPotential,
             icon: const Icon(Icons.check),
@@ -433,8 +494,8 @@ class _CubeDialogState extends ConsumerState<CubeDialog> {
               backgroundColor: Colors.green,
               foregroundColor: Colors.white,
             ),
-          )
-        else
+          ),
+        ] else
           ElevatedButton.icon(
             onPressed: _isRolling ? null : _rollPotential,
             icon: _isRolling
