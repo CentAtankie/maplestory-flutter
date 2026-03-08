@@ -5,6 +5,7 @@ import '../providers/game_provider.dart';
 import '../game/models/player.dart';
 import '../game/models/item.dart';
 import 'cube_dialog.dart';
+import 'equipment_detail_dialog.dart';
 
 /// 物品栏分类
 enum InventoryCategory {
@@ -467,11 +468,22 @@ class _InventoryDialogState extends ConsumerState<InventoryDialog> {
                             ),
                           ),
                         const SizedBox(width: 8),
-                        // 操作按钮 - 背包里的装备都显示装备和卖出
+                        // 操作按钮 - 背包里的装备都显示详情、装备和卖出
                         if (isEquipment)
                           Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
+                              // 详情按钮
+                              ElevatedButton(
+                                onPressed: () => _showEquipmentDetail(itemId, equipment!, player),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.blue,
+                                  foregroundColor: Colors.white,
+                                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                                ),
+                                child: const Text('详情'),
+                              ),
+                              const SizedBox(width: 8),
                               ElevatedButton(
                                 onPressed: () => _equip(itemId),
                                 style: ElevatedButton.styleFrom(
@@ -614,5 +626,26 @@ class _InventoryDialogState extends ConsumerState<InventoryDialog> {
         ),
       );
     }
+  }
+
+  /// 显示装备详情对话框
+  void _showEquipmentDetail(String itemId, Equipment equipment, Player player) {
+    // 优先通过instanceId获取装备实例（新系统）
+    final equipInstance = ref.read(gameProvider.notifier).getEquipmentByInstanceId(itemId);
+    final actualEquipment = equipInstance ?? equipment;
+    
+    // 检查该装备是否已装备
+    final isEquipped = player.equipment.values.any((eq) => eq?.instanceId == actualEquipment.instanceId);
+    
+    showDialog(
+      context: context,
+      builder: (context) => EquipmentDetailDialog(
+        equipment: actualEquipment,
+        isEquipped: isEquipped,
+        onEquip: isEquipped ? null : () => _equip(itemId),
+        onUnequip: isEquipped ? () => _unequip(actualEquipment) : null,
+        onSell: () => _sell(itemId),
+      ),
+    );
   }
 }
