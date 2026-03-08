@@ -554,12 +554,12 @@ class ActionPanel extends ConsumerWidget {
                     ),
                   ),
                   const SizedBox(height: 8),
-                  _buildEquippedItem('武器', player.equipment[EquipmentSlot.weapon]),
-                  _buildEquippedItem('头盔', player.equipment[EquipmentSlot.helmet]),
-                  _buildEquippedItem('衣服', player.equipment[EquipmentSlot.armor]),
-                  _buildEquippedItem('裤子', player.equipment[EquipmentSlot.pants]),
-                  _buildEquippedItem('鞋子', player.equipment[EquipmentSlot.shoes]),
-                  _buildEquippedItem('披风', player.equipment[EquipmentSlot.cape]),
+                  _buildEquippedItem('武器', player.equipment[EquipmentSlot.weapon], EquipmentSlot.weapon, ref, setDialogState),
+                  _buildEquippedItem('头盔', player.equipment[EquipmentSlot.helmet], EquipmentSlot.helmet, ref, setDialogState),
+                  _buildEquippedItem('衣服', player.equipment[EquipmentSlot.armor], EquipmentSlot.armor, ref, setDialogState),
+                  _buildEquippedItem('裤子', player.equipment[EquipmentSlot.pants], EquipmentSlot.pants, ref, setDialogState),
+                  _buildEquippedItem('鞋子', player.equipment[EquipmentSlot.shoes], EquipmentSlot.shoes, ref, setDialogState),
+                  _buildEquippedItem('披风', player.equipment[EquipmentSlot.cape], EquipmentSlot.cape, ref, setDialogState),
                 ],
               ),
             ),
@@ -620,7 +620,7 @@ class ActionPanel extends ConsumerWidget {
     );
   }
 
-  Widget _buildEquippedItem(String slotName, Equipment? equipment) {
+  Widget _buildEquippedItem(String slotName, Equipment? equipment, EquipmentSlot slot, WidgetRef ref, StateSetter setDialogState) {
     if (equipment == null) {
       return Padding(
         padding: const EdgeInsets.symmetric(vertical: 2),
@@ -647,12 +647,15 @@ class ActionPanel extends ConsumerWidget {
             '$slotName: ',
             style: const TextStyle(color: Colors.white54, fontSize: 12),
           ),
-          Text(
-            equipment.name,
-            style: const TextStyle(
-              color: Colors.amber,
-              fontSize: 12,
-              fontWeight: FontWeight.bold,
+          Expanded(
+            child: Text(
+              equipment.name,
+              style: const TextStyle(
+                color: Colors.amber,
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+              ),
+              overflow: TextOverflow.ellipsis,
             ),
           ),
           const SizedBox(width: 4),
@@ -661,6 +664,27 @@ class ActionPanel extends ConsumerWidget {
             style: TextStyle(
               color: Colors.green.withOpacity(0.8),
               fontSize: 10,
+            ),
+          ),
+          const SizedBox(width: 8),
+          // 卸下按钮
+          SizedBox(
+            width: 40,
+            height: 24,
+            child: ElevatedButton(
+              onPressed: () {
+                final success = ref.read(gameProvider.notifier).unequipItem(slot);
+                if (success) {
+                  setDialogState(() {});
+                }
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.orange.withOpacity(0.3),
+                foregroundColor: Colors.orange,
+                padding: EdgeInsets.zero,
+                textStyle: const TextStyle(fontSize: 10),
+              ),
+              child: const Text('卸下'),
             ),
           ),
         ],
