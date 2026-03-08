@@ -680,354 +680,357 @@ class ActionPanel extends ConsumerWidget {
           '⚙️ 设置',
           style: TextStyle(color: Colors.white),
         ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // 背景音乐控制
-            StatefulBuilder(
-              builder: (context, setState) {
-                final audioManager = AudioManager();
-                final isPlaying = audioManager.isPlaying;
-                final volume = audioManager.volume;
-                final isWeb = audioManager.isWeb;
-                
-                return Column(
-                  children: [
-                    ListTile(
-                      leading: Icon(
-                        isWeb 
-                            ? Icons.music_off 
-                            : (isPlaying ? Icons.music_note : Icons.music_off),
-                        color: isWeb 
-                            ? Colors.grey 
-                            : (isPlaying ? Colors.green : Colors.grey),
-                      ),
-                      title: const Text(
-                        '背景音乐',
-                        style: TextStyle(color: Colors.white),
-                      ),
-                      subtitle: Text(
-                        isWeb 
-                            ? 'Web 平台暂不支持'
-                            : (isPlaying ? '正在播放: 射手村' : '已暂停'),
-                        style: const TextStyle(color: Colors.white54, fontSize: 12),
-                      ),
-                      trailing: isWeb 
-                          ? null
-                          : Switch(
-                              value: isPlaying,
-                              onChanged: (value) async {
-                                if (value) {
-                                  await AudioManager().resume();
-                                } else {
-                                  await AudioManager().pause();
-                                }
-                                setState(() {});
-                              },
-                              activeColor: Colors.green,
-                            ),
-                    ),
-                    if (!isWeb && isPlaying)
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                        child: Row(
-                          children: [
-                            const Icon(
-                              Icons.volume_down,
-                              color: Colors.white54,
-                              size: 20,
-                            ),
-                            Expanded(
-                              child: Slider(
-                                value: volume,
-                                onChanged: (value) async {
-                                  await AudioManager().setVolume(value);
-                                  setState(() {});
-                                },
-                                activeColor: Colors.green,
-                                inactiveColor: Colors.white24,
-                              ),
-                            ),
-                            const Icon(
-                              Icons.volume_up,
-                              color: Colors.white54,
-                              size: 20,
-                            ),
-                          ],
+        content: SizedBox(
+          width: double.maxFinite,
+          height: MediaQuery.of(context).size.height * 0.6, // 限制最大高度
+          child: SingleChildScrollView( // 添加滚动支持
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // 背景音乐控制
+                StatefulBuilder(
+                  builder: (context, setState) {
+                    final audioManager = AudioManager();
+                    final isPlaying = audioManager.isPlaying;
+                    final volume = audioManager.volume;
+                    final isWeb = audioManager.isWeb;
+                    
+                    return Column(
+                      children: [
+                        ListTile(
+                          leading: Icon(
+                            isWeb 
+                                ? Icons.music_off 
+                                : (isPlaying ? Icons.music_note : Icons.music_off),
+                            color: isWeb 
+                                ? Colors.grey 
+                                : (isPlaying ? Colors.green : Colors.grey),
+                          ),
+                          title: const Text(
+                            '背景音乐',
+                            style: TextStyle(color: Colors.white),
+                          ),
+                          subtitle: Text(
+                            isWeb 
+                                ? 'Web 平台暂不支持'
+                                : (isPlaying ? '正在播放: 射手村' : '已暂停'),
+                            style: const TextStyle(color: Colors.white54, fontSize: 12),
+                          ),
+                          trailing: isWeb 
+                              ? null
+                              : Switch(
+                                  value: isPlaying,
+                                  onChanged: (value) async {
+                                    if (value) {
+                                      await AudioManager().resume();
+                                    } else {
+                                      await AudioManager().pause();
+                                    }
+                                    setState(() {});
+                                  },
+                                  activeColor: Colors.green,
+                                ),
                         ),
-                      ),
-                    const Divider(color: Colors.white24),
-                  ],
-                );
-              },
-            ),
-            // 修改名字
-            ListTile(
-              leading: const Icon(Icons.edit, color: Colors.orange),
-              title: const Text(
-                '修改名字',
-                style: TextStyle(color: Colors.white),
-              ),
-              subtitle: Text(
-                '当前: ${ref.read(gameProvider).player.name}',
-                style: const TextStyle(color: Colors.white54, fontSize: 12),
-              ),
-              onTap: () {
-                Navigator.pop(context);
-                _showRenameDialog(context, ref);
-              },
-            ),
-            const Divider(color: Colors.white24),
-            // 保存游戏
-            ListTile(
-              leading: const Icon(Icons.save, color: Colors.green),
-              title: const Text(
-                '保存游戏',
-                style: TextStyle(color: Colors.white),
-              ),
-              subtitle: const Text(
-                '将当前进度保存到本地',
-                style: TextStyle(color: Colors.white54, fontSize: 12),
-              ),
-              onTap: () async {
-                Navigator.pop(context);
-                final success = await ref.read(gameProvider.notifier).saveGame();
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(success ? '✅ 游戏已保存' : '❌ 保存失败'),
-                      backgroundColor: success ? Colors.green : Colors.red,
-                    ),
-                  );
-                }
-              },
-            ),
-            // 读取存档
-            ListTile(
-              leading: Icon(Icons.folder_open, 
-                color: hasSave ? Colors.blue : Colors.grey),
-              title: Text(
-                '读取存档',
-                style: TextStyle(
-                  color: hasSave ? Colors.white : Colors.grey,
+                        if (!isWeb && isPlaying)
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 16),
+                            child: Row(
+                              children: [
+                                const Icon(
+                                  Icons.volume_down,
+                                  color: Colors.white54,
+                                  size: 20,
+                                ),
+                                Expanded(
+                                  child: Slider(
+                                    value: volume,
+                                    onChanged: (value) async {
+                                      await AudioManager().setVolume(value);
+                                      setState(() {});
+                                    },
+                                    activeColor: Colors.green,
+                                    inactiveColor: Colors.white24,
+                                  ),
+                                ),
+                                const Icon(
+                                  Icons.volume_up,
+                                  color: Colors.white54,
+                                  size: 20,
+                                ),
+                              ],
+                            ),
+                          ),
+                        const Divider(color: Colors.white24),
+                      ],
+                    );
+                  },
                 ),
-              ),
-              subtitle: Text(
-                hasSave ? '加载上次保存的进度' : '没有存档',
-                style: TextStyle(
-                  color: hasSave ? Colors.white54 : Colors.grey, 
-                  fontSize: 12
+                // 修改名字
+                ListTile(
+                  leading: const Icon(Icons.edit, color: Colors.orange),
+                  title: const Text(
+                    '修改名字',
+                    style: TextStyle(color: Colors.white),
+                  ),
+                  subtitle: Text(
+                    '当前: ${ref.read(gameProvider).player.name}',
+                    style: const TextStyle(color: Colors.white54, fontSize: 12),
+                  ),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _showRenameDialog(context, ref);
+                  },
                 ),
-              ),
-              onTap: hasSave ? () async {
-                Navigator.pop(context);
-                final success = await ref.read(gameProvider.notifier).loadGame();
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(success ? '✅ 存档已读取' : '❌ 读取失败'),
-                      backgroundColor: success ? Colors.green : Colors.red,
+                const Divider(color: Colors.white24),
+                // 保存游戏
+                ListTile(
+                  leading: const Icon(Icons.save, color: Colors.green),
+                  title: const Text(
+                    '保存游戏',
+                    style: TextStyle(color: Colors.white),
+                  ),
+                  subtitle: const Text(
+                    '将当前进度保存到本地',
+                    style: TextStyle(color: Colors.white54, fontSize: 12),
+                  ),
+                  onTap: () async {
+                    Navigator.pop(context);
+                    final success = await ref.read(gameProvider.notifier).saveGame();
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(success ? '✅ 游戏已保存' : '❌ 保存失败'),
+                          backgroundColor: success ? Colors.green : Colors.red,
+                        ),
+                      );
+                    }
+                  },
+                ),
+                // 读取存档
+                ListTile(
+                  leading: Icon(Icons.folder_open, 
+                    color: hasSave ? Colors.blue : Colors.grey),
+                  title: Text(
+                    '读取存档',
+                    style: TextStyle(
+                      color: hasSave ? Colors.white : Colors.grey,
                     ),
-                  );
-                }
-              } : null,
-            ),
-            // 导出存档
-            ListTile(
-              leading: const Icon(Icons.upload, color: Colors.orange),
-              title: const Text(
-                '导出存档',
-                style: TextStyle(color: Colors.white),
-              ),
-              subtitle: const Text(
-                '导出为 JSON 文件（可转移存档）',
-                style: TextStyle(color: Colors.white54, fontSize: 12),
-              ),
-              onTap: () async {
-                Navigator.pop(context);
-                final json = await ref.read(gameProvider.notifier).exportToJson();
-                if (context.mounted) {
-                  if (json != null) {
-                    // 显示导出成功提示，并让用户复制
+                  ),
+                  subtitle: Text(
+                    hasSave ? '加载上次保存的进度' : '没有存档',
+                    style: TextStyle(
+                      color: hasSave ? Colors.white54 : Colors.grey, 
+                      fontSize: 12
+                    ),
+                  ),
+                  onTap: hasSave ? () async {
+                    Navigator.pop(context);
+                    final success = await ref.read(gameProvider.notifier).loadGame();
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(success ? '✅ 存档已读取' : '❌ 读取失败'),
+                          backgroundColor: success ? Colors.green : Colors.red,
+                        ),
+                      );
+                    }
+                  } : null,
+                ),
+                // 导出存档
+                ListTile(
+                  leading: const Icon(Icons.upload, color: Colors.orange),
+                  title: const Text(
+                    '导出存档',
+                    style: TextStyle(color: Colors.white),
+                  ),
+                  subtitle: const Text(
+                    '导出为 JSON 文件（可转移存档）',
+                    style: TextStyle(color: Colors.white54, fontSize: 12),
+                  ),
+                  onTap: () async {
+                    Navigator.pop(context);
+                    final json = await ref.read(gameProvider.notifier).exportToJson();
+                    if (context.mounted) {
+                      if (json != null) {
+                        showDialog(
+                          context: context,
+                          builder: (context) => AlertDialog(
+                            backgroundColor: const Color(0xFF1A1A2E),
+                            title: const Text(
+                              '📤 存档已导出',
+                              style: TextStyle(color: Colors.white),
+                            ),
+                            content: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Text(
+                                  '请复制以下文本保存到安全的地方：',
+                                  style: TextStyle(color: Colors.white70),
+                                ),
+                                const SizedBox(height: 12),
+                                Container(
+                                  padding: const EdgeInsets.all(12),
+                                  decoration: BoxDecoration(
+                                    color: Colors.black26,
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: SelectableText(
+                                    json.substring(0, json.length > 200 ? 200 : json.length) + '...',
+                                    style: const TextStyle(
+                                      color: Colors.white70,
+                                      fontSize: 12,
+                                      fontFamily: 'monospace',
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            actions: [
+                              TextButton(
+                                onPressed: () => Navigator.pop(context),
+                                child: const Text('关闭'),
+                              ),
+                            ],
+                          ),
+                        );
+                      } else {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('❌ 导出失败'),
+                            backgroundColor: Colors.red,
+                          ),
+                        );
+                      }
+                    }
+                  },
+                ),
+                // 导入存档
+                ListTile(
+                  leading: const Icon(Icons.download, color: Colors.purple),
+                  title: const Text(
+                    '导入存档',
+                    style: TextStyle(color: Colors.white),
+                  ),
+                  subtitle: const Text(
+                    '从 JSON 文件恢复存档',
+                    style: TextStyle(color: Colors.white54, fontSize: 12),
+                  ),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _showImportDialog(context, ref);
+                  },
+                ),
+                const Divider(color: Colors.white24),
+                // 删除存档
+                ListTile(
+                  leading: Icon(Icons.delete, 
+                    color: hasSave ? Colors.red : Colors.grey),
+                  title: Text(
+                    '删除存档',
+                    style: TextStyle(
+                      color: hasSave ? Colors.red : Colors.grey,
+                    ),
+                  ),
+                  onTap: hasSave ? () {
+                    Navigator.pop(context);
                     showDialog(
                       context: context,
                       builder: (context) => AlertDialog(
                         backgroundColor: const Color(0xFF1A1A2E),
                         title: const Text(
-                          '📤 存档已导出',
-                          style: TextStyle(color: Colors.white),
+                          '⚠️ 确认删除?',
+                          style: TextStyle(color: Colors.red),
                         ),
-                        content: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Text(
-                              '请复制以下文本保存到安全的地方：',
-                              style: TextStyle(color: Colors.white70),
-                            ),
-                            const SizedBox(height: 12),
-                            Container(
-                              padding: const EdgeInsets.all(12),
-                              decoration: BoxDecoration(
-                                color: Colors.black26,
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: SelectableText(
-                                json.substring(0, json.length > 200 ? 200 : json.length) + '...',
-                                style: const TextStyle(
-                                  color: Colors.white70,
-                                  fontSize: 12,
-                                  fontFamily: 'monospace',
-                                ),
-                              ),
-                            ),
-                          ],
+                        content: const Text(
+                          '存档将被永久删除，无法恢复！',
+                          style: TextStyle(color: Colors.white70),
                         ),
                         actions: [
                           TextButton(
                             onPressed: () => Navigator.pop(context),
-                            child: const Text('关闭'),
+                            child: const Text('取消'),
+                          ),
+                          TextButton(
+                            onPressed: () async {
+                              Navigator.pop(context);
+                              final success = await ref.read(gameProvider.notifier).deleteSave();
+                              if (context.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(success ? '🗑️ 存档已删除' : '❌ 删除失败'),
+                                    backgroundColor: success ? Colors.green : Colors.red,
+                                  ),
+                                );
+                              }
+                            },
+                            child: const Text(
+                              '确认删除',
+                              style: TextStyle(color: Colors.red),
+                            ),
                           ),
                         ],
                       ),
                     );
-                  } else {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('❌ 导出失败'),
-                        backgroundColor: Colors.red,
-                      ),
-                    );
-                  }
-                }
-              },
-            ),
-            // 导入存档
-            ListTile(
-              leading: const Icon(Icons.download, color: Colors.purple),
-              title: const Text(
-                '导入存档',
-                style: TextStyle(color: Colors.white),
-              ),
-              subtitle: const Text(
-                '从 JSON 文件恢复存档',
-                style: TextStyle(color: Colors.white54, fontSize: 12),
-              ),
-              onTap: () {
-                Navigator.pop(context);
-                _showImportDialog(context, ref);
-              },
-            ),
-            const Divider(color: Colors.white24),
-            // 删除存档
-            ListTile(
-              leading: Icon(Icons.delete, 
-                color: hasSave ? Colors.red : Colors.grey),
-              title: Text(
-                '删除存档',
-                style: TextStyle(
-                  color: hasSave ? Colors.red : Colors.grey,
+                  } : null,
                 ),
-              ),
-              onTap: hasSave ? () {
-                Navigator.pop(context);
-                showDialog(
-                  context: context,
-                  builder: (context) => AlertDialog(
-                    backgroundColor: const Color(0xFF1A1A2E),
-                    title: const Text(
-                      '⚠️ 确认删除?',
-                      style: TextStyle(color: Colors.red),
-                    ),
-                    content: const Text(
-                      '存档将被永久删除，无法恢复！',
-                      style: TextStyle(color: Colors.white70),
-                    ),
-                    actions: [
-                      TextButton(
-                        onPressed: () => Navigator.pop(context),
-                        child: const Text('取消'),
-                      ),
-                      TextButton(
-                        onPressed: () async {
-                          Navigator.pop(context);
-                          final success = await ref.read(gameProvider.notifier).deleteSave();
-                          if (context.mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text(success ? '🗑️ 存档已删除' : '❌ 删除失败'),
-                                backgroundColor: success ? Colors.green : Colors.red,
-                              ),
-                            );
-                          }
-                        },
-                        child: const Text(
-                          '确认删除',
-                          style: TextStyle(color: Colors.red),
-                        ),
-                      ),
-                    ],
+                const Divider(color: Colors.white24),
+                // 重新开始
+                ListTile(
+                  leading: const Icon(Icons.refresh, color: Colors.white70),
+                  title: const Text(
+                    '重新开始',
+                    style: TextStyle(color: Colors.white),
                   ),
-                );
-              } : null,
-            ),
-            const Divider(color: Colors.white24),
-            // 重新开始
-            ListTile(
-              leading: const Icon(Icons.refresh, color: Colors.white70),
-              title: const Text(
-                '重新开始',
-                style: TextStyle(color: Colors.white),
-              ),
-              onTap: () async {
-                Navigator.pop(context);
-                // 使用更简单的方式兼容微信
-                final confirmed = await showDialog<bool>(
-                  context: context,
-                  barrierDismissible: false, // 微信兼容：必须点击按钮关闭
-                  builder: (BuildContext ctx) {
-                    return AlertDialog(
-                      backgroundColor: const Color(0xFF1A1A2E),
-                      title: const Text(
-                        '确认重新开始?',
-                        style: TextStyle(color: Colors.white),
-                      ),
-                      content: const Text(
-                        '当前进度将会丢失',
-                        style: TextStyle(color: Colors.white70),
-                      ),
-                      actions: [
-                        TextButton(
-                          onPressed: () => Navigator.of(ctx).pop(false),
-                          child: const Text('取消'),
-                        ),
-                        TextButton(
-                          onPressed: () => Navigator.of(ctx).pop(true),
-                          child: const Text(
-                            '确认',
-                            style: TextStyle(color: Colors.red),
+                  onTap: () async {
+                    Navigator.pop(context);
+                    final confirmed = await showDialog<bool>(
+                      context: context,
+                      barrierDismissible: false,
+                      builder: (BuildContext ctx) {
+                        return AlertDialog(
+                          backgroundColor: const Color(0xFF1A1A2E),
+                          title: const Text(
+                            '确认重新开始?',
+                            style: TextStyle(color: Colors.white),
                           ),
-                        ),
-                      ],
+                          content: const Text(
+                            '当前进度将会丢失',
+                            style: TextStyle(color: Colors.white70),
+                          ),
+                          actions: [
+                            TextButton(
+                              onPressed: () => Navigator.of(ctx).pop(false),
+                              child: const Text('取消'),
+                            ),
+                            TextButton(
+                              onPressed: () => Navigator.of(ctx).pop(true),
+                              child: const Text(
+                                '确认',
+                                style: TextStyle(color: Colors.red),
+                              ),
+                            ),
+                          ],
+                        );
+                      },
                     );
+                    
+                    if (confirmed == true && context.mounted) {
+                      await Future.delayed(const Duration(milliseconds: 100));
+                      if (context.mounted) {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (context) => CreateCharacterScreen(
+                              playerName: ref.read(gameProvider).player.name,
+                            ),
+                          ),
+                        );
+                      }
+                    }
                   },
-                );
-                
-                if (confirmed == true && context.mounted) {
-                  // 延迟执行导航，避免微信兼容问题
-                  await Future.delayed(const Duration(milliseconds: 100));
-                  if (context.mounted) {
-                    Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (context) => CreateCharacterScreen(
-                          playerName: ref.read(gameProvider).player.name,
-                        ),
-                      ),
-                    );
-                  }
-                }
-              },
+                ),
+              ],
             ),
-          ],
+          ),
         ),
         actions: [
           TextButton(
