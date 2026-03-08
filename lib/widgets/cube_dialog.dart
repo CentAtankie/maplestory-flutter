@@ -1,3 +1,4 @@
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/game_provider.dart';
@@ -77,13 +78,13 @@ class _CubeDialogState extends ConsumerState<CubeDialog> {
     // 模拟滚动动画
     Future.delayed(const Duration(milliseconds: 800), () {
       final currentPotential = widget.equipment.potential;
-      final random = DateTime.now().millisecond;
+      final random = Random().nextInt(100); // 0-99 真正随机
 
       setState(() {
         // 判断是否升级潜能
         if (widget.cubeType == 'advanced' && currentPotential?.grade == PotentialGrade.rare) {
           // 高级魔方：30%概率升级到黄色
-          if (random % 100 < 30) {
+          if (random < 30) {
             _previewGrade = PotentialGrade.epic;
             _previewStats = EquipmentPotential.generateEpic().stats;
           } else {
@@ -92,7 +93,7 @@ class _CubeDialogState extends ConsumerState<CubeDialog> {
           }
         } else if (widget.cubeType == 'super' && currentPotential?.grade == PotentialGrade.epic) {
           // 超级魔方：20%概率升级到绿色
-          if (random % 100 < 20) {
+          if (random < 20) {
             _previewGrade = PotentialGrade.unique;
             _previewStats = EquipmentPotential.generateUnique().stats;
           } else {
