@@ -354,7 +354,7 @@ class Player {
       bonus += equip!.str;
       bonus += equip.potential?.stats
           .where((s) => s.type == PotentialType.str)
-          .fold(0, (sum, s) => sum + s.value) ?? 0;
+          .fold<int>(0, (sum, s) => sum + (s.value ?? 0)) ?? 0;
     }
     return bonus;
   }
@@ -372,7 +372,7 @@ class Player {
       bonus += equip!.dex;
       bonus += equip.potential?.stats
           .where((s) => s.type == PotentialType.dex)
-          .fold(0, (sum, s) => sum + s.value) ?? 0;
+          .fold<int>(0, (sum, s) => sum + (s.value ?? 0)) ?? 0;
     }
     return bonus;
   }
@@ -389,8 +389,8 @@ class Player {
     for (final equip in equipment.values.where((e) => e != null)) {
       bonus += equip!.intBonus;
       bonus += equip.potential?.stats
-          .where((s) => s.type == PotentialType.intelligence)
-          .fold(0, (sum, s) => sum + s.value) ?? 0;
+          .where((s) => s.type == PotentialType.intStat)
+          .fold<int>(0, (sum, s) => sum + (s.value ?? 0)) ?? 0;
     }
     return bonus;
   }
@@ -408,7 +408,7 @@ class Player {
       bonus += equip!.luk;
       bonus += equip.potential?.stats
           .where((s) => s.type == PotentialType.luk)
-          .fold(0, (sum, s) => sum + s.value) ?? 0;
+          .fold<int>(0, (sum, s) => sum + (s.value ?? 0)) ?? 0;
     }
     return bonus;
   }
