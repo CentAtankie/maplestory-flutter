@@ -10,7 +10,9 @@ class QuestDialog extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final player = ref.watch(gameProvider).player;
-    final quests = ref.watch(gameProvider).quests;
+    final gameData = ref.watch(gameProvider);
+    final quests = gameData.quests;
+    final currentMapId = gameData.currentMap.id;
 
     // 可接取的任务
     final availableQuests = quests.where((q) => q.status == QuestStatus.available).toList();
@@ -238,7 +240,7 @@ class QuestDialog extends ConsumerWidget {
             // 转职按钮
             if (quest.type == QuestType.jobChange && 
                 quest.status == QuestStatus.inProgress &&
-                quest.targetMapId == player.currentMapId) ...[
+                quest.targetMapId == currentMapId) ...[
               const SizedBox(height: 8),
               SizedBox(
                 width: double.infinity,
