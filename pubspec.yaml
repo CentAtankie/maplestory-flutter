@@ -1,7 +1,7 @@
 name: maplestory_flutter
 description: 冒险岛文字版 - Flutter 多平台游戏
 publish_to: 'none'
-version: 1.0.0+1
+version: 0.0.1+1
 
 environment:
   sdk: '>=3.0.0 <4.0.0'

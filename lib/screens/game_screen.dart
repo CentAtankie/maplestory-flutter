@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/game_provider.dart';
 import '../game/models/map.dart';
+import '../utils/version.dart';
 import '../widgets/status_bar.dart';
 import '../widgets/game_log.dart';
 import '../widgets/action_panel.dart';
@@ -21,23 +22,44 @@ class GameScreen extends ConsumerWidget {
       body: SafeArea(
         child: Column(
           children: [
-            // 状态栏
-            const StatusBar(),
-            
-            // 地图信息
-            _buildMapInfo(gameState),
-            
-            // 游戏日志区域 - 固定高度，可滚动
-            SizedBox(
-              height: 180,  // 固定高度
-              child: Container(
-                margin: const EdgeInsets.symmetric(horizontal: 12),
-                child: const GameLog(),
+            // 可滚动的内容区域
+            Expanded(
+              child: SingleChildScrollView(
+                child: Column(
+                  children: [
+                    // 状态栏
+                    const StatusBar(),
+                    
+                    // 地图信息
+                    _buildMapInfo(gameState),
+                    
+                    // 游戏日志区域
+                    Container(
+                      margin: const EdgeInsets.symmetric(horizontal: 12),
+                      height: 180,
+                      child: const GameLog(),
+                    ),
+                    
+                    // 操作面板
+                    const ActionPanel(),
+                    
+                    const SizedBox(height: 8),
+                  ],
+                ),
               ),
             ),
             
-            // 操作面板
-            const ActionPanel(),
+            // 版本号显示在底部
+            Container(
+              padding: const EdgeInsets.symmetric(vertical: 4),
+              child: Text(
+                'v$appVersion',
+                style: const TextStyle(
+                  color: Colors.white30,
+                  fontSize: 11,
+                ),
+              ),
+            ),
           ],
         ),
       ),
