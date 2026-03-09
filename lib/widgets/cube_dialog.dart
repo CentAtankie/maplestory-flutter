@@ -83,11 +83,16 @@ class _CubeDialogState extends ConsumerState<CubeDialog> {
       final random = Random().nextInt(100); // 0-99 真正随机
 
       setState(() {
-        // 判断是否升级潜能
-        final currentGrade = currentPotential?.grade ?? PotentialGrade.rare;
+        // 判断当前潜能状态
+        final currentGrade = currentPotential?.grade ?? PotentialGrade.none;
         
+        // 无潜能的装备：任何魔方都洗出A级（稀有）
+        if (currentGrade == PotentialGrade.none) {
+          _previewGrade = PotentialGrade.rare;
+          _previewStats = EquipmentPotential.generateRare().stats;
+        }
         // 超级魔方洗A级物品时，应用高级魔方的效果（30%概率变S）
-        if (widget.cubeType == 'super' && currentGrade == PotentialGrade.rare) {
+        else if (widget.cubeType == 'super' && currentGrade == PotentialGrade.rare) {
           // 超级魔方洗A级 → 按高级魔方逻辑：30%概率升级到S级
           if (random < 30) {
             _previewGrade = PotentialGrade.epic;
@@ -586,8 +591,8 @@ bool _canUseCubeOnEquipment(String cubeType, Equipment? equipment) {
   if (maxGrade == null) return false;
   
   final currentGrade = equipment.potential?.grade ?? PotentialGrade.none;
-  // 无潜能的装备也不能用魔方
-  if (currentGrade == PotentialGrade.none) return false;
+  // 无潜能的装备可以使用任何魔方
+  if (currentGrade == PotentialGrade.none) return true;
   
   // 检查当前等级是否不超过魔方支持的最高等级
   return currentGrade.index <= maxGrade.index;
@@ -597,11 +602,11 @@ bool _canUseCubeOnEquipment(String cubeType, Equipment? equipment) {
 String _getCubeLimitDescription(String cubeType) {
   switch (cubeType) {
     case 'normal':
-      return '仅可用于A级(稀有)装备';
+      return '可用于无潜能或A级(稀有)装备';
     case 'advanced':
-      return '仅可用于S级(史诗)及以下装备';
+      return '可用于无潜能或S级(史诗)及以下装备';
     case 'super':
-      return '可用于SS级(传说)及以下装备';
+      return '可用于任何潜能等级装备';
     default:
       return '';
   }

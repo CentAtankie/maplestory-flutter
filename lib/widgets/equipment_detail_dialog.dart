@@ -698,8 +698,8 @@ bool _canUseCubeOnEquipment(String cubeType, Equipment? equipment) {
   if (maxGrade == null) return false;
 
   final currentGrade = equipment.potential?.grade ?? PotentialGrade.none;
-  // 无潜能的装备也不能用魔方
-  if (currentGrade == PotentialGrade.none) return false;
+  // 无潜能的装备可以使用任何魔方
+  if (currentGrade == PotentialGrade.none) return true;
 
   // 检查当前等级是否不超过魔方支持的最高等级
   return currentGrade.index <= maxGrade.index;
@@ -709,11 +709,11 @@ bool _canUseCubeOnEquipment(String cubeType, Equipment? equipment) {
 String _getCubeLimitDescription(String cubeType) {
   switch (cubeType) {
     case 'normal':
-      return '仅可用于A级(稀有)装备';
+      return '可用于无潜能或A级(稀有)装备';
     case 'advanced':
-      return '仅可用于S级(史诗)及以下装备';
+      return '可用于无潜能或S级(史诗)及以下装备';
     case 'super':
-      return '可用于SS级(传说)及以下装备';
+      return '可用于任何潜能等级装备';
     default:
       return '';
   }
