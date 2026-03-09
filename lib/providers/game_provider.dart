@@ -1072,11 +1072,37 @@ class GameNotifier extends StateNotifier<GameData> {
 
   /// 接受任务
   void acceptQuest(String questId) {
-    final newQuests = state.quests.map((quest) {
-      if (quest.id == questId) {
-        return quest.copyWith(status: QuestStatus.inProgress);
+    final quest = state.quests.firstWhere((q) => q.id == questId);
+    
+    // 检查是否是转职任务
+    if (quest.type == QuestType.jobChange) {
+      // 检查是否已有进行中的转职任务
+      final activeJobQuest = state.quests.firstWhere(
+        (q) => q.type == QuestType.jobChange && q.status == QuestStatus.inProgress,
+        orElse: () => quest, // 如果没有找到，返回当前任务（避免null）
+      );
+      
+      // 如果已有进行中的转职任务且不是同一个任务，放弃之前的
+      if (activeJobQuest.id != questId && activeJobQuest.status == QuestStatus.inProgress) {
+        // 放弃之前的转职任务
+        final abandonedQuests = state.quests.map((q) {
+          if (q.id == activeJobQuest.id) {
+            return q.copyWith(status: QuestStatus.available, currentCount: 0);
+          }
+          return q;
+        }).toList();
+        
+        state = state.copyWith(quests: abandonedQuests);
+        addLog('❌ 已放弃任务：${activeJobQuest.title}', LogType.warning);
       }
-      return quest;
+    }
+    
+    // 接受新任务
+    final newQuests = state.quests.map((q) {
+      if (q.id == questId) {
+        return q.copyWith(status: QuestStatus.inProgress);
+      }
+      return q;
     }).toList();
     state = state.copyWith(quests: newQuests);
   }

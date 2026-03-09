@@ -80,12 +80,13 @@ class GameMaps {
     'lith': GameMap(
       id: 'lith',
       name: '明珠港',
-      description: '海边港口城市，海盗们聚集的地方。',
+      description: '海边港口城市，海盗们聚集的地方。从这里可以乘船前往诺特勒斯号。',
       emoji: '⚓',
       mobs: [],
       encounterChance: 0.0,
       exits: {
         '北': 'henesys',
+        '船': 'nautilus',
       },
       isTown: true,
     ),
