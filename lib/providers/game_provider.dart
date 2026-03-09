@@ -404,7 +404,7 @@ class GameNotifier extends StateNotifier<GameData> {
     }
 
     // 更新任务进度（如果有狩猎任务）
-    updateQuestProgress(mob.id.name);
+    updateQuestProgress(mob.name);
 
     // 升级检查
     var updatedPlayer = player.copyWith(
@@ -1123,7 +1123,16 @@ class GameNotifier extends StateNotifier<GameData> {
       newPlayer = newPlayer.copyWith(meso: newPlayer.meso + mesoReward);
     }
     if (expReward > 0) {
-      newPlayer = _addExp(newPlayer, expReward);
+      final newExp = newPlayer.stats.exp + expReward;
+      if (newExp >= newPlayer.stats.maxExp) {
+        newPlayer = _levelUp(newPlayer.copyWith(
+          stats: newPlayer.stats.copyWith(exp: newExp),
+        ));
+      } else {
+        newPlayer = newPlayer.copyWith(
+          stats: newPlayer.stats.copyWith(exp: newExp),
+        );
+      }
     }
 
     state = state.copyWith(

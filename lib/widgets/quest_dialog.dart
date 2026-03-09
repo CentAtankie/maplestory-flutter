@@ -50,19 +50,19 @@ class QuestDialog extends ConsumerWidget {
                   children: [
                     // 可接取
                     _buildQuestList(
-                      context, ref, player, availableQuests,
+                      context, ref, player, currentMapId, availableQuests,
                       emptyText: '暂无可接取任务',
                       showAccept: true,
                     ),
                     // 进行中
                     _buildQuestList(
-                      context, ref, player, activeQuests,
+                      context, ref, player, currentMapId, activeQuests,
                       emptyText: '暂无进行中的任务',
                       showProgress: true,
                     ),
                     // 已完成
                     _buildQuestList(
-                      context, ref, player, completedQuests,
+                      context, ref, player, currentMapId, completedQuests,
                       emptyText: '暂无已完成任务',
                       showClaim: true,
                     ),
@@ -86,6 +86,7 @@ class QuestDialog extends ConsumerWidget {
     BuildContext context,
     WidgetRef ref,
     Player player,
+    String currentMapId,
     List<GameQuest> quests, {
     required String emptyText,
     bool showAccept = false,
@@ -105,7 +106,7 @@ class QuestDialog extends ConsumerWidget {
       itemCount: quests.length,
       itemBuilder: (context, index) {
         final quest = quests[index];
-        return _buildQuestCard(context, ref, player, quest, 
+        return _buildQuestCard(context, ref, player, currentMapId, quest,
           showAccept: showAccept,
           showProgress: showProgress,
           showClaim: showClaim,
@@ -118,6 +119,7 @@ class QuestDialog extends ConsumerWidget {
     BuildContext context,
     WidgetRef ref,
     Player player,
+    String currentMapId,
     GameQuest quest, {
     bool showAccept = false,
     bool showProgress = false,

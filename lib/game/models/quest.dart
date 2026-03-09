@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../game/models/player.dart';
+import 'player.dart';
 
 /// 任务类型
 enum QuestType {
