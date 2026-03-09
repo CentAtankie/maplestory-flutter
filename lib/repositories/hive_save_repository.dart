@@ -6,21 +6,22 @@ import '../game/models/mob.dart';
 import '../game/models/player.dart';
 import '../game/models/mail.dart';
 import '../game/models/potential.dart';
+import '../game/models/quest.dart';
 import '../providers/game_provider.dart';
 import 'save_repository.dart';
 
 /// Hive 本地存档实现
 class HiveSaveRepository implements SaveRepository {
-  static const String _boxName = 'game_saves_v5';  // 升级版本号，避免旧存档冲突
-  static const String _saveKey = 'current_save_v5';
-  static const String _equipmentKey = 'equipment_instances_v5';
-  
+  static const String _boxName = 'game_saves_v6';  // 升级版本号，避免旧存档冲突
+  static const String _saveKey = 'current_save_v6';
+  static const String _equipmentKey = 'equipment_instances_v6';
+
   Box? _box;
-  
+
   /// 初始化 Hive
   Future<void> init() async {
     await Hive.initFlutter();
-    
+
     // 注册适配器
     if (!Hive.isAdapterRegistered(0)) {
       Hive.registerAdapter(GameDataAdapter());
@@ -58,39 +59,49 @@ class HiveSaveRepository implements SaveRepository {
     if (!Hive.isAdapterRegistered(11)) {
       Hive.registerAdapter(PotentialTypeAdapter());
     }
+    if (!Hive.isAdapterRegistered(12)) {
+      Hive.registerAdapter(QuestTypeAdapter());
+    }
+    if (!Hive.isAdapterRegistered(13)) {
+      Hive.registerAdapter(QuestStatusAdapter());
+    }
+    if (!Hive.isAdapterRegistered(14)) {
+      Hive.registerAdapter(GameQuestAdapter());
+    }
     
     _box = await Hive.openBox(_boxName);
   }
-  
+
   @override
   Future<void> saveGame(GameData data, {Map<String, Equipment>? equipmentInstances}) async {
     if (_box == null) await init();
-    
+
     final saveData = _GameSaveData(
       player: data.player,
       currentMapId: data.currentMap.id,
       logs: data.logs,
       mails: data.mails,
+      quests: data.quests,
       timestamp: DateTime.now(),
     );
-    
+
     await _box!.put(_saveKey, saveData);
-    
+
     // 保存装备实例
     if (equipmentInstances != null) {
       final equipmentJson = _equipmentInstancesToJson(equipmentInstances);
       await _box!.put(_equipmentKey, equipmentJson);
     }
   }
-  
+
   @override
   Future<GameData?> loadGame() async {
     if (_box == null) await init();
-    
+
     try {
       final saveData = _box!.get(_saveKey) as _GameSaveData?;
       if (saveData == null) return null;
-      
+
       return GameData(
         player: saveData.player,
         currentMap: GameMaps.getMap(saveData.currentMapId),
@@ -99,6 +110,7 @@ class HiveSaveRepository implements SaveRepository {
         random: Random(),
         shopCategory: ShopCategory.all,
         mails: saveData.mails,
+        quests: saveData.quests,
       );
     } catch (e) {
       print('存档格式不兼容，重置存档: $e');
@@ -106,40 +118,40 @@ class HiveSaveRepository implements SaveRepository {
       return null;
     }
   }
-  
+
   @override
   Future<Map<String, Equipment>?> loadEquipmentInstances() async {
     if (_box == null) await init();
-    
+
     try {
       final equipmentJson = _box!.get(_equipmentKey) as String?;
       if (equipmentJson == null) return null;
-      
+
       return _equipmentInstancesFromJson(equipmentJson);
     } catch (e) {
       print('装备实例加载失败: $e');
       return null;
     }
   }
-  
+
   @override
   Future<void> deleteSave() async {
     if (_box == null) await init();
     await _box!.delete(_saveKey);
     await _box!.delete(_equipmentKey);
   }
-  
+
   @override
   Future<bool> hasSave() async {
     if (_box == null) await init();
     return _box!.containsKey(_saveKey);
   }
-  
+
   @override
   Future<String> exportToJson(Map<String, Equipment> equipmentInstances) async {
     final data = await loadGame();
     if (data == null) throw Exception('没有存档可导出');
-    
+
     final exportData = {
       'player': _playerToJson(data.player),
       'currentMapId': data.currentMap.id,
@@ -168,24 +180,24 @@ class HiveSaveRepository implements SaveRepository {
       'equipmentInstances': _equipmentInstancesToJson(equipmentInstances),
       'exportedAt': DateTime.now().toIso8601String(),
     };
-    
+
     return jsonEncode(exportData);
   }
-  
+
   @override
   Future<void> importFromJson(String json) async {
     final data = jsonDecode(json) as Map<String, dynamic>;
-    
+
     final player = _playerFromJson(data['player'] as Map<String, dynamic>);
     final currentMapId = data['currentMapId'] as String;
     final logs = (data['logs'] as List).map((log) => LogEntry(
       message: log['message'] as String,
       type: LogType.values[log['type'] as int],
     )).toList();
-    final mails = data['mails'] != null 
+    final mails = data['mails'] != null
         ? (data['mails'] as List).map((m) => _mailFromJson(m as Map<String, dynamic>)).toList()
         : <GameMail>[];
-    
+
     final saveData = _GameSaveData(
       player: player,
       currentMapId: currentMapId,
@@ -193,18 +205,18 @@ class HiveSaveRepository implements SaveRepository {
       mails: mails,
       timestamp: DateTime.now(),
     );
-    
+
     if (_box == null) await init();
     await _box!.put(_saveKey, saveData);
-    
+
     // 导入装备实例
     if (data['equipmentInstances'] != null) {
       await _box!.put(_equipmentKey, data['equipmentInstances'] as String);
     }
   }
-  
+
   // ========== 装备实例序列化 ==========
-  
+
   String _equipmentInstancesToJson(Map<String, Equipment> instances) {
     final Map<String, dynamic> jsonMap = {};
     for (final entry in instances.entries) {
@@ -212,11 +224,11 @@ class HiveSaveRepository implements SaveRepository {
     }
     return jsonEncode(jsonMap);
   }
-  
+
   Map<String, Equipment> _equipmentInstancesFromJson(String json) {
     final Map<String, dynamic> jsonMap = jsonDecode(json) as Map<String, dynamic>;
     final Map<String, Equipment> instances = {};
-    
+
     for (final entry in jsonMap.entries) {
       final equip = _equipmentFromJson(entry.value as Map<String, dynamic>);
       if (equip != null) {
@@ -225,7 +237,7 @@ class HiveSaveRepository implements SaveRepository {
     }
     return instances;
   }
-  
+
   Map<String, dynamic> _equipmentToJson(Equipment equipment) {
     return {
       'name': equipment.name,
@@ -247,7 +259,7 @@ class HiveSaveRepository implements SaveRepository {
       'potential': equipment.potential != null ? _potentialToJson(equipment.potential!) : null,
     };
   }
-  
+
   Equipment? _equipmentFromJson(Map<String, dynamic> json) {
     try {
       return Equipment(
@@ -267,7 +279,7 @@ class HiveSaveRepository implements SaveRepository {
         levelReq: json['levelReq'] as int?,
         crit: json['crit'] as int?,
         avoid: json['avoid'] as int?,
-        potential: json['potential'] != null 
+        potential: json['potential'] != null
             ? _potentialFromJson(json['potential'] as Map<String, dynamic>)
             : null,
       );
@@ -276,7 +288,7 @@ class HiveSaveRepository implements SaveRepository {
       return null;
     }
   }
-  
+
   Map<String, dynamic> _potentialToJson(EquipmentPotential potential) {
     return {
       'grade': potential.grade.index,
@@ -287,7 +299,7 @@ class HiveSaveRepository implements SaveRepository {
       }).toList(),
     };
   }
-  
+
   EquipmentPotential _potentialFromJson(Map<String, dynamic> json) {
     return EquipmentPotential(
       grade: PotentialGrade.values[json['grade'] as int],
@@ -298,7 +310,7 @@ class HiveSaveRepository implements SaveRepository {
       )).toList(),
     );
   }
-  
+
   // JSON 序列化辅助方法
   Map<String, dynamic> _playerToJson(Player player) {
     return {
@@ -322,7 +334,7 @@ class HiveSaveRepository implements SaveRepository {
       'currentMap': player.currentMap,
     };
   }
-  
+
   Player _playerFromJson(Map<String, dynamic> json) {
     final statsJson = json['stats'] as Map<String, dynamic>;
     return Player(
@@ -346,7 +358,7 @@ class HiveSaveRepository implements SaveRepository {
       currentMap: json['currentMap'] as String,
     );
   }
-  
+
   // 邮件 JSON 序列化辅助方法
   GameMail _mailFromJson(Map<String, dynamic> json) {
     return GameMail(
@@ -362,7 +374,7 @@ class HiveSaveRepository implements SaveRepository {
           .toList(),
     );
   }
-  
+
   MailAttachment _attachmentFromJson(Map<String, dynamic> json) {
     return MailAttachment(
       type: MailAttachmentType.values[json['type'] as int],
@@ -381,6 +393,7 @@ class _GameSaveData {
   final String currentMapId;
   final List<LogEntry> logs;
   final List<GameMail> mails;
+  final List<GameQuest> quests;
   final DateTime timestamp;
 
   _GameSaveData({
@@ -388,6 +401,7 @@ class _GameSaveData {
     required this.currentMapId,
     required this.logs,
     required this.mails,
+    required this.quests,
     required this.timestamp,
   });
 }
@@ -404,6 +418,7 @@ class GameDataAdapter extends TypeAdapter<_GameSaveData> {
       currentMapId: reader.readString(),
       logs: reader.readList().cast<LogEntry>(),
       mails: reader.readList().cast<GameMail>(),
+      quests: reader.readList().cast<GameQuest>(),
       timestamp: DateTime.parse(reader.readString()),
     );
   }
@@ -414,6 +429,7 @@ class GameDataAdapter extends TypeAdapter<_GameSaveData> {
     writer.writeString(obj.currentMapId);
     writer.writeList(obj.logs);
     writer.writeList(obj.mails);
+    writer.writeList(obj.quests);
     writer.writeString(obj.timestamp.toIso8601String());
   }
 }
@@ -430,11 +446,11 @@ class PlayerAdapter extends TypeAdapter<Player> {
     final meso = reader.readInt();
     final inventory = reader.readList().cast<String>();
     final currentMap = reader.readString();
-    
+
     // 读取装备（JSON格式）
     final equipmentJson = reader.readString();
     final equipment = _equipmentMapFromJson(equipmentJson);
-    
+
     return Player(
       name: name,
       job: job,
@@ -457,7 +473,7 @@ class PlayerAdapter extends TypeAdapter<Player> {
     // 保存装备为JSON
     writer.writeString(_equipmentMapToJson(obj.equipment));
   }
-  
+
   // 装备Map转JSON
   String _equipmentMapToJson(Map<EquipmentSlot, Equipment?> equipment) {
     final Map<String, dynamic> jsonMap = {};
@@ -468,7 +484,7 @@ class PlayerAdapter extends TypeAdapter<Player> {
     }
     return jsonEncode(jsonMap);
   }
-  
+
   // JSON转装备Map
   Map<EquipmentSlot, Equipment?> _equipmentMapFromJson(String json) {
     if (json.isEmpty) return {};
@@ -486,7 +502,7 @@ class PlayerAdapter extends TypeAdapter<Player> {
       return {};
     }
   }
-  
+
   Map<String, dynamic> _equipmentToJson(Equipment equipment) {
     return {
       'name': equipment.name,
@@ -508,7 +524,7 @@ class PlayerAdapter extends TypeAdapter<Player> {
       'potential': equipment.potential != null ? _potentialToJson(equipment.potential!) : null,
     };
   }
-  
+
   Equipment? _equipmentFromJson(Map<String, dynamic> json) {
     try {
       return Equipment(
@@ -528,7 +544,7 @@ class PlayerAdapter extends TypeAdapter<Player> {
         levelReq: json['levelReq'] as int?,
         crit: json['crit'] as int?,
         avoid: json['avoid'] as int?,
-        potential: json['potential'] != null 
+        potential: json['potential'] != null
             ? _potentialFromJson(json['potential'] as Map<String, dynamic>)
             : null,
       );
@@ -537,7 +553,7 @@ class PlayerAdapter extends TypeAdapter<Player> {
       return null;
     }
   }
-  
+
   Map<String, dynamic> _potentialToJson(EquipmentPotential potential) {
     return {
       'grade': potential.grade.index,
@@ -548,7 +564,7 @@ class PlayerAdapter extends TypeAdapter<Player> {
       }).toList(),
     };
   }
-  
+
   EquipmentPotential _potentialFromJson(Map<String, dynamic> json) {
     return EquipmentPotential(
       grade: PotentialGrade.values[json['grade'] as int],
@@ -766,5 +782,94 @@ class PotentialTypeAdapter extends TypeAdapter<PotentialType> {
   @override
   void write(BinaryWriter writer, PotentialType obj) {
     writer.writeInt(obj.index);
+  }
+}
+
+// ========== 任务系统适配器 ==========
+
+class QuestTypeAdapter extends TypeAdapter<QuestType> {
+  @override
+  final int typeId = 12;
+
+  @override
+  QuestType read(BinaryReader reader) {
+    return QuestType.values[reader.readInt()];
+  }
+
+  @override
+  void write(BinaryWriter writer, QuestType obj) {
+    writer.writeInt(obj.index);
+  }
+}
+
+class QuestStatusAdapter extends TypeAdapter<QuestStatus> {
+  @override
+  final int typeId = 13;
+
+  @override
+  QuestStatus read(BinaryReader reader) {
+    return QuestStatus.values[reader.readInt()];
+  }
+
+  @override
+  void write(BinaryWriter writer, QuestStatus obj) {
+    writer.writeInt(obj.index);
+  }
+}
+
+class GameQuestAdapter extends TypeAdapter<GameQuest> {
+  @override
+  final int typeId = 14;
+
+  @override
+  GameQuest read(BinaryReader reader) {
+    return GameQuest(
+      id: reader.readString(),
+      title: reader.readString(),
+      description: reader.readString(),
+      type: QuestType.values[reader.readInt()],
+      minLevel: reader.readInt(),
+      requiredJob: reader.readBool() ? Job.values[reader.readInt()] : null,
+      targetJob: reader.readBool() ? Job.values[reader.readInt()] : null,
+      targetMapId: reader.readString(),
+      targetMobs: reader.readList().cast<String>(),
+      targetCount: reader.readInt(),
+      currentCount: reader.readInt(),
+      status: QuestStatus.values[reader.readInt()],
+      rewards: Map<String, int>.fromEntries(
+        List.generate(reader.readInt(), (_) {
+          final key = reader.readString();
+          final value = reader.readInt();
+          return MapEntry(key, value);
+        }),
+      ),
+    );
+  }
+
+  @override
+  void write(BinaryWriter writer, GameQuest obj) {
+    writer.writeString(obj.id);
+    writer.writeString(obj.title);
+    writer.writeString(obj.description);
+    writer.writeInt(obj.type.index);
+    writer.writeInt(obj.minLevel);
+    writer.writeBool(obj.requiredJob != null);
+    if (obj.requiredJob != null) {
+      writer.writeInt(obj.requiredJob!.index);
+    }
+    writer.writeBool(obj.targetJob != null);
+    if (obj.targetJob != null) {
+      writer.writeInt(obj.targetJob!.index);
+    }
+    writer.writeString(obj.targetMapId ?? '');
+    writer.writeList(obj.targetMobs);
+    writer.writeInt(obj.targetCount);
+    writer.writeInt(obj.currentCount);
+    writer.writeInt(obj.status.index);
+    writer.writeInt(obj.rewards.length);
+    obj.rewards.forEach((key, value) {
+      writer.writeString(key);
+      writer.writeInt(value);
+    });
   }
 }
