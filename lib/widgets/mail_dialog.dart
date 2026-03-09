@@ -18,12 +18,17 @@ class _MailDialogState extends ConsumerState<MailDialog> {
   Widget build(BuildContext context) {
     final mails = ref.watch(gameProvider).mails;
     final unreadCount = mails.where((m) => !m.isRead).length;
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isMobile = screenWidth < 600;
 
     return AlertDialog(
       backgroundColor: const Color(0xFF1A1A2E),
+      insetPadding: isMobile 
+          ? const EdgeInsets.all(8) 
+          : const EdgeInsets.symmetric(horizontal: 40, vertical: 24),
       title: Row(
         children: [
-          const Text('📧 邮件', style: TextStyle(color: Colors.white)),
+          const Text('📧 邮件', style: TextStyle(color: Colors.white, fontSize: 16)),
           if (unreadCount > 0) ...[
             const SizedBox(width: 8),
             Container(
@@ -32,36 +37,66 @@ class _MailDialogState extends ConsumerState<MailDialog> {
               child: Text('$unreadCount', style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
             ),
           ],
+          const Spacer(),
+          if (_selectedMail != null && isMobile)
+            TextButton.icon(
+              onPressed: () => setState(() => _selectedMail = null),
+              icon: const Icon(Icons.arrow_back, size: 18),
+              label: const Text('返回', style: TextStyle(fontSize: 12)),
+            ),
         ],
       ),
       content: SizedBox(
-        width: 500,
-        height: 400,
+        width: isMobile ? screenWidth * 0.95 : 500,
+        height: isMobile ? screenWidth * 1.2 : 400,
         child: mails.isEmpty
             ? const Center(child: Text('暂无邮件', style: TextStyle(color: Colors.white54)))
-            : Row(
-                children: [
-                  SizedBox(
-                    width: 140,
-                    child: ListView.builder(
-                      itemCount: mails.length,
-                      itemBuilder: (context, index) => _buildMailListItem(mails[index]),
-                    ),
-                  ),
-                  const VerticalDivider(color: Colors.white24),
-                  Expanded(
-                    child: _selectedMail != null
-                        ? _buildMailDetail(_selectedMail!)
-                        : const Center(child: Text('选择邮件查看', style: TextStyle(color: Colors.white54))),
-                  ),
-                ],
-              ),
+            : isMobile 
+                ? _buildMobileLayout(mails)
+                : _buildDesktopLayout(mails),
       ),
-      actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('关闭'))],
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context), 
+          child: const Text('关闭'),
+        ),
+      ],
     );
   }
 
-  Widget _buildMailListItem(GameMail mail) {
+  /// 手机端布局 - 单页切换
+  Widget _buildMobileLayout(List<GameMail> mails) {
+    if (_selectedMail != null) {
+      return _buildMailDetail(_selectedMail!, isMobile: true);
+    }
+    return ListView.builder(
+      itemCount: mails.length,
+      itemBuilder: (context, index) => _buildMailListItem(mails[index], isMobile: true),
+    );
+  }
+
+  /// 桌面端布局 - 左右分栏
+  Widget _buildDesktopLayout(List<GameMail> mails) {
+    return Row(
+      children: [
+        SizedBox(
+          width: 140,
+          child: ListView.builder(
+            itemCount: mails.length,
+            itemBuilder: (context, index) => _buildMailListItem(mails[index], isMobile: false),
+          ),
+        ),
+        const VerticalDivider(color: Colors.white24),
+        Expanded(
+          child: _selectedMail != null
+              ? _buildMailDetail(_selectedMail!, isMobile: false)
+              : const Center(child: Text('选择邮件查看', style: TextStyle(color: Colors.white54))),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildMailListItem(GameMail mail, {required bool isMobile}) {
     final isSelected = _selectedMail?.id == mail.id;
     return InkWell(
       onTap: () {
@@ -70,22 +105,57 @@ class _MailDialogState extends ConsumerState<MailDialog> {
       },
       child: Container(
         padding: const EdgeInsets.all(12),
+        margin: const EdgeInsets.only(bottom: 4),
         decoration: BoxDecoration(
           color: isSelected ? const Color(0xFF533483) : mail.isRead ? Colors.transparent : const Color(0xFF0F3460),
           borderRadius: BorderRadius.circular(8),
+          border: isSelected ? Border.all(color: Colors.amber.withOpacity(0.5)) : null,
         ),
         child: Row(
           children: [
-            if (!mail.isRead) Container(width: 8, height: 8, decoration: const BoxDecoration(color: Colors.blue, shape: BoxShape.circle)) else const SizedBox(width: 8),
+            // 未读指示器
+            if (!mail.isRead) 
+              Container(width: 8, height: 8, decoration: const BoxDecoration(color: Colors.blue, shape: BoxShape.circle))
+            else 
+              const SizedBox(width: 8),
             const SizedBox(width: 8),
-            if (mail.hasUnclaimedAttachments) const Text('🎁', style: TextStyle(fontSize: 16)) else const SizedBox(width: 24),
+            // 附件图标
+            if (mail.hasUnclaimedAttachments) 
+              const Text('🎁', style: TextStyle(fontSize: 16))
+            else 
+              const SizedBox(width: 24),
             const SizedBox(width: 8),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(mail.title, style: TextStyle(color: Colors.white, fontWeight: mail.isRead ? FontWeight.normal : FontWeight.bold, fontSize: 14), maxLines: 1, overflow: TextOverflow.ellipsis),
-                  Text(mail.sender, style: const TextStyle(color: Colors.white54, fontSize: 12)),
+                  Text(
+                    mail.title, 
+                    style: TextStyle(
+                      color: Colors.white, 
+                      fontWeight: mail.isRead ? FontWeight.normal : FontWeight.bold, 
+                      fontSize: 14,
+                    ), 
+                    maxLines: 1, 
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 2),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          mail.sender, 
+                          style: const TextStyle(color: Colors.white54, fontSize: 11),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      Text(
+                        '${mail.sentAt.month}/${mail.sentAt.day} ${mail.sentAt.hour.toString().padLeft(2, '0')}:${mail.sentAt.minute.toString().padLeft(2, '0')}', 
+                        style: const TextStyle(color: Colors.white38, fontSize: 10),
+                      ),
+                    ],
+                  ),
                 ],
               ),
             ),
@@ -95,23 +165,48 @@ class _MailDialogState extends ConsumerState<MailDialog> {
     );
   }
 
-  Widget _buildMailDetail(GameMail mail) {
+  Widget _buildMailDetail(GameMail mail, {required bool isMobile}) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(mail.title, style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
-        const SizedBox(height: 4),
+        // 标题
+        Text(
+          mail.title, 
+          style: const TextStyle(
+            color: Colors.white, 
+            fontSize: 16, 
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        const SizedBox(height: 8),
+        // 发件人和日期
         Row(
           children: [
-            Text('发件人: ${mail.sender}', style: const TextStyle(color: Colors.white70, fontSize: 12)),
-            const Spacer(),
-            Text('${mail.sentAt.month}/${mail.sentAt.day}', style: const TextStyle(color: Colors.white54, fontSize: 12)),
+            Expanded(
+              child: Text(
+                '发件人: ${mail.sender}', 
+                style: const TextStyle(color: Colors.white70, fontSize: 12),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            Text(
+              '${mail.sentAt.month}/${mail.sentAt.day} ${mail.sentAt.hour.toString().padLeft(2, '0')}:${mail.sentAt.minute.toString().padLeft(2, '0')}', 
+              style: const TextStyle(color: Colors.white54, fontSize: 11),
+            ),
           ],
         ),
         const Divider(color: Colors.white24),
-        Flexible(
-          child: SingleChildScrollView(child: Text(mail.content, style: const TextStyle(color: Colors.white, fontSize: 14))),
+        // 内容
+        Expanded(
+          child: SingleChildScrollView(
+            child: Text(
+              mail.content, 
+              style: const TextStyle(color: Colors.white, fontSize: 14, height: 1.5),
+            ),
+          ),
         ),
+        // 附件区域
         if (mail.attachments.isNotEmpty) ...[
           const Divider(color: Colors.white24),
           Row(
@@ -123,12 +218,26 @@ class _MailDialogState extends ConsumerState<MailDialog> {
                   onTap: () => _showGiftDetail(mail),
                   child: Container(
                     padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(color: const Color(0xFF533483), borderRadius: BorderRadius.circular(8), border: Border.all(color: Colors.amber)),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF533483), 
+                      borderRadius: BorderRadius.circular(8), 
+                      border: Border.all(color: Colors.amber),
+                    ),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        const Text('新手冒险大礼包', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                        Text('${mail.attachments.length}件', style: const TextStyle(color: Colors.amber)),
+                        const Expanded(
+                          child: Text(
+                            '新手冒险大礼包', 
+                            style: TextStyle(
+                              color: Colors.white, 
+                              fontWeight: FontWeight.bold,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        Text('${mail.attachments.length}件', style: const TextStyle(color: Colors.amber, fontSize: 12)),
                       ],
                     ),
                   ),
@@ -137,6 +246,7 @@ class _MailDialogState extends ConsumerState<MailDialog> {
             ],
           ),
           const SizedBox(height: 12),
+          // 领取按钮
           if (!mail.isClaimed)
             SizedBox(
               width: double.infinity,
@@ -145,19 +255,30 @@ class _MailDialogState extends ConsumerState<MailDialog> {
                   ref.read(gameProvider.notifier).claimMailAttachments(mail.id);
                   setState(() => _selectedMail = _selectedMail?.copyWith(isClaimed: true));
                 },
-                icon: const Icon(Icons.card_giftcard),
+                icon: const Icon(Icons.card_giftcard, size: 20),
                 label: const Text('一键领取'),
-                style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.green,
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                ),
               ),
             )
           else
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(color: Colors.grey.withOpacity(0.2), borderRadius: BorderRadius.circular(8)),
-              child: const Text('✓ 已领取', textAlign: TextAlign.center, style: TextStyle(color: Colors.white54)),
+              decoration: BoxDecoration(
+                color: Colors.grey.withOpacity(0.2), 
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Text(
+                '✓ 已领取', 
+                textAlign: TextAlign.center, 
+                style: TextStyle(color: Colors.white54),
+              ),
             ),
         ],
+        // 删除按钮
         if (mail.isClaimed || mail.attachments.isEmpty)
           Align(
             alignment: Alignment.centerRight,
@@ -176,14 +297,20 @@ class _MailDialogState extends ConsumerState<MailDialog> {
   }
 
   void _showGiftDetail(GameMail mail) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isMobile = screenWidth < 600;
+    
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: const Color(0xFF1A1A2E),
-        title: const Text('🎁 礼包详情', style: TextStyle(color: Colors.white)),
+        insetPadding: isMobile 
+            ? const EdgeInsets.all(8) 
+            : const EdgeInsets.symmetric(horizontal: 40, vertical: 24),
+        title: const Text('🎁 礼包详情', style: TextStyle(color: Colors.white, fontSize: 16)),
         content: SizedBox(
-          width: 300,
-          height: 400,
+          width: isMobile ? screenWidth * 0.9 : 300,
+          height: isMobile ? screenWidth * 1.0 : 400,
           child: ListView.builder(
             itemCount: mail.attachments.length,
             itemBuilder: (context, index) {
