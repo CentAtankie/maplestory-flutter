@@ -24,28 +24,39 @@ class GameScreen extends ConsumerWidget {
           children: [
             // 可滚动的内容区域
             Expanded(
-              child: SingleChildScrollView(
-                child: Column(
-                  children: [
-                    // 状态栏
-                    const StatusBar(),
-                    
-                    // 地图信息
-                    _buildMapInfo(gameState),
-                    
-                    // 游戏日志区域
-                    Container(
-                      margin: const EdgeInsets.symmetric(horizontal: 12),
-                      height: 180,
-                      child: const GameLog(),
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  return SingleChildScrollView(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    child: ConstrainedBox(
+                      constraints: BoxConstraints(
+                        minHeight: constraints.maxHeight,
+                      ),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          // 状态栏
+                          const StatusBar(),
+                          
+                          // 地图信息
+                          _buildMapInfo(gameState),
+                          
+                          // 游戏日志区域
+                          Container(
+                            margin: const EdgeInsets.symmetric(horizontal: 12),
+                            height: 180,
+                            child: const GameLog(),
+                          ),
+                          
+                          // 操作面板
+                          const ActionPanel(),
+                          
+                          const SizedBox(height: 8),
+                        ],
+                      ),
                     ),
-                    
-                    // 操作面板
-                    const ActionPanel(),
-                    
-                    const SizedBox(height: 8),
-                  ],
-                ),
+                  );
+                },
               ),
             ),
             
