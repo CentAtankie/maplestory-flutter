@@ -6,6 +6,57 @@ import '../game/models/potential.dart';
 import '../providers/game_provider.dart';
 import 'cube_dialog.dart';
 
+/// 显示顶层错误提示（在弹窗之上）
+void _showTopErrorToast(BuildContext context, String message) {
+  final overlay = Overlay.of(context);
+  final entry = OverlayEntry(
+    builder: (context) => Positioned(
+      top: MediaQuery.of(context).padding.top + 50,
+      left: 20,
+      right: 20,
+      child: Material(
+        color: Colors.transparent,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          decoration: BoxDecoration(
+            color: Colors.red,
+            borderRadius: BorderRadius.circular(8),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.3),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Row(
+            children: [
+              const Icon(Icons.error_outline, color: Colors.white),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  message,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 14,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    ),
+  );
+
+  overlay.insert(entry);
+
+  // 3秒后自动移除
+  Future.delayed(const Duration(seconds: 3), () {
+    entry.remove();
+  });
+}
+
 /// 装备详情对话框 - 显示装备信息并提供使用魔方入口
 class EquipmentDetailDialog extends StatelessWidget {
   final Equipment equipment;
@@ -604,17 +655,11 @@ class CubeSelectorDialog extends ConsumerWidget {
   void _useCube(BuildContext context, WidgetRef ref, String cubeType) {
     // 检查装备等级是否符合魔方使用要求
     if (!_canUseCubeOnEquipment(cubeType, equipment)) {
-      // 先关闭弹窗，再显示错误提示，避免被挡住
-      Navigator.pop(context);
-      Future.microtask(() {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('❌ 该装备不能使用${_getCubeName(cubeType)}！${_getCubeLimitDescription(cubeType)}'),
-            backgroundColor: Colors.red,
-            duration: const Duration(seconds: 3),
-          ),
-        );
-      });
+      // 使用顶层提示，不关闭弹窗
+      _showTopErrorToast(
+        context,
+        '该装备不能使用${_getCubeName(cubeType)}！${_getCubeLimitDescription(cubeType)}',
+      );
       return;
     }
 
