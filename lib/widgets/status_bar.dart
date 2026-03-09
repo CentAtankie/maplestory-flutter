@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/game_provider.dart';
 import '../game/models/player.dart';
+import '../game/models/quest.dart';
 import '../widgets/mail_dialog.dart';
 import '../widgets/character_dialog.dart';
+import '../widgets/quest_dialog.dart';
 
 class StatusBar extends ConsumerWidget {
   const StatusBar({super.key});
@@ -102,6 +104,45 @@ class StatusBar extends ConsumerWidget {
                     Icons.person,
                     color: Colors.white70,
                   ),
+                ),
+                
+                // 任务按钮
+                Stack(
+                  children: [
+                    IconButton(
+                      onPressed: () {
+                        showDialog(
+                          context: context,
+                          builder: (context) => const QuestDialog(),
+                        );
+                      },
+                      icon: const Icon(
+                        Icons.assignment,
+                        color: Colors.white70,
+                      ),
+                    ),
+                    // 可接取或进行中任务标记
+                    if (gameData.availableQuestCount > 0 || gameData.activeQuestCount > 0)
+                      Positioned(
+                        right: 4,
+                        top: 4,
+                        child: Container(
+                          padding: const EdgeInsets.all(4),
+                          decoration: BoxDecoration(
+                            color: gameData.availableQuestCount > 0 ? Colors.green : Colors.orange,
+                            shape: BoxShape.circle,
+                          ),
+                          child: Text(
+                            '${gameData.availableQuestCount > 0 ? gameData.availableQuestCount : gameData.activeQuestCount}',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
                 ),
                 
                 // 邮件按钮

@@ -36,6 +36,9 @@ class GameMaps {
       exits: {
         '东': 'farm',
         '南': 'lith',
+        '北': 'perion',
+        '西': 'ellinia',
+        '公园': 'henesys_park',
       },
       isTown: true,
     ),
@@ -96,6 +99,67 @@ class GameMaps {
       exits: {
         '南': 'farm',
       },
+    ),
+    // 转职地图
+    'perion': GameMap(
+      id: 'perion',
+      name: '勇士部落',
+      description: '战士们的聚集地，这里充满了热血与力量。武术教练在这里等待有潜力的冒险家。',
+      emoji: '⛺',
+      mobs: [],
+      encounterChance: 0.0,
+      exits: {
+        '南': 'henesys',
+      },
+      isTown: true,
+    ),
+    'ellinia': GameMap(
+      id: 'ellinia',
+      name: '魔法密林',
+      description: '被魔法笼罩的神秘森林，大魔法师汉斯在这里传授魔法知识。',
+      emoji: '🌲',
+      mobs: [],
+      encounterChance: 0.0,
+      exits: {
+        '东': 'henesys',
+      },
+      isTown: true,
+    ),
+    'henesys_park': GameMap(
+      id: 'henesys_park',
+      name: '射手村公园',
+      description: '射手村的训练场，弓箭手导师赫丽娜在这里指导新手。',
+      emoji: '🎯',
+      mobs: [],
+      encounterChance: 0.0,
+      exits: {
+        '西': 'henesys',
+      },
+      isTown: true,
+    ),
+    'kerning': GameMap(
+      id: 'kerning',
+      name: '废弃都市',
+      description: '一个充满活力的城市，飞侠导师达克鲁在这里训练暗影行者。',
+      emoji: '🏙️',
+      mobs: [],
+      encounterChance: 0.0,
+      exits: {
+        '北': 'henesys',
+      },
+      isTown: true,
+    ),
+    'nautilus': GameMap(
+      id: 'nautilus',
+      name: '诺特勒斯号',
+      description: '一艘巨大的海盗船，海盗导师凯琳在这里训练海盗新兵。',
+      emoji: '⚓',
+      mobs: [],
+      encounterChance: 0.0,
+      exits: {
+        '西': 'lith',
+      },
+      isTown: true,
     ),
   };
 

@@ -7,6 +7,7 @@ import '../game/models/map.dart';
 import '../game/models/item.dart' hide Equipment;
 import '../game/models/potential.dart';
 import '../game/models/mail.dart';
+import '../game/models/quest.dart';
 import '../repositories/save_repository.dart';
 import '../repositories/hive_save_repository.dart';
 
@@ -402,6 +403,9 @@ class GameNotifier extends StateNotifier<GameData> {
       addLog('✨ 稀有掉落：${equipInstance.name}！', LogType.reward);
     }
 
+    // 更新任务进度（如果有狩猎任务）
+    updateQuestProgress(mob.id.name);
+
     // 升级检查
     var updatedPlayer = player.copyWith(
       stats: player.stats.copyWith(exp: newExp),
@@ -430,6 +434,9 @@ class GameNotifier extends StateNotifier<GameData> {
 
     addLog('🆙 升级了！到达 Lv.$newLevel！', LogType.success);
     addLog('💫 获得 5 点属性点，点击角色面板分配', LogType.reward);
+
+    // 检查任务解锁
+    checkQuestUnlock();
 
     return player.copyWith(
       stats: player.stats.copyWith(
@@ -1060,6 +1067,107 @@ class GameNotifier extends StateNotifier<GameData> {
     );
     addLog('📧 收到新邮件：${mail.title}', LogType.success);
   }
+
+  // ========== 任务系统 ==========
+
+  /// 接受任务
+  void acceptQuest(String questId) {
+    final newQuests = state.quests.map((quest) {
+      if (quest.id == questId) {
+        return quest.copyWith(status: QuestStatus.inProgress);
+      }
+      return quest;
+    }).toList();
+    state = state.copyWith(quests: newQuests);
+  }
+
+  /// 更新任务进度（狩猎/收集）
+  void updateQuestProgress(String mobId) {
+    final newQuests = state.quests.map((quest) {
+      if (quest.status == QuestStatus.inProgress &&
+          quest.targetMobs.contains(mobId)) {
+        final newCount = quest.currentCount + 1;
+        if (newCount >= quest.targetCount) {
+          addLog('✅ 任务完成：${quest.title}', LogType.success);
+          return quest.copyWith(
+            currentCount: newCount,
+            status: QuestStatus.completed,
+          );
+        }
+        return quest.copyWith(currentCount: newCount);
+      }
+      return quest;
+    }).toList();
+    state = state.copyWith(quests: newQuests);
+  }
+
+  /// 领取任务奖励
+  void claimQuestReward(String questId) {
+    final quest = state.quests.firstWhere((q) => q.id == questId);
+    if (quest.status != QuestStatus.completed) return;
+
+    // 发放奖励
+    int mesoReward = quest.rewards['meso'] ?? 0;
+    int expReward = quest.rewards['exp'] ?? 0;
+
+    final newQuests = state.quests.map((q) {
+      if (q.id == questId) {
+        return q.copyWith(status: QuestStatus.claimed);
+      }
+      return q;
+    }).toList();
+
+    // 更新玩家数据
+    var newPlayer = state.player;
+    if (mesoReward > 0) {
+      newPlayer = newPlayer.copyWith(meso: newPlayer.meso + mesoReward);
+    }
+    if (expReward > 0) {
+      newPlayer = _addExp(newPlayer, expReward);
+    }
+
+    state = state.copyWith(
+      quests: newQuests,
+      player: newPlayer,
+    );
+  }
+
+  /// 完成转职
+  void completeJobChange(String questId, Job newJob) {
+    final quest = state.quests.firstWhere((q) => q.id == questId);
+    if (quest.status != QuestStatus.inProgress) return;
+
+    // 更新任务状态为已完成
+    final newQuests = state.quests.map((q) {
+      if (q.id == questId) {
+        return q.copyWith(status: QuestStatus.completed);
+      }
+      return q;
+    }).toList();
+
+    // 更新玩家职业
+    final newPlayer = state.player.copyWith(job: newJob);
+
+    state = state.copyWith(
+      quests: newQuests,
+      player: newPlayer,
+    );
+
+    // 领取转职奖励
+    claimQuestReward(questId);
+  }
+
+  /// 检查并解锁新任务（升级时调用）
+  void checkQuestUnlock() {
+    final player = state.player;
+    final newQuests = state.quests.map((quest) {
+      if (quest.status == QuestStatus.available && quest.canAccept(player)) {
+        addLog('📜 新任务可用：${quest.title}', LogType.success);
+      }
+      return quest;
+    }).toList();
+    state = state.copyWith(quests: newQuests);
+  }
 }
 
 // 游戏数据
@@ -1072,6 +1180,7 @@ class GameData {
   final Random random;
   final ShopCategory shopCategory;  // 当前商店分类
   final List<GameMail> mails;       // 邮件列表
+  final List<GameQuest> quests;     // 任务列表
 
   GameData({
     required this.player,
@@ -1082,6 +1191,7 @@ class GameData {
     required this.random,
     this.shopCategory = ShopCategory.all,  // 默认全部
     this.mails = const [],                 // 默认空邮件列表
+    this.quests = const [],                // 默认空任务列表
   });
 
   factory GameData.initial() {
@@ -1091,6 +1201,8 @@ class GameData {
       MailTemplates.welcomeMail(),
       MailTemplates.newPlayerGift(),
     ];
+    // 加载任务数据库
+    final initialQuests = QuestDatabase.getAllQuests();
     
     return GameData(
       player: newPlayer,
@@ -1100,6 +1212,7 @@ class GameData {
       logs: [LogEntry(message: '🎮 欢迎来到冒险岛世界！')],
       random: Random(),
       mails: welcomeMails,
+      quests: initialQuests,
     );
   }
 
@@ -1110,6 +1223,12 @@ class GameData {
   int get unclaimedAttachmentCount => 
       mails.where((m) => m.hasUnclaimedAttachments).length;
 
+  /// 获取进行中的任务数量
+  int get activeQuestCount => quests.where((q) => q.status == QuestStatus.inProgress).length;
+
+  /// 获取可接取的任务数量
+  int get availableQuestCount => quests.where((q) => q.status == QuestStatus.available).toList().length;
+
   GameData copyWith({
     Player? player,
     GameMap? currentMap,
@@ -1118,6 +1237,7 @@ class GameData {
     List<LogEntry>? logs,
     ShopCategory? shopCategory,
     List<GameMail>? mails,
+    List<GameQuest>? quests,
   }) {
     return GameData(
       player: player ?? this.player,
@@ -1128,6 +1248,7 @@ class GameData {
       random: random,
       shopCategory: shopCategory ?? this.shopCategory,
       mails: mails ?? this.mails,
+      quests: quests ?? this.quests,
     );
   }
 }
