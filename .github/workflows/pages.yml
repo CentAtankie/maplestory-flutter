@@ -36,7 +36,7 @@ jobs:
         run: flutter pub get
 
       - name: Build Web
-        run: flutter build web --release --base-href "/maplestory-flutter/"
+        run: flutter build web --release --base-href "/maplestory-flutter/" --no-tree-shake-icons
 
       - name: Setup Pages
         uses: actions/configure-pages@v4
