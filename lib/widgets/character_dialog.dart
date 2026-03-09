@@ -171,36 +171,99 @@ class _CharacterDialogState extends ConsumerState<CharacterDialog> {
     return Card(
       color: equip != null ? const Color(0xFF533483) : const Color(0xFF0F3460),
       margin: const EdgeInsets.only(bottom: 8),
-      child: ListTile(
-        leading: Text(equip?.emoji ?? emoji, style: const TextStyle(fontSize: 24)),
-        title: Text(equip?.name ?? '$name (未装备)', 
-          style: TextStyle(color: equip != null ? Colors.white : Colors.white54, 
-                          fontWeight: equip != null ? FontWeight.bold : FontWeight.normal)),
-        subtitle: equip != null
-            ? Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(equip.stats, style: TextStyle(color: Colors.green.withOpacity(0.8), fontSize: 12)),
-                  if (equip.potential != null) _buildPotentialPreview(equip.potential!),
-                ],
-              )
-            : null,
-        trailing: equip != null
-            ? Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  IconButton(
-                    onPressed: () => _showEquipmentDetail(context, equip),
-                    icon: const Icon(Icons.info, color: Colors.blue),
+      child: InkWell(
+        onTap: equip != null ? () => _showEquipmentDetail(context, equip) : null,
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Row(
+            children: [
+              // 装备大图
+              Container(
+                width: 56,
+                height: 56,
+                decoration: BoxDecoration(
+                  color: equip != null ? Colors.black.withOpacity(0.3) : Colors.transparent,
+                  borderRadius: BorderRadius.circular(8),
+                  border: equip?.potential != null
+                      ? Border.all(
+                          color: _getGradeColor(equip!.potential!.grade),
+                          width: 2,
+                        )
+                      : null,
+                ),
+                child: Center(
+                  child: Text(
+                    equip?.emoji ?? emoji,
+                    style: TextStyle(
+                      fontSize: equip != null ? 36 : 28,
+                      color: equip != null ? Colors.white : Colors.white38,
+                    ),
                   ),
-                  ElevatedButton(
-                    onPressed: () => _unequip(slot, setDialogState),
-                    style: ElevatedButton.styleFrom(backgroundColor: Colors.orange, foregroundColor: Colors.white),
-                    child: const Text('卸下'),
-                  ),
-                ],
-              )
-            : null,
+                ),
+              ),
+              const SizedBox(width: 12),
+              // 装备信息
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      equip?.name ?? '$name (未装备)',
+                      style: TextStyle(
+                        color: equip != null ? Colors.white : Colors.white54,
+                        fontWeight: equip != null ? FontWeight.bold : FontWeight.normal,
+                        fontSize: 15,
+                      ),
+                    ),
+                    if (equip != null) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        equip.stats,
+                        style: TextStyle(
+                          color: Colors.green.withOpacity(0.9),
+                          fontSize: 13,
+                        ),
+                      ),
+                      if (equip.potential != null) ...[
+                        const SizedBox(height: 4),
+                        _buildPotentialPreview(equip.potential!),
+                      ],
+                    ],
+                  ],
+                ),
+              ),
+              // 操作按钮
+              if (equip != null)
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // 洗魔方按钮
+                    if (equip.potential != null)
+                      IconButton(
+                        onPressed: () {
+                          Navigator.pop(context);
+                          _showCubeDialog(context, equip);
+                        },
+                        icon: const Text('🎲', style: TextStyle(fontSize: 20)),
+                        tooltip: '洗魔方',
+                      ),
+                    // 卸下按钮
+                    ElevatedButton(
+                      onPressed: () => _unequip(slot, setDialogState),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.orange,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        minimumSize: const Size(0, 36),
+                      ),
+                      child: const Text('卸下', style: TextStyle(fontSize: 12)),
+                    ),
+                  ],
+                ),
+            ],
+          ),
+        ),
       ),
     );
   }
