@@ -49,6 +49,15 @@ class HiveSaveRepository implements SaveRepository {
     if (!Hive.isAdapterRegistered(8)) {
       Hive.registerAdapter(MailAttachmentTypeAdapter());
     }
+    if (!Hive.isAdapterRegistered(9)) {
+      Hive.registerAdapter(EquipmentSlotAdapter());
+    }
+    if (!Hive.isAdapterRegistered(10)) {
+      Hive.registerAdapter(PotentialGradeAdapter());
+    }
+    if (!Hive.isAdapterRegistered(11)) {
+      Hive.registerAdapter(PotentialTypeAdapter());
+    }
     
     _box = await Hive.openBox(_boxName);
   }
@@ -415,13 +424,25 @@ class PlayerAdapter extends TypeAdapter<Player> {
 
   @override
   Player read(BinaryReader reader) {
+    final name = reader.readString();
+    final job = Job.values[reader.readInt()];
+    final stats = reader.read() as Stats;
+    final meso = reader.readInt();
+    final inventory = reader.readList().cast<String>();
+    final currentMap = reader.readString();
+    
+    // 读取装备（JSON格式）
+    final equipmentJson = reader.readString();
+    final equipment = _equipmentMapFromJson(equipmentJson);
+    
     return Player(
-      name: reader.readString(),
-      job: Job.values[reader.readInt()],
-      stats: reader.read() as Stats,
-      meso: reader.readInt(),
-      inventory: reader.readList().cast<String>(),
-      currentMap: reader.readString(),
+      name: name,
+      job: job,
+      stats: stats,
+      meso: meso,
+      inventory: inventory,
+      currentMap: currentMap,
+      equipment: equipment,
     );
   }
 
@@ -433,6 +454,110 @@ class PlayerAdapter extends TypeAdapter<Player> {
     writer.writeInt(obj.meso);
     writer.writeList(obj.inventory);
     writer.writeString(obj.currentMap);
+    // 保存装备为JSON
+    writer.writeString(_equipmentMapToJson(obj.equipment));
+  }
+  
+  // 装备Map转JSON
+  String _equipmentMapToJson(Map<EquipmentSlot, Equipment?> equipment) {
+    final Map<String, dynamic> jsonMap = {};
+    for (final entry in equipment.entries) {
+      if (entry.value != null) {
+        jsonMap[entry.key.index.toString()] = _equipmentToJson(entry.value!);
+      }
+    }
+    return jsonEncode(jsonMap);
+  }
+  
+  // JSON转装备Map
+  Map<EquipmentSlot, Equipment?> _equipmentMapFromJson(String json) {
+    if (json.isEmpty) return {};
+    try {
+      final Map<String, dynamic> jsonMap = jsonDecode(json) as Map<String, dynamic>;
+      final Map<EquipmentSlot, Equipment?> equipment = {};
+      for (final entry in jsonMap.entries) {
+        final slotIndex = int.parse(entry.key);
+        final slot = EquipmentSlot.values[slotIndex];
+        equipment[slot] = _equipmentFromJson(entry.value as Map<String, dynamic>);
+      }
+      return equipment;
+    } catch (e) {
+      print('装备解析失败: $e');
+      return {};
+    }
+  }
+  
+  Map<String, dynamic> _equipmentToJson(Equipment equipment) {
+    return {
+      'name': equipment.name,
+      'id': equipment.id,
+      'instanceId': equipment.instanceId,
+      'emoji': equipment.emoji,
+      'description': equipment.description,
+      'slot': equipment.slot.index,
+      'atk': equipment.atk,
+      'def': equipment.def,
+      'str': equipment.str,
+      'dex': equipment.dex,
+      'intBonus': equipment.intBonus,
+      'luk': equipment.luk,
+      'price': equipment.price,
+      'levelReq': equipment.levelReq,
+      'crit': equipment.crit,
+      'avoid': equipment.avoid,
+      'potential': equipment.potential != null ? _potentialToJson(equipment.potential!) : null,
+    };
+  }
+  
+  Equipment? _equipmentFromJson(Map<String, dynamic> json) {
+    try {
+      return Equipment(
+        name: json['name'] as String,
+        id: json['id'] as String?,
+        instanceId: json['instanceId'] as String,
+        emoji: json['emoji'] as String?,
+        description: json['description'] as String?,
+        slot: EquipmentSlot.values[json['slot'] as int],
+        atk: json['atk'] as int? ?? 0,
+        def: json['def'] as int? ?? 0,
+        str: json['str'] as int? ?? 0,
+        dex: json['dex'] as int? ?? 0,
+        intBonus: json['intBonus'] as int? ?? 0,
+        luk: json['luk'] as int? ?? 0,
+        price: json['price'] as int?,
+        levelReq: json['levelReq'] as int?,
+        crit: json['crit'] as int?,
+        avoid: json['avoid'] as int?,
+        potential: json['potential'] != null 
+            ? _potentialFromJson(json['potential'] as Map<String, dynamic>)
+            : null,
+      );
+    } catch (e) {
+      print('装备解析失败: $e');
+      return null;
+    }
+  }
+  
+  Map<String, dynamic> _potentialToJson(EquipmentPotential potential) {
+    return {
+      'grade': potential.grade.index,
+      'stats': potential.stats.map((s) => {
+        'type': s.type.index,
+        'value': s.value,
+        'grade': s.grade,
+      }).toList(),
+    };
+  }
+  
+  EquipmentPotential _potentialFromJson(Map<String, dynamic> json) {
+    return EquipmentPotential(
+      grade: PotentialGrade.values[json['grade'] as int],
+      stats: (json['stats'] as List).map((s) => PotentialStat(
+        type: PotentialType.values[s['type'] as int],
+        value: s['value'] as int,
+        grade: s['grade'] as String,
+      )).toList(),
+    );
   }
 }
 
@@ -593,6 +718,53 @@ class MailAttachmentTypeAdapter extends TypeAdapter<MailAttachmentType> {
 
   @override
   void write(BinaryWriter writer, MailAttachmentType obj) {
+    writer.writeInt(obj.index);
+  }
+}
+
+// ========== 装备系统适配器 ==========
+
+class EquipmentSlotAdapter extends TypeAdapter<EquipmentSlot> {
+  @override
+  final int typeId = 9;
+
+  @override
+  EquipmentSlot read(BinaryReader reader) {
+    return EquipmentSlot.values[reader.readInt()];
+  }
+
+  @override
+  void write(BinaryWriter writer, EquipmentSlot obj) {
+    writer.writeInt(obj.index);
+  }
+}
+
+class PotentialGradeAdapter extends TypeAdapter<PotentialGrade> {
+  @override
+  final int typeId = 10;
+
+  @override
+  PotentialGrade read(BinaryReader reader) {
+    return PotentialGrade.values[reader.readInt()];
+  }
+
+  @override
+  void write(BinaryWriter writer, PotentialGrade obj) {
+    writer.writeInt(obj.index);
+  }
+}
+
+class PotentialTypeAdapter extends TypeAdapter<PotentialType> {
+  @override
+  final int typeId = 11;
+
+  @override
+  PotentialType read(BinaryReader reader) {
+    return PotentialType.values[reader.readInt()];
+  }
+
+  @override
+  void write(BinaryWriter writer, PotentialType obj) {
     writer.writeInt(obj.index);
   }
 }
