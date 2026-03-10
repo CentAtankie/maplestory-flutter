@@ -177,6 +177,7 @@ class HiveSaveRepository implements SaveRepository {
           'meso': a.meso,
         }).toList(),
       }).toList(),
+      'quests': data.quests.map((quest) => _questToJson(quest)).toList(),
       'equipmentInstances': _equipmentInstancesToJson(equipmentInstances),
       'exportedAt': DateTime.now().toIso8601String(),
     };
@@ -197,12 +198,16 @@ class HiveSaveRepository implements SaveRepository {
     final mails = data['mails'] != null
         ? (data['mails'] as List).map((m) => _mailFromJson(m as Map<String, dynamic>)).toList()
         : <GameMail>[];
+    final quests = data['quests'] != null
+        ? (data['quests'] as List).map((q) => _questFromJson(q as Map<String, dynamic>)).toList()
+        : QuestDatabase.getAllQuests();
 
     final saveData = _GameSaveData(
       player: player,
       currentMapId: currentMapId,
       logs: logs,
       mails: mails,
+      quests: quests,
       timestamp: DateTime.now(),
     );
 
@@ -383,6 +388,45 @@ class HiveSaveRepository implements SaveRepository {
       instanceId: json['instanceId'] as String?,
       count: json['count'] as int?,
       meso: json['meso'] as int?,
+    );
+  }
+
+  // 任务 JSON 序列化辅助方法
+  Map<String, dynamic> _questToJson(GameQuest quest) {
+    return {
+      'id': quest.id,
+      'title': quest.title,
+      'description': quest.description,
+      'type': quest.type.index,
+      'minLevel': quest.minLevel,
+      'requiredJob': quest.requiredJob?.index,
+      'targetJob': quest.targetJob?.index,
+      'targetMapId': quest.targetMapId,
+      'targetMobs': quest.targetMobs,
+      'targetCount': quest.targetCount,
+      'currentCount': quest.currentCount,
+      'status': quest.status.index,
+      'rewards': quest.rewards,
+    };
+  }
+
+  GameQuest _questFromJson(Map<String, dynamic> json) {
+    return GameQuest(
+      id: json['id'] as String,
+      title: json['title'] as String,
+      description: json['description'] as String,
+      type: QuestType.values[json['type'] as int],
+      minLevel: json['minLevel'] as int,
+      requiredJob: json['requiredJob'] != null ? Job.values[json['requiredJob'] as int] : null,
+      targetJob: json['targetJob'] != null ? Job.values[json['targetJob'] as int] : null,
+      targetMapId: json['targetMapId'] as String?,
+      targetMobs: (json['targetMobs'] as List).cast<String>(),
+      targetCount: json['targetCount'] as int,
+      currentCount: json['currentCount'] as int,
+      status: QuestStatus.values[json['status'] as int],
+      rewards: (json['rewards'] as Map<String, dynamic>).map(
+        (k, v) => MapEntry(k, v as int),
+      ),
     );
   }
 }
