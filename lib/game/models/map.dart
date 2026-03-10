@@ -111,6 +111,7 @@ class GameMaps {
       encounterChance: 0.0,
       exits: {
         '南': 'henesys',
+        '西': 'perion_field',
       },
       isTown: true,
     ),
@@ -123,6 +124,7 @@ class GameMaps {
       encounterChance: 0.0,
       exits: {
         '东': 'henesys',
+        '东北': 'ellinia_field',
       },
       isTown: true,
     ),
@@ -147,6 +149,7 @@ class GameMaps {
       encounterChance: 0.0,
       exits: {
         '北': 'henesys',
+        '南': 'kerning_swamp',
       },
       isTown: true,
     ),
@@ -161,6 +164,143 @@ class GameMaps {
         '西': 'lith',
       },
       isTown: true,
+    ),
+    // ========== 勇士部落周边 ==========
+    'perion_field': GameMap(
+      id: 'perion_field',
+      name: '勇士部落西部荒野',
+      description: '荒芜的土地，野猪群在这里游荡。',
+      emoji: '🏜️',
+      mobs: [MobType.wildBoar, MobType.woodenMummy],
+      encounterChance: 0.6,
+      exits: {
+        '东': 'perion',
+        '北': 'fire_land1',
+      },
+    ),
+    'fire_land1': GameMap(
+      id: 'fire_land1',
+      name: '火焰之地I',
+      description: '炎热的荒地，木妖和花蘑菇在这里共存。',
+      emoji: '🔥',
+      mobs: [MobType.woodenMummy, MobType.evilEye],
+      encounterChance: 0.65,
+      exits: {
+        '南': 'perion_field',
+        '东': 'fire_land2',
+        '北': 'highland1',
+      },
+    ),
+    'fire_land2': GameMap(
+      id: 'fire_land2',
+      name: '火焰之地II',
+      description: '更深入的火焰之地，僵尸蘑菇开始出现。',
+      emoji: '🔥',
+      mobs: [MobType.evilEye, MobType.zombieMushroom],
+      encounterChance: 0.7,
+      exits: {
+        '西': 'fire_land1',
+      },
+    ),
+    // ========== 魔法密林周边 ==========
+    'ellinia_field': GameMap(
+      id: 'ellinia_field',
+      name: '魔法森林',
+      description: '被魔法笼罩的森林深处，奇怪的生物在这里出没。',
+      emoji: '🌲',
+      mobs: [MobType.woodenMummy, MobType.evilEye],
+      encounterChance: 0.6,
+      exits: {
+        '西': 'ellinia',
+        '东': 'ant_tunnel1',
+        '北': 'highland1',
+      },
+    ),
+    'ant_tunnel1': GameMap(
+      id: 'ant_tunnel1',
+      name: '蚂蚁洞入口',
+      description: '阴暗潮湿的洞穴入口，僵尸蘑菇在这里滋生。',
+      emoji: '🐜',
+      mobs: [MobType.zombieMushroom, MobType.fireBoar],
+      encounterChance: 0.7,
+      exits: {
+        '西': 'ellinia_field',
+        '东': 'ant_tunnel2',
+      },
+    ),
+    'ant_tunnel2': GameMap(
+      id: 'ant_tunnel2',
+      name: '蚂蚁洞深处',
+      description: '洞穴深处，更强的怪物在这里栖息。',
+      emoji: '🐜',
+      mobs: [MobType.fireBoar, MobType.stoneGolem],
+      encounterChance: 0.75,
+      exits: {
+        '西': 'ant_tunnel1',
+      },
+    ),
+    // ========== 废弃都市周边 ==========
+    'kerning_swamp': GameMap(
+      id: 'kerning_swamp',
+      name: '沼泽地',
+      description: '废弃都市外围的沼泽，野猪和绿水灵在这里游荡。',
+      emoji: '🐸',
+      mobs: [MobType.wildBoar, MobType.slime],
+      encounterChance: 0.6,
+      exits: {
+        '北': 'kerning',
+        '东': 'subway1',
+      },
+    ),
+    'subway1': GameMap(
+      id: 'subway1',
+      name: '地铁入口',
+      description: '废弃的地铁站入口，黑暗中有蝙蝠怪出没。',
+      emoji: '🚇',
+      mobs: [MobType.fireBoar, MobType.wraith],
+      encounterChance: 0.7,
+      exits: {
+        '西': 'kerning_swamp',
+        '东': 'subway2',
+      },
+    ),
+    'subway2': GameMap(
+      id: 'subway2',
+      name: '地铁深处',
+      description: '地铁深处充满了幽灵，非常危险。',
+      emoji: '🚇',
+      mobs: [MobType.wraith, MobType.darkStoneGolem],
+      encounterChance: 0.8,
+      exits: {
+        '西': 'subway1',
+        '北': 'highland2',
+      },
+    ),
+    // ========== 高级地图 ==========
+    'highland1': GameMap(
+      id: 'highland1',
+      name: '高原I',
+      description: '危险的岩石高原，巨大的石头人在此徘徊。',
+      emoji: '⛰️',
+      mobs: [MobType.stoneGolem, MobType.darkStoneGolem],
+      encounterChance: 0.75,
+      exits: {
+        '南': 'fire_land1',
+        '西': 'ellinia_field',
+        '东': 'highland2',
+      },
+    ),
+    'highland2': GameMap(
+      id: 'highland2',
+      name: '高原II',
+      description: '更高的海拔，元素生物在这里游荡。',
+      emoji: '⛰️',
+      mobs: [MobType.iceSentinel, MobType.fireSentinel],
+      encounterChance: 0.8,
+      exits: {
+        '西': 'highland1',
+        '南': 'subway2',
+      },
     ),
   };
 

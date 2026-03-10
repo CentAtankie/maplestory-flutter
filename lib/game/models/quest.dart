@@ -167,6 +167,84 @@ class QuestDatabase {
       targetMapId: 'nautilus',
       rewards: {'meso': 2000, 'exp': 500},
     ),
+    // ========== 高级等级任务 ==========
+    // 20级任务
+    GameQuest(
+      id: 'level_20_milestone',
+      title: '成长的证明',
+      description: '你的实力正在飞速提升！达到20级，证明你的成长。',
+      type: QuestType.levelUp,
+      minLevel: 20,
+      requiredJob: null,
+      rewards: {'meso': 5000, 'exp': 1000},
+    ),
+    // 30级任务
+    GameQuest(
+      id: 'level_30_milestone',
+      title: '中级冒险家',
+      description: '你已经不再是新手了！达到30级，成为中级冒险家。',
+      type: QuestType.levelUp,
+      minLevel: 30,
+      requiredJob: null,
+      rewards: {'meso': 10000, 'exp': 3000},
+    ),
+    // 40级任务
+    GameQuest(
+      id: 'level_40_milestone',
+      title: '高级冒险家',
+      description: '你的名字开始被人传颂！达到40级，成为高级冒险家。',
+      type: QuestType.levelUp,
+      minLevel: 40,
+      requiredJob: null,
+      rewards: {'meso': 20000, 'exp': 8000},
+    ),
+    // 50级任务
+    GameQuest(
+      id: 'level_50_milestone',
+      title: '传说冒险家',
+      description: '你已经站在了冒险岛的顶端！达到50级，成为传说中的冒险家。',
+      type: QuestType.levelUp,
+      minLevel: 50,
+      requiredJob: null,
+      rewards: {'meso': 50000, 'exp': 20000},
+    ),
+    // ========== 狩猎任务 ==========
+    // 野猪狩猎任务
+    GameQuest(
+      id: 'hunt_wild_boar',
+      title: '野猪大作战',
+      description: '勇士部落附近的野猪太多了！去西部荒野消灭30只野猪。',
+      type: QuestType.hunt,
+      minLevel: 15,
+      requiredJob: null,
+      targetMobs: ['野猪'],
+      targetCount: 30,
+      rewards: {'meso': 3000, 'exp': 1500},
+    ),
+    // 石头人狩猎任务
+    GameQuest(
+      id: 'hunt_stone_golem',
+      title: '粉碎石头人',
+      description: '高原上的石头人威胁着冒险者的安全！消灭20只石头人。',
+      type: QuestType.hunt,
+      minLevel: 35,
+      requiredJob: null,
+      targetMobs: ['石头人', '黑石头人'],
+      targetCount: 20,
+      rewards: {'meso': 15000, 'exp': 5000},
+    ),
+    // 幽灵狩猎任务
+    GameQuest(
+      id: 'hunt_wraith',
+      title: '地铁清理行动',
+      description: '废弃都市地铁深处出现了大量幽灵！消灭25只小幽灵。',
+      type: QuestType.hunt,
+      minLevel: 45,
+      requiredJob: null,
+      targetMobs: ['小幽灵'],
+      targetCount: 25,
+      rewards: {'meso': 25000, 'exp': 10000},
+    ),
   ];
 
   /// 获取所有任务

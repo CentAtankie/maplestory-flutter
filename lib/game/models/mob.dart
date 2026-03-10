@@ -9,7 +9,21 @@ enum MobType {
   slime('绿水灵', '💧'),
   mushroom('蘑菇仔', '🍄'),
   blueMushroom('蓝蘑菇', '🍄'),
-  hornyMushroom('刺蘑菇', '🌵');
+  hornyMushroom('刺蘑菇', '🌵'),
+  // 10-20级怪物
+  woodenMummy('木妖', '🪵'),
+  wildBoar('野猪', '🐗'),
+  evilEye('独眼兽', '👁️'),
+  // 20-30级怪物
+  zombieMushroom('僵尸蘑菇', '🧟'),
+  fireBoar('火焰野猪', '🐗'),
+  // 30-40级怪物
+  stoneGolem('石头人', '🗿'),
+  darkStoneGolem('黑石头人', '🗿'),
+  // 40-50级怪物
+  iceSentinel('冰独眼兽', '👁️'),
+  fireSentinel('火独眼兽', '👁️'),
+  wraith('小幽灵', '👻');
 
   final String displayName;
   final String emoji;
@@ -151,6 +165,150 @@ class Mob {
           drops: [
             DropItem(itemId: 'horny_mushroom_cap', chance: 0.15),
             DropItem(itemId: 'red_potion_large', chance: 0.1),
+          ],
+        );
+      // 10-20级怪物
+      case MobType.woodenMummy:
+        return Mob(
+          name: '木妖',
+          emoji: '🪵',
+          level: 15,
+          hp: 180,
+          maxHp: 180,
+          atk: 38,
+          exp: 40,
+          drops: [
+            DropItem(itemId: 'wood_piece', chance: 0.25),
+            DropItem(itemId: 'red_potion_large', chance: 0.15),
+          ],
+        );
+      case MobType.wildBoar:
+        return Mob(
+          name: '野猪',
+          emoji: '🐗',
+          level: 18,
+          hp: 250,
+          maxHp: 250,
+          atk: 45,
+          exp: 55,
+          drops: [
+            DropItem(itemId: 'boar_tooth', chance: 0.3),
+            DropItem(itemId: 'white_potion', chance: 0.15),
+          ],
+        );
+      case MobType.evilEye:
+        return Mob(
+          name: '独眼兽',
+          emoji: '👁️',
+          level: 20,
+          hp: 300,
+          maxHp: 300,
+          atk: 50,
+          exp: 65,
+          drops: [
+            DropItem(itemId: 'evil_eye_tail', chance: 0.25),
+            DropItem(itemId: 'white_potion', chance: 0.2),
+          ],
+        );
+      // 20-30级怪物
+      case MobType.zombieMushroom:
+        return Mob(
+          name: '僵尸蘑菇',
+          emoji: '🧟',
+          level: 24,
+          hp: 400,
+          maxHp: 400,
+          atk: 60,
+          exp: 85,
+          drops: [
+            DropItem(itemId: 'zombie_mushroom_cap', chance: 0.25),
+            DropItem(itemId: 'white_potion', chance: 0.2),
+          ],
+        );
+      case MobType.fireBoar:
+        return Mob(
+          name: '火焰野猪',
+          emoji: '🔥',
+          level: 28,
+          hp: 520,
+          maxHp: 520,
+          atk: 72,
+          exp: 110,
+          drops: [
+            DropItem(itemId: 'fire_boar_tooth', chance: 0.3),
+            DropItem(itemId: 'blue_potion_large', chance: 0.2),
+          ],
+        );
+      // 30-40级怪物
+      case MobType.stoneGolem:
+        return Mob(
+          name: '石头人',
+          emoji: '🗿',
+          level: 35,
+          hp: 800,
+          maxHp: 800,
+          atk: 95,
+          exp: 160,
+          drops: [
+            DropItem(itemId: 'golem_stone', chance: 0.25),
+            DropItem(itemId: 'red_potion_large', chance: 0.25),
+          ],
+        );
+      case MobType.darkStoneGolem:
+        return Mob(
+          name: '黑石头人',
+          emoji: '🗿',
+          level: 40,
+          hp: 1100,
+          maxHp: 1100,
+          atk: 120,
+          exp: 220,
+          drops: [
+            DropItem(itemId: 'dark_golem_stone', chance: 0.25),
+            DropItem(itemId: 'blue_potion_large', chance: 0.25),
+          ],
+        );
+      // 40-50级怪物
+      case MobType.iceSentinel:
+        return Mob(
+          name: '冰独眼兽',
+          emoji: '❄️',
+          level: 45,
+          hp: 1500,
+          maxHp: 1500,
+          atk: 150,
+          exp: 300,
+          drops: [
+            DropItem(itemId: 'ice_piece', chance: 0.2),
+            DropItem(itemId: 'white_potion', chance: 0.3),
+          ],
+        );
+      case MobType.fireSentinel:
+        return Mob(
+          name: '火独眼兽',
+          emoji: '🔥',
+          level: 48,
+          hp: 1800,
+          maxHp: 1800,
+          atk: 170,
+          exp: 380,
+          drops: [
+            DropItem(itemId: 'fire_piece', chance: 0.2),
+            DropItem(itemId: 'white_potion', chance: 0.3),
+          ],
+        );
+      case MobType.wraith:
+        return Mob(
+          name: '小幽灵',
+          emoji: '👻',
+          level: 50,
+          hp: 2200,
+          maxHp: 2200,
+          atk: 200,
+          exp: 500,
+          drops: [
+            DropItem(itemId: 'wraith_cloth', chance: 0.2),
+            DropItem(itemId: 'blue_potion_large', chance: 0.3),
           ],
         );
     }
