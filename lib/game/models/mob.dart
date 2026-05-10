@@ -1,4 +1,37 @@
 import 'dart:math';
+import 'status_effect.dart';
+
+/// 怪物元素属性
+enum MobElement { neutral, fire, ice, poison, dark }
+
+/// 怪物特性
+enum MobTrait {
+  shellArmor,      // 首击减伤 50%
+  split,           // 死亡分裂
+  spore,           // 死亡释放毒雾
+  dodgy,           // 高闪避
+  thorn,           // 受击反击
+  ink,             // 低血降低玩家命中
+  woodBody,        // 火弱 (+50% 火伤)
+  charge,          // 首击增伤 50%
+  gaze,            // 降低玩家闪避
+  venom,           // 攻击附带中毒
+  flame,           // 攻击附带燃烧
+  frost,           // 攻击附带冰冻
+  petrify,         // 高防御 + 首击减伤
+  manaDrain,       // 攻击吸收 MP
+  iceResist,       // 冰抗高 火弱
+  fireResist,      // 火抗高 冰弱
+  ghostForm,       // 高闪避 + 物理减伤
+  lifeSteal,       // 吸血
+  lucky,           // 高暴击
+  heavyArmor,      // 高防御
+  swift,           // 高闪避
+  timeStop,        // 每 N 回合眩晕玩家
+  summon,          // 低血召唤小怪
+  rage,            // 低血攻击力翻倍
+  dragonBreath,    // 每 N 回合大范围攻击
+}
 
 /// 怪物类型
 enum MobType {
@@ -73,6 +106,9 @@ class Mob {
   int def;
   int exp;
   List<DropItem> drops;
+  MobElement element;
+  List<MobTrait> traits;
+  List<StatusEffect> statusEffects;
 
   Mob({
     required this.name,
@@ -84,7 +120,10 @@ class Mob {
     this.def = 0,
     required this.exp,
     this.drops = const [],
-  });
+    this.element = MobElement.neutral,
+    this.traits = const [],
+    List<StatusEffect>? statusEffects,
+  }) : statusEffects = statusEffects ?? [];
 
   /// 创建怪物
   factory Mob.create(MobType type) {
@@ -130,6 +169,7 @@ class Mob {
             DropItem(itemId: 'red_snail_shell', chance: 0.3),
             DropItem(itemId: 'orange_potion', chance: 0.15),
           ],
+          traits: [MobTrait.shellArmor],
         );
       case MobType.slime:
         return Mob(
@@ -158,6 +198,7 @@ class Mob {
             DropItem(itemId: 'mushroom_cap', chance: 0.2),
             DropItem(itemId: 'orange_potion', chance: 0.15),
           ],
+          traits: [MobTrait.spore],
         );
       case MobType.blueMushroom:
         return Mob(
@@ -172,6 +213,7 @@ class Mob {
             DropItem(itemId: 'blue_mushroom_cap', chance: 0.2),
             DropItem(itemId: 'blue_potion', chance: 0.2),
           ],
+          traits: [MobTrait.dodgy],
         );
       case MobType.hornyMushroom:
         return Mob(
@@ -186,6 +228,7 @@ class Mob {
             DropItem(itemId: 'horny_mushroom_cap', chance: 0.15),
             DropItem(itemId: 'red_potion_large', chance: 0.1),
           ],
+          traits: [MobTrait.thorn],
         );
       // 10-20级怪物
       case MobType.woodenMummy:
@@ -201,6 +244,8 @@ class Mob {
             DropItem(itemId: 'wood_piece', chance: 0.25),
             DropItem(itemId: 'red_potion_large', chance: 0.15),
           ],
+          element: MobElement.neutral,
+          traits: [MobTrait.woodBody],
         );
       case MobType.wildBoar:
         return Mob(
@@ -215,6 +260,7 @@ class Mob {
             DropItem(itemId: 'boar_tooth', chance: 0.3),
             DropItem(itemId: 'white_potion', chance: 0.15),
           ],
+          traits: [MobTrait.charge],
         );
       case MobType.evilEye:
         return Mob(
@@ -229,6 +275,7 @@ class Mob {
             DropItem(itemId: 'evil_eye_tail', chance: 0.25),
             DropItem(itemId: 'white_potion', chance: 0.2),
           ],
+          traits: [MobTrait.gaze],
         );
       // 20-30级怪物
       case MobType.zombieMushroom:
@@ -244,6 +291,8 @@ class Mob {
             DropItem(itemId: 'zombie_mushroom_cap', chance: 0.25),
             DropItem(itemId: 'white_potion', chance: 0.2),
           ],
+          element: MobElement.poison,
+          traits: [MobTrait.venom],
         );
       case MobType.fireBoar:
         return Mob(
@@ -258,6 +307,8 @@ class Mob {
             DropItem(itemId: 'fire_boar_tooth', chance: 0.3),
             DropItem(itemId: 'blue_potion_large', chance: 0.2),
           ],
+          element: MobElement.fire,
+          traits: [MobTrait.flame],
         );
       // 30-40级怪物
       case MobType.stoneGolem:
@@ -273,6 +324,7 @@ class Mob {
             DropItem(itemId: 'golem_stone', chance: 0.25),
             DropItem(itemId: 'red_potion_large', chance: 0.25),
           ],
+          traits: [MobTrait.petrify],
         );
       case MobType.darkStoneGolem:
         return Mob(
@@ -287,6 +339,8 @@ class Mob {
             DropItem(itemId: 'dark_golem_stone', chance: 0.25),
             DropItem(itemId: 'blue_potion_large', chance: 0.25),
           ],
+          element: MobElement.dark,
+          traits: [MobTrait.manaDrain],
         );
       // 40-50级怪物
       case MobType.iceSentinel:
@@ -302,6 +356,8 @@ class Mob {
             DropItem(itemId: 'ice_piece', chance: 0.2),
             DropItem(itemId: 'white_potion', chance: 0.3),
           ],
+          element: MobElement.ice,
+          traits: [MobTrait.iceResist],
         );
       case MobType.fireSentinel:
         return Mob(
@@ -316,6 +372,8 @@ class Mob {
             DropItem(itemId: 'fire_piece', chance: 0.2),
             DropItem(itemId: 'white_potion', chance: 0.3),
           ],
+          element: MobElement.fire,
+          traits: [MobTrait.fireResist],
         );
       case MobType.wraith:
         return Mob(
@@ -330,6 +388,8 @@ class Mob {
             DropItem(itemId: 'wraith_cloth', chance: 0.2),
             DropItem(itemId: 'blue_potion_large', chance: 0.3),
           ],
+          element: MobElement.dark,
+          traits: [MobTrait.ghostForm],
         );
 
       // ===== 5-15 级低级补足 =====
@@ -385,6 +445,8 @@ class Mob {
           drops: [
             DropItem(itemId: 'white_potion', chance: 0.25),
           ],
+          element: MobElement.ice,
+          traits: [MobTrait.frost],
         );
 
       // ===== 50-80 级高级怪物 =====
@@ -402,6 +464,8 @@ class Mob {
             DropItem(itemId: 'wraith_cloth', chance: 0.25),
             DropItem(itemId: 'blue_potion_large', chance: 0.3),
           ],
+          element: MobElement.dark,
+          traits: [MobTrait.lifeSteal],
         );
       case MobType.luckyMonkey:
         return Mob(
@@ -418,6 +482,7 @@ class Mob {
             DropItem(itemId: 'blue_potion_large', chance: 0.3),
             DropItem(itemId: 'white_potion', chance: 0.4),
           ],
+          traits: [MobTrait.lucky],
         );
       case MobType.crocky:
         return Mob(
@@ -433,6 +498,7 @@ class Mob {
             DropItem(itemId: 'fire_piece', chance: 0.15),
             DropItem(itemId: 'blue_potion_large', chance: 0.35),
           ],
+          traits: [MobTrait.heavyArmor],
         );
       case MobType.jrCelion:
         return Mob(
@@ -449,6 +515,7 @@ class Mob {
             DropItem(itemId: 'fire_piece', chance: 0.18),
             DropItem(itemId: 'white_potion', chance: 0.4),
           ],
+          traits: [MobTrait.swift],
         );
       case MobType.masterChronos:
         return Mob(
@@ -465,6 +532,7 @@ class Mob {
             DropItem(itemId: 'fire_piece', chance: 0.2),
             DropItem(itemId: 'wraith_cloth', chance: 0.3),
           ],
+          traits: [MobTrait.timeStop],
         );
 
       // ===== Boss 怪物 (高 HP / 高奖励,单怪 boss 关) =====
@@ -483,6 +551,8 @@ class Mob {
             DropItem(itemId: 'red_potion_large', chance: 0.6),
             DropItem(itemId: 'white_potion', chance: 0.4),
           ],
+          element: MobElement.poison,
+          traits: [MobTrait.summon, MobTrait.venom],
         );
       case MobType.balrogJr:
         return Mob(
@@ -499,6 +569,8 @@ class Mob {
             DropItem(itemId: 'blue_potion_large', chance: 0.7),
             DropItem(itemId: 'wraith_cloth', chance: 0.5),
           ],
+          element: MobElement.fire,
+          traits: [MobTrait.rage, MobTrait.flame],
         );
       case MobType.pianus:
         return Mob(
@@ -516,6 +588,8 @@ class Mob {
             DropItem(itemId: 'wraith_cloth', chance: 0.8),
             DropItem(itemId: 'white_potion', chance: 0.6),
           ],
+          element: MobElement.dark,
+          traits: [MobTrait.dragonBreath, MobTrait.rage],
         );
     }
   }
@@ -531,6 +605,9 @@ class Mob {
     int? def,
     int? exp,
     List<DropItem>? drops,
+    MobElement? element,
+    List<MobTrait>? traits,
+    List<StatusEffect>? statusEffects,
   }) {
     return Mob(
       name: name ?? this.name,
@@ -542,6 +619,9 @@ class Mob {
       def: def ?? this.def,
       exp: exp ?? this.exp,
       drops: drops ?? this.drops,
+      element: element ?? this.element,
+      traits: traits ?? this.traits,
+      statusEffects: statusEffects ?? this.statusEffects,
     );
   }
 

@@ -1,6 +1,7 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'potential.dart';
+import 'status_effect.dart';
 
 /// 职业类型
 ///
@@ -379,10 +380,166 @@ enum Job {
         );
     }
   }
+
+  /// 第二技能 (Buff / Utility)
+  JobSkill? get secondSkill {
+    switch (this) {
+      case Job.beginner:
+        return null;
+      case Job.warrior:
+        return const JobSkill(
+          name: '钢铁意志',
+          emoji: '🛡️',
+          multiplier: 0,
+          mpCost: 8,
+          description: '3回合内防御力+50%',
+          effectType: SkillEffectType.buff,
+        );
+      case Job.fighter:
+        return const JobSkill(
+          name: '战吼',
+          emoji: '📢',
+          multiplier: 0,
+          mpCost: 10,
+          description: '3回合内攻击力+30%',
+          effectType: SkillEffectType.buff,
+        );
+      case Job.magician:
+        return const JobSkill(
+          name: '魔法盾',
+          emoji: '🔮',
+          multiplier: 0,
+          mpCost: 12,
+          description: '3回合内受到伤害优先扣除MP',
+          effectType: SkillEffectType.buff,
+        );
+      case Job.fpMage:
+        return const JobSkill(
+          name: '火墙',
+          emoji: '🔥',
+          multiplier: 0,
+          mpCost: 15,
+          description: '下回合攻击必定附带燃烧',
+          effectType: SkillEffectType.special,
+        );
+      case Job.bowman:
+        return const JobSkill(
+          name: '蓄力',
+          emoji: '🏹',
+          multiplier: 0,
+          mpCost: 8,
+          description: '下回合攻击必定暴击',
+          effectType: SkillEffectType.special,
+        );
+      case Job.hunter:
+        return const JobSkill(
+          name: '鹰眼',
+          emoji: '👁️',
+          multiplier: 0,
+          mpCost: 10,
+          description: '3回合内暴击率+15%',
+          effectType: SkillEffectType.buff,
+        );
+      case Job.thief:
+        return const JobSkill(
+          name: '隐身',
+          emoji: '🌑',
+          multiplier: 0,
+          mpCost: 10,
+          description: '下回合必定闪避怪物攻击',
+          effectType: SkillEffectType.special,
+        );
+      case Job.assassin:
+        return const JobSkill(
+          name: '暗影步',
+          emoji: '💨',
+          multiplier: 0,
+          mpCost: 14,
+          description: '下回合连续攻击2次',
+          effectType: SkillEffectType.special,
+        );
+      case Job.pirate:
+        return const JobSkill(
+          name: '霸气',
+          emoji: '💪',
+          multiplier: 0,
+          mpCost: 8,
+          description: '3回合内攻击力+20%',
+          effectType: SkillEffectType.buff,
+        );
+      case Job.brawler:
+        return const JobSkill(
+          name: '铁布衫',
+          emoji: '🛡️',
+          multiplier: 0,
+          mpCost: 12,
+          description: '3回合内防御+30%且反弹20%伤害',
+          effectType: SkillEffectType.buff,
+        );
+    }
+  }
+
+  /// 觉醒技能 - 三转后的强化版技能
+  /// 仅二转职业有觉醒技能，基础职业返回null
+  JobSkill? get awakenedSkill {
+    switch (this) {
+      case Job.beginner:
+      case Job.warrior:
+      case Job.magician:
+      case Job.bowman:
+      case Job.thief:
+      case Job.pirate:
+        return null;
+      case Job.fighter:
+        return const JobSkill(
+          name: '终极剑气',
+          emoji: '⚡',
+          multiplier: 5.5,
+          mpCost: 20,
+          description: '觉醒！释放毁灭性剑气，无视防御',
+        );
+      case Job.fpMage:
+        return const JobSkill(
+          name: '陨石术',
+          emoji: '☄️',
+          multiplier: 6.0,
+          mpCost: 25,
+          description: '觉醒！召唤陨石毁灭一切',
+        );
+      case Job.hunter:
+        return const JobSkill(
+          name: '箭雨',
+          emoji: '🌧️',
+          multiplier: 5.2,
+          mpCost: 22,
+          description: '觉醒！万箭齐发，覆盖全场',
+        );
+      case Job.assassin:
+        return const JobSkill(
+          name: '暗影风暴',
+          emoji: '🌑',
+          multiplier: 4.5,
+          mpCost: 24,
+          alwaysCrit: true,
+          description: '觉醒！暗影分身同时攻击',
+        );
+      case Job.brawler:
+        return const JobSkill(
+          name: '海啸拳',
+          emoji: '🌊',
+          multiplier: 5.0,
+          mpCost: 20,
+          description: '觉醒！拳劲如海啸般席卷',
+        );
+    }
+  }
 }
 
 /// 主属性枚举
 enum JobStat { str, dex, intStat, luk }
+
+/// 技能效果类型
+enum SkillEffectType { damage, buff, special }
 
 /// 职业独享技能描述
 class JobSkill {
@@ -392,6 +549,7 @@ class JobSkill {
   final int mpCost;
   final bool alwaysCrit;
   final String description;
+  final SkillEffectType effectType;
 
   const JobSkill({
     required this.name,
@@ -400,6 +558,7 @@ class JobSkill {
     required this.mpCost,
     this.alwaysCrit = false,
     required this.description,
+    this.effectType = SkillEffectType.damage,
   });
 }
 
@@ -509,6 +668,7 @@ class Equipment {
   int? crit;     // 暴击率加成
   int? avoid;    // 闪避率加成
   EquipmentPotential? potential; // 潜能属性
+  String? setName; // 装备套装名称
 
   Equipment({
     required this.name,
@@ -528,6 +688,7 @@ class Equipment {
     this.crit,
     this.avoid,
     this.potential,
+    this.setName,
   }) : instanceId = instanceId ?? _generateUuid();  // 自动分配UUID
 
   /// 获取装备属性描述
@@ -564,6 +725,7 @@ class Equipment {
       crit: crit,
       avoid: avoid,
       potential: potential,
+      setName: setName,
     );
   }
 
@@ -623,6 +785,8 @@ class Player {
   String currentMap;
   int meso;
   Map<String, int> skillLevels; // key: Job.name, value: 0-10 技能等级
+  List<StatusEffect> statusEffects; // 战斗中的状态效果
+  bool isAwakened; // 三转觉醒状态
 
   /// 最大技能等级
   static const int maxSkillLevel = 10;
@@ -647,6 +811,8 @@ class Player {
     this.currentMap = 'henesys',
     this.meso = 0,
     Map<String, int>? skillLevels,
+    List<StatusEffect>? statusEffects,
+    this.isAwakened = false,
   })  : equipment = equipment ?? {
           EquipmentSlot.weapon: equipmentDb['beginner_sword'],
           EquipmentSlot.helmet: null,
@@ -656,7 +822,8 @@ class Player {
           EquipmentSlot.cape: null,
         },
         inventory = inventory ?? [],
-        skillLevels = skillLevels ?? {};
+        skillLevels = skillLevels ?? {},
+        statusEffects = statusEffects ?? [];
 
   /// 创建新玩家 - 投骰子决定初始属性 (总25点，每个4-13)
   factory Player.create(String name, {Random? random}) {
@@ -891,6 +1058,68 @@ class Player {
   /// 获取总闪避率 (最高50%) - 含职业加成
   double getAvoidRate() => (baseAvoidRate + equipAvoidRate + job.avoidBonus).clamp(0, 50);
 
+  /// 获取套装加成
+  /// 返回 Map<bonusType, bonusValue>，bonusType 为 'atkPercent', 'defPercent', 'mpPercent'
+  Map<String, int> get setBonus {
+    final bonus = <String, int>{};
+
+    // 按 setName 分组统计已装备件数
+    final setCounts = <String, int>{};
+    for (final equip in equipment.values.where((e) => e != null)) {
+      final set = equip!.setName;
+      if (set != null && set.isNotEmpty) {
+        setCounts[set] = (setCounts[set] ?? 0) + 1;
+      }
+    }
+
+    for (final entry in setCounts.entries) {
+      final setName = entry.key;
+      final count = entry.value;
+
+      switch (setName) {
+        case 'Iron Set':
+          // 2件: +10% DEF
+          if (count >= 2) {
+            bonus['defPercent'] = (bonus['defPercent'] ?? 0) + 10;
+          }
+        case 'Mage Set':
+          // 2件: +10% MP
+          if (count >= 2) {
+            bonus['mpPercent'] = (bonus['mpPercent'] ?? 0) + 10;
+          }
+        case 'Adventurer Set':
+          // 3件: +5% ATK
+          if (count >= 3) {
+            bonus['atkPercent'] = (bonus['atkPercent'] ?? 0) + 5;
+          }
+      }
+    }
+
+    return bonus;
+  }
+
+  /// 觉醒 - 三转系统
+  /// 提升基础属性并获得觉醒技能
+  Player awaken() {
+    if (isAwakened) return this;
+
+    final newStats = stats.copyWith(
+      str: stats.str + 10,
+      dex: stats.dex + 10,
+      intStat: stats.intStat + 10,
+      luk: stats.luk + 10,
+      maxHp: stats.maxHp + 200,
+      maxMp: stats.maxMp + 100,
+      hp: stats.maxHp + 200,
+      mp: stats.maxMp + 100,
+    );
+
+    return copyWith(
+      stats: newStats,
+      isAwakened: true,
+    );
+  }
+
   /// 复制玩家
   Player copyWith({
     String? name,
@@ -901,6 +1130,8 @@ class Player {
     String? currentMap,
     int? meso,
     Map<String, int>? skillLevels,
+    List<StatusEffect>? statusEffects,
+    bool? isAwakened,
   }) {
     return Player(
       name: name ?? this.name,
@@ -911,6 +1142,8 @@ class Player {
       currentMap: currentMap ?? this.currentMap,
       meso: meso ?? this.meso,
       skillLevels: skillLevels ?? this.skillLevels,
+      statusEffects: statusEffects ?? this.statusEffects,
+      isAwakened: isAwakened ?? this.isAwakened,
     );
   }
 }

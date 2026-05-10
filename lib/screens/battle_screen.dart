@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/game_provider.dart';
 import '../game/models/mob.dart';
 import '../game/models/player.dart';
+import '../game/models/status_effect.dart';
 import '../services/audio_manager.dart';
 import '../widgets/status_bar.dart';
 import '../widgets/game_log.dart';
@@ -213,6 +214,14 @@ class _BattleScreenState extends ConsumerState<BattleScreen>
       if (player.stats.mp >= player.job.skill.mpCost) notifier.useSkill();
       return KeyEventResult.handled;
     }
+    if (event.logicalKey == LogicalKeyboardKey.digit3 ||
+        event.logicalKey == LogicalKeyboardKey.numpad3) {
+      if (player.isAwakened && player.job.awakenedSkill != null &&
+          player.stats.mp >= player.job.awakenedSkill!.mpCost) {
+        notifier.useAwakenedSkill();
+      }
+      return KeyEventResult.handled;
+    }
     if (event.logicalKey == LogicalKeyboardKey.escape ||
         event.logicalKey == LogicalKeyboardKey.keyF) {
       notifier.flee();
@@ -294,7 +303,112 @@ class _BattleScreenState extends ConsumerState<BattleScreen>
               _buildStatBadge('🛡️ ${mob.def}', Colors.blue),
             ],
           ),
+          // 怪物状态效果
+          if (mob.statusEffects.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 6,
+              alignment: WrapAlignment.center,
+              children: mob.statusEffects.map((e) =>
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: e.isDebuff ? Colors.red.withOpacity(0.2) : Colors.green.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(4),
+                    border: Border.all(
+                      color: e.isDebuff ? Colors.red.withOpacity(0.5) : Colors.green.withOpacity(0.5),
+                    ),
+                  ),
+                  child: Text(
+                    '${e.emoji} ${e.displayName} ${e.remainingTurns}T',
+                    style: TextStyle(
+                      color: e.isDebuff ? Colors.redAccent : Colors.greenAccent,
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ).toList(),
+            ),
+          ],
+          // 怪物特性标签
+          if (mob.traits.isNotEmpty) ...[
+            const SizedBox(height: 4),
+            Wrap(
+              spacing: 4,
+              alignment: WrapAlignment.center,
+              children: mob.traits.map((t) =>
+                _buildTraitBadge(t),
+              ).toList(),
+            ),
+          ],
         ],
+      ),
+    );
+  }
+
+  Widget _buildTraitBadge(MobTrait trait) {
+    String label;
+    Color color;
+    switch (trait) {
+      case MobTrait.shellArmor:
+        label = '坚硬外壳';
+        color = Colors.brown;
+        break;
+      case MobTrait.thorn:
+        label = '尖刺';
+        color = Colors.green;
+        break;
+      case MobTrait.venom:
+        label = '毒液';
+        color = Colors.purple;
+        break;
+      case MobTrait.flame:
+        label = '火焰';
+        color = Colors.orange;
+        break;
+      case MobTrait.frost:
+        label = '冰冻';
+        color = Colors.cyan;
+        break;
+      case MobTrait.petrify:
+        label = '石化';
+        color = Colors.grey;
+        break;
+      case MobTrait.ghostForm:
+        label = '幽灵';
+        color = Colors.indigo;
+        break;
+      case MobTrait.lifeSteal:
+        label = '吸血';
+        color = Colors.red;
+        break;
+      case MobTrait.rage:
+        label = '狂暴';
+        color = Colors.deepOrange;
+        break;
+      case MobTrait.summon:
+        label = '召唤';
+        color = Colors.pink;
+        break;
+      case MobTrait.dragonBreath:
+        label = '龙息';
+        color = Colors.amber;
+        break;
+      default:
+        label = '特性';
+        color = Colors.blueGrey;
+    }
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.15),
+        borderRadius: BorderRadius.circular(4),
+        border: Border.all(color: color.withOpacity(0.4)),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(color: color, fontSize: 9, fontWeight: FontWeight.bold),
       ),
     );
   }
@@ -320,6 +434,10 @@ class _BattleScreenState extends ConsumerState<BattleScreen>
   Widget _buildBattleActions(BuildContext context, WidgetRef ref, Player player) {
     final skill = player.job.skill;
     final canUseSkill = player.stats.mp >= skill.mpCost;
+    final secondSkill = player.job.secondSkill;
+    final canUseSecond = secondSkill != null && player.stats.mp >= secondSkill.mpCost;
+    final awakenedSkill = player.job.awakenedSkill;
+    final canUseAwakened = player.isAwakened && awakenedSkill != null && player.stats.mp >= awakenedSkill.mpCost;
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -331,19 +449,25 @@ class _BattleScreenState extends ConsumerState<BattleScreen>
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+            // 觉醒技能行 (仅觉醒后显示)
+            if (player.isAwakened && awakenedSkill != null) ...[
+              SizedBox(
+                width: double.infinity,
+                child: _buildActionButton(
+                  icon: Icons.auto_awesome,
+                  label: '${awakenedSkill.emoji} ${awakenedSkill.name}',
+                  color: canUseAwakened ? Colors.amber : Colors.grey,
+                  subLabel: canUseAwakened ? '消耗 ${awakenedSkill.mpCost} MP | 觉醒技能' : 'MP 不足',
+                  onPressed: canUseAwakened
+                      ? () => ref.read(gameProvider.notifier).useAwakenedSkill()
+                      : null,
+                ),
+              ),
+              const SizedBox(height: 12),
+            ],
+            // 技能行
             Row(
               children: [
-                Expanded(
-                  child: _buildActionButton(
-                    icon: Icons.info,
-                    label: '查看状态',
-                    color: Colors.blue,
-                    onPressed: () {
-                      _showStatusDialog(context, player);
-                    },
-                  ),
-                ),
-                const SizedBox(width: 12),
                 Expanded(
                   child: _buildActionButton(
                     icon: Icons.auto_fix_high,
@@ -355,9 +479,32 @@ class _BattleScreenState extends ConsumerState<BattleScreen>
                         : null,
                   ),
                 ),
+                const SizedBox(width: 12),
+                if (secondSkill != null)
+                  Expanded(
+                    child: _buildActionButton(
+                      icon: Icons.flash_on,
+                      label: '${secondSkill.emoji} ${secondSkill.name}',
+                      color: canUseSecond ? Colors.teal : Colors.grey,
+                      subLabel: canUseSecond ? '消耗 ${secondSkill.mpCost} MP' : 'MP 不足',
+                      onPressed: canUseSecond
+                          ? () => ref.read(gameProvider.notifier).useSecondSkill()
+                          : null,
+                    ),
+                  )
+                else
+                  Expanded(
+                    child: _buildActionButton(
+                      icon: Icons.lock,
+                      label: '技能锁定',
+                      color: Colors.grey,
+                      onPressed: null,
+                    ),
+                  ),
               ],
             ),
             const SizedBox(height: 12),
+            // 基础行动行
             Row(
               children: [
                 Expanded(
@@ -382,6 +529,19 @@ class _BattleScreenState extends ConsumerState<BattleScreen>
                   ),
                 ),
               ],
+            ),
+            const SizedBox(height: 12),
+            // 查看状态
+            SizedBox(
+              width: double.infinity,
+              child: _buildActionButton(
+                icon: Icons.info,
+                label: '查看状态',
+                color: Colors.blue,
+                onPressed: () {
+                  _showStatusDialog(context, player);
+                },
+              ),
             ),
           ],
         ),

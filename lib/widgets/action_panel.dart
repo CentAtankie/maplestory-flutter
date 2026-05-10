@@ -11,6 +11,7 @@ import '../screens/create_character_screen.dart';
 import '../services/audio_manager.dart';
 import 'inventory_dialog.dart';
 import 'character_dialog.dart';
+import 'crafting_dialog.dart';
 
 class ActionPanel extends ConsumerWidget {
   const ActionPanel({super.key});
@@ -342,7 +343,23 @@ class ActionPanel extends ConsumerWidget {
           ),
         ),
         const SizedBox(width: 12),
-        
+
+        // 合成
+        Expanded(
+          child: _buildActionButton(
+            icon: Icons.build,
+            label: '合成',
+            color: Colors.teal,
+            onPressed: () {
+              showDialog(
+                context: context,
+                builder: (context) => const CraftingDialog(),
+              );
+            },
+          ),
+        ),
+        const SizedBox(width: 12),
+
         // 设置
         Expanded(
           child: _buildActionButton(

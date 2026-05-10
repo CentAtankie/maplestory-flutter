@@ -262,19 +262,29 @@ class QuestDialog extends ConsumerWidget {
                 ),
               ),
             ],
-            // 转职按钮
-            if (quest.type == QuestType.jobChange && 
+            // 转职/觉醒按钮
+            if (quest.type == QuestType.jobChange &&
                 quest.status == QuestStatus.inProgress &&
                 quest.targetMapId == currentMapId) ...[
               const SizedBox(height: 8),
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton.icon(
-                  onPressed: () => _completeJobChange(context, ref, quest),
-                  icon: const Icon(Icons.workspace_premium),
-                  label: const Text('完成转职'),
+                  onPressed: () {
+                    if (quest.id.startsWith('awaken_')) {
+                      _completeAwakening(context, ref, quest);
+                    } else {
+                      _completeJobChange(context, ref, quest);
+                    }
+                  },
+                  icon: Icon(
+                    quest.id.startsWith('awaken_') ? Icons.auto_awesome : Icons.workspace_premium,
+                  ),
+                  label: Text(
+                    quest.id.startsWith('awaken_') ? '完成觉醒' : '完成转职',
+                  ),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.purple,
+                    backgroundColor: quest.id.startsWith('awaken_') ? Colors.amber : Colors.purple,
                     foregroundColor: Colors.white,
                   ),
                 ),
@@ -310,10 +320,10 @@ class QuestDialog extends ConsumerWidget {
 
   void _completeJobChange(BuildContext context, WidgetRef ref, GameQuest quest) {
     if (quest.targetJob == null) return;
-    
+
     ref.read(gameProvider.notifier).completeJobChange(quest.id, quest.targetJob!);
     Navigator.pop(context);
-    
+
     // 显示转职成功对话框
     showDialog(
       context: context,
@@ -355,6 +365,105 @@ class QuestDialog extends ConsumerWidget {
             style: ElevatedButton.styleFrom(
               backgroundColor: quest.targetJob!.color,
               foregroundColor: Colors.white,
+            ),
+            child: const Text('确定'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _completeAwakening(BuildContext context, WidgetRef ref, GameQuest quest) {
+    final notifier = ref.read(gameProvider.notifier);
+    final player = ref.read(gameProvider).player;
+
+    // Check requirements
+    if (player.stats.level < 70) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('❌ 需要达到 Lv.70 才能觉醒'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    if (player.isAwakened) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('❌ 已经觉醒过了'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    // Complete the quest first
+    notifier.completeJobChange(quest.id, quest.targetJob!);
+
+    // Then perform awakening
+    notifier.awakenJob();
+
+    Navigator.pop(context);
+
+    // Show awakening success dialog
+    final awakenedSkill = player.job.awakenedSkill;
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        backgroundColor: MapleColors.background,
+        title: const Row(
+          children: [
+            Text('✨', style: TextStyle(fontSize: 32)),
+            SizedBox(width: 12),
+            Text('觉醒成功！', style: TextStyle(color: Colors.amber)),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              '${player.job.displayName} 完成了最终觉醒！',
+              style: const TextStyle(color: Colors.white, fontSize: 16),
+            ),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.amber.withOpacity(0.2),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.amber),
+              ),
+              child: Column(
+                children: [
+                  const Text(
+                    '觉醒属性提升',
+                    style: TextStyle(color: Colors.amber, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    '💪 全属性 +10\n❤️ MaxHP +200\n💧 MaxMP +100',
+                    style: TextStyle(color: Colors.white70),
+                  ),
+                  if (awakenedSkill != null) ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      '⚡ 觉醒技能: ${awakenedSkill.emoji} ${awakenedSkill.name}',
+                      style: const TextStyle(color: Colors.amber),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.amber,
+              foregroundColor: Colors.black,
             ),
             child: const Text('确定'),
           ),

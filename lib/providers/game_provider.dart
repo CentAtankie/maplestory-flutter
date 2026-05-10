@@ -3,11 +3,13 @@ import 'dart:math' as math;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../game/models/player.dart';
 import '../game/models/mob.dart';
+import '../game/models/status_effect.dart';
 import '../game/models/map.dart';
 import '../game/models/item.dart' hide Equipment;
 import '../game/models/potential.dart';
 import '../game/models/mail.dart';
 import '../game/models/quest.dart';
+import '../game/models/crafting.dart';
 import '../repositories/save_repository.dart';
 import '../repositories/hive_save_repository.dart';
 
@@ -343,6 +345,98 @@ class GameNotifier extends StateNotifier<GameData> {
     );
   }
 
+  /// 使用第二技能 (Buff / Utility)
+  void useSecondSkill() {
+    if (state.gameState != GameState.battling || state.currentMob == null) return;
+
+    final secondSkill = state.player.job.secondSkill;
+    if (secondSkill == null) {
+      addLog('❌ 当前职业没有第二技能', LogType.error);
+      return;
+    }
+    if (state.player.stats.mp < secondSkill.mpCost) {
+      addLog('❌ MP 不足 (需要 ${secondSkill.mpCost})', LogType.error);
+      return;
+    }
+
+    final player = state.player;
+    final newMp = player.stats.mp - secondSkill.mpCost;
+    var newPlayer = player.copyWith(
+      stats: player.stats.copyWith(mp: newMp),
+    );
+
+    // 根据技能类型应用效果
+    switch (player.job) {
+      case Job.warrior:
+        newPlayer = newPlayer.copyWith(
+          statusEffects: [...newPlayer.statusEffects, StatusEffect(type: StatusType.defUp, value: 50, remainingTurns: 3)],
+        );
+        addLog('🛡️ 钢铁意志！3回合内防御力+50%', LogType.success);
+        break;
+      case Job.fighter:
+        newPlayer = newPlayer.copyWith(
+          statusEffects: [...newPlayer.statusEffects, StatusEffect(type: StatusType.atkUp, value: 30, remainingTurns: 3)],
+        );
+        addLog('📢 战吼！3回合内攻击力+30%', LogType.success);
+        break;
+      case Job.magician:
+        newPlayer = newPlayer.copyWith(
+          statusEffects: [...newPlayer.statusEffects, StatusEffect(type: StatusType.magicGuard, value: 0, remainingTurns: 3)],
+        );
+        addLog('🔮 魔法盾！3回合内伤害优先扣除MP', LogType.success);
+        break;
+      case Job.fpMage:
+        newPlayer = newPlayer.copyWith(
+          statusEffects: [...newPlayer.statusEffects, StatusEffect(type: StatusType.nextCrit, value: 0, remainingTurns: 1)],
+        );
+        addLog('🔥 火墙蓄力！下回合攻击必定暴击并附带燃烧', LogType.success);
+        break;
+      case Job.bowman:
+        newPlayer = newPlayer.copyWith(
+          statusEffects: [...newPlayer.statusEffects, StatusEffect(type: StatusType.nextCrit, value: 0, remainingTurns: 1)],
+        );
+        addLog('🏹 蓄力完成！下回合攻击必定暴击', LogType.success);
+        break;
+      case Job.hunter:
+        newPlayer = newPlayer.copyWith(
+          statusEffects: [...newPlayer.statusEffects, StatusEffect(type: StatusType.atkUp, value: 15, remainingTurns: 3)],
+        );
+        addLog('👁️ 鹰眼！3回合内暴击率+15%', LogType.success);
+        break;
+      case Job.thief:
+        newPlayer = newPlayer.copyWith(
+          statusEffects: [...newPlayer.statusEffects, StatusEffect(type: StatusType.nextDodge, value: 0, remainingTurns: 1)],
+        );
+        addLog('🌑 隐身！下回合必定闪避怪物攻击', LogType.success);
+        break;
+      case Job.assassin:
+        newPlayer = newPlayer.copyWith(
+          statusEffects: [...newPlayer.statusEffects, StatusEffect(type: StatusType.nextCrit, value: 0, remainingTurns: 1)],
+        );
+        addLog('💨 暗影步！下回合连续攻击2次', LogType.success);
+        break;
+      case Job.pirate:
+        newPlayer = newPlayer.copyWith(
+          statusEffects: [...newPlayer.statusEffects, StatusEffect(type: StatusType.atkUp, value: 20, remainingTurns: 3)],
+        );
+        addLog('💪 霸气！3回合内攻击力+20%', LogType.success);
+        break;
+      case Job.brawler:
+        newPlayer = newPlayer.copyWith(
+          statusEffects: [...newPlayer.statusEffects, StatusEffect(type: StatusType.defUp, value: 30, remainingTurns: 3)],
+        );
+        addLog('🛡️ 铁布衫！3回合内防御+30%', LogType.success);
+        break;
+      default:
+        addLog('❌ 第二技能尚未实现', LogType.error);
+        return;
+    }
+
+    state = state.copyWith(player: newPlayer);
+    // 推进回合 (应用 DOT)
+    _advanceStatusEffects();
+  }
+
   /// 玩家攻击的统一入口: 普攻和技能共用,保证暴击/闪避规则一致
   void _executePlayerAttack({
     required double skillMultiplier,
@@ -354,11 +448,36 @@ class GameNotifier extends StateNotifier<GameData> {
     final player = state.player;
     final mob = state.currentMob!;
 
-    // 玩家命中
+    // 检查玩家是否被控制 (冰冻/眩晕)
+    if (player.statusEffects.any((s) => s.isActionBlocked)) {
+      final effect = player.statusEffects.firstWhere((s) => s.isActionBlocked);
+      addLog('${effect.emoji} 你被 ${effect.displayName} 了，无法行动！', LogType.warning);
+      _advanceStatusEffects();
+      return;
+    }
+
+    // 检查怪物是否被控制
+    if (mob.statusEffects.any((s) => s.isActionBlocked)) {
+      final effect = mob.statusEffects.firstWhere((s) => s.isActionBlocked);
+      addLog('${effect.emoji} ${mob.name} 被 ${effect.displayName} 了！', LogType.success);
+    }
+
+    // 玩家命中 (考虑怪物特性: 闪避型怪物)
     final hit = _rollPlayerHit(player, mob, multiplier: skillMultiplier, forceCrit: forceCrit);
+
+    // 应用怪物受击特性: 首击减伤
+    var actualDamage = hit.damage;
+    if (mob.traits.contains(MobTrait.shellArmor) || mob.traits.contains(MobTrait.petrify)) {
+      // 首次受击减伤 50%
+      if (mob.maxHp == mob.hp) {
+        actualDamage = (actualDamage * 0.5).toInt();
+        addLog('🛡️ ${mob.name} 的坚硬外壳减少了首次伤害！', LogType.normal);
+      }
+    }
+
     _battleEffects.add(BattleEffect(
       target: BattleEffectTarget.mob,
-      damage: hit.damage,
+      damage: actualDamage,
       isCrit: hit.isCrit,
     ));
 
@@ -366,24 +485,35 @@ class GameNotifier extends StateNotifier<GameData> {
       final label = skillName ?? '✨ 技能';
       addLog(
         hit.isCrit
-            ? '$label 暴击！对 ${mob.name} 造成 ${hit.damage} 点伤害！'
-            : '$label 对 ${mob.name} 造成 ${hit.damage} 点伤害！',
+            ? '$label 暴击！对 ${mob.name} 造成 $actualDamage 点伤害！'
+            : '$label 对 ${mob.name} 造成 $actualDamage 点伤害！',
         LogType.battle,
       );
     } else {
       addLog(
         hit.isCrit
-            ? '💥 暴击！你对 ${mob.name} 造成 ${hit.damage} 点伤害！'
-            : '⚔️ 你对 ${mob.name} 造成 ${hit.damage} 点伤害！',
+            ? '💥 暴击！你对 ${mob.name} 造成 $actualDamage 点伤害！'
+            : '⚔️ 你对 ${mob.name} 造成 $actualDamage 点伤害！',
         hit.isCrit ? LogType.reward : LogType.battle,
       );
+    }
+
+    // 应用元素弱点 (火属性怪物受冰伤增加, 冰属性受火伤增加)
+    if (mob.element == MobElement.fire && (player.job == Job.fpMage || player.job == Job.magician)) {
+      final bonus = (actualDamage * 0.3).toInt();
+      actualDamage += bonus;
+      addLog('❄️ 元素克制！额外造成 $bonus 点伤害', LogType.reward);
+    } else if (mob.element == MobElement.ice && (player.job == Job.fpMage || player.job == Job.magician)) {
+      final bonus = (actualDamage * 0.3).toInt();
+      actualDamage += bonus;
+      addLog('🔥 元素克制！额外造成 $bonus 点伤害', LogType.reward);
     }
 
     // 海盗/拳手/刺客追打被动: 概率触发额外打击
     int extraDamage = 0;
     if (player.job.extraHitChance > 0) {
       if (state.random.nextDouble() < player.job.extraHitChance) {
-        extraDamage = (hit.damage * player.job.extraHitDamageRatio).toInt();
+        extraDamage = (actualDamage * player.job.extraHitDamageRatio).toInt();
         if (extraDamage > 0) {
           _battleEffects.add(BattleEffect(
             target: BattleEffectTarget.mob,
@@ -396,14 +526,14 @@ class GameNotifier extends StateNotifier<GameData> {
       }
     }
 
-    final totalDamage = hit.damage + extraDamage;
+    final totalDamage = actualDamage + extraDamage;
     final newMobHp = mob.hp - totalDamage;
 
     // 怪物死亡
     if (newMobHp <= 0) {
       _battleEffects.add(BattleEffect(
         target: BattleEffectTarget.mob,
-        damage: hit.damage,
+        damage: actualDamage,
         isFatal: true,
       ));
       _winBattle(mob);
@@ -411,50 +541,201 @@ class GameNotifier extends StateNotifier<GameData> {
     }
 
     // 扣除 MP (技能消耗)
-    final mobAlive = mob.copyWith(hp: newMobHp);
-    final playerAfterMp = mpCost > 0
+    var mobAlive = mob.copyWith(hp: newMobHp);
+    var playerAfterMp = mpCost > 0
         ? player.copyWith(stats: player.stats.copyWith(mp: player.stats.mp - mpCost))
         : player;
 
-    // 怪物反击 (闪避检定)
-    final counter = _rollMobHit(playerAfterMp, mobAlive);
-    _battleEffects.add(BattleEffect(
-      target: BattleEffectTarget.player,
-      damage: counter.damage,
-      isAvoided: counter.isAvoided,
-      isReduced: !counter.isAvoided && playerAfterMp.job.damageReduction > 0,
-    ));
-    if (counter.isAvoided) {
-      addLog('💨 你闪避了 ${mob.name} 的攻击！', LogType.success);
-      state = state.copyWith(currentMob: mobAlive, player: playerAfterMp);
-      return;
+    // 应用怪物受击特性: 尖刺反击
+    if (mob.traits.contains(MobTrait.thorn)) {
+      final thornDmg = (totalDamage * 0.2).toInt();
+      if (thornDmg > 0) {
+        playerAfterMp = playerAfterMp.copyWith(
+          stats: playerAfterMp.stats.copyWith(hp: (playerAfterMp.stats.hp - thornDmg).clamp(1, playerAfterMp.stats.maxHp)),
+        );
+        addLog('🌵 ${mob.name} 的尖刺反弹了 $thornDmg 伤害！', LogType.warning);
+      }
     }
 
-    final newPlayerHp = playerAfterMp.stats.hp - counter.damage;
-    addLog('💥 ${mob.name} 对你造成 ${counter.damage} 点伤害！', LogType.warning);
+    // Boss 机制检查
+    _checkBossMechanics(mobAlive, playerAfterMp);
 
-    if (newPlayerHp <= 0) {
+    // 怪物反击 (如果被控制则跳过)
+    if (!mobAlive.statusEffects.any((s) => s.isActionBlocked)) {
+      final counter = _rollMobHit(playerAfterMp, mobAlive);
       _battleEffects.add(BattleEffect(
         target: BattleEffectTarget.player,
         damage: counter.damage,
-        isFatal: true,
+        isAvoided: counter.isAvoided,
+        isReduced: !counter.isAvoided && playerAfterMp.job.damageReduction > 0,
       ));
-      _gameOver();
+      if (counter.isAvoided) {
+        addLog('💨 你闪避了 ${mobAlive.name} 的攻击！', LogType.success);
+        if (counter.consumedDodge) {
+          addLog('✨ 必定闪避效果已消耗', LogType.success);
+        }
+      } else {
+        var newPlayerHp = playerAfterMp.stats.hp - counter.damage;
+        // 魔法盾吸收 MP
+        if (counter.mpAbsorb > 0) {
+          final newMp = (playerAfterMp.stats.mp - counter.mpAbsorb).clamp(0, playerAfterMp.stats.maxMp);
+          playerAfterMp = playerAfterMp.copyWith(
+            stats: playerAfterMp.stats.copyWith(mp: newMp),
+          );
+          addLog('🔮 魔法盾吸收了 ${counter.mpAbsorb} 点伤害！', LogType.success);
+        }
+        addLog('💥 ${mobAlive.name} 对你造成 ${counter.damage} 点伤害！', LogType.warning);
+
+        // 怪物攻击附带状态效果
+        if (mobAlive.traits.contains(MobTrait.venom) && state.random.nextDouble() < 0.3) {
+          _applyStatusEffectToPlayer(StatusType.poison, value: (mobAlive.atk * 0.3).toInt(), turns: 3);
+          addLog('☠️ ${mobAlive.name} 的毒液让你中毒了！', LogType.warning);
+        }
+        if (mobAlive.traits.contains(MobTrait.flame) && state.random.nextDouble() < 0.25) {
+          _applyStatusEffectToPlayer(StatusType.burn, value: (mobAlive.atk * 0.4).toInt(), turns: 3);
+          addLog('🔥 ${mobAlive.name} 的火焰让你燃烧了！', LogType.warning);
+        }
+        if (mobAlive.traits.contains(MobTrait.frost) && state.random.nextDouble() < 0.2) {
+          _applyStatusEffectToPlayer(StatusType.freeze, value: 0, turns: 1);
+          addLog('❄️ ${mobAlive.name} 的寒冰让你冻住了！', LogType.warning);
+        }
+
+        if (newPlayerHp <= 0) {
+          _battleEffects.add(BattleEffect(
+            target: BattleEffectTarget.player,
+            damage: counter.damage,
+            isFatal: true,
+          ));
+          _gameOver();
+          return;
+        }
+
+        playerAfterMp = playerAfterMp.copyWith(
+          stats: playerAfterMp.stats.copyWith(hp: newPlayerHp),
+        );
+      }
+    } else {
+      addLog('💫 ${mobAlive.name} 被控制，无法攻击！', LogType.success);
+    }
+
+    // 回合结束: 应用 DOT 状态效果
+    _advanceStatusEffects();
+
+    state = state.copyWith(
+      currentMob: mobAlive,
+      player: playerAfterMp,
+    );
+  }
+
+  /// 给玩家附加状态效果
+  void _applyStatusEffectToPlayer(StatusType type, {required int value, required int turns}) {
+    final player = state.player;
+    final existing = player.statusEffects.where((s) => s.type == type).toList();
+    if (existing.isNotEmpty) {
+      // 刷新持续时间
+      final updated = player.statusEffects.map((s) {
+        if (s.type == type) {
+          return s.copyWith(remainingTurns: turns, value: value);
+        }
+        return s;
+      }).toList();
+      state = state.copyWith(player: player.copyWith(statusEffects: updated));
+    } else {
+      state = state.copyWith(
+        player: player.copyWith(
+          statusEffects: [...player.statusEffects, StatusEffect(type: type, value: value, remainingTurns: turns)],
+        ),
+      );
+    }
+  }
+
+  /// 推进状态效果 (回合结束调用): 减少持续回合, 应用 DOT 伤害
+  void _advanceStatusEffects() {
+    final player = state.player;
+    final mob = state.currentMob;
+    if (mob == null) return;
+
+    var updatedPlayerHp = player.stats.hp;
+    var updatedPlayerEffects = <StatusEffect>[];
+    var updatedMobHp = mob.hp;
+    var updatedMobEffects = <StatusEffect>[];
+
+    // 处理玩家身上的状态
+    for (final effect in player.statusEffects) {
+      final newTurns = effect.remainingTurns - 1;
+      if (newTurns <= 0) {
+        addLog('${effect.emoji} ${effect.displayName} 效果结束了', LogType.normal);
+        continue;
+      }
+      // DOT 伤害
+      if (effect.type == StatusType.burn || effect.type == StatusType.poison || effect.type == StatusType.bleed) {
+        updatedPlayerHp = (updatedPlayerHp - effect.value).clamp(1, player.stats.maxHp);
+        addLog('${effect.emoji} ${effect.displayName} 造成 ${effect.value} 点伤害！', LogType.warning);
+      }
+      updatedPlayerEffects.add(effect.copyWith(remainingTurns: newTurns));
+    }
+
+    // 处理怪物身上的状态
+    for (final effect in mob.statusEffects) {
+      final newTurns = effect.remainingTurns - 1;
+      if (newTurns <= 0) {
+        addLog('${effect.emoji} ${mob.name} 的 ${effect.displayName} 效果结束了', LogType.normal);
+        continue;
+      }
+      if (effect.type == StatusType.burn || effect.type == StatusType.poison || effect.type == StatusType.bleed) {
+        updatedMobHp = (updatedMobHp - effect.value).clamp(1, mob.maxHp);
+        addLog('${effect.emoji} ${mob.name} 受到 ${effect.value} 点 ${effect.displayName} 伤害！', LogType.battle);
+      }
+      updatedMobEffects.add(effect.copyWith(remainingTurns: newTurns));
+    }
+
+    // 检查怪物是否被 DOT 杀死
+    if (updatedMobHp <= 0 && mob.hp > 0) {
+      _winBattle(mob);
       return;
     }
 
     state = state.copyWith(
-      currentMob: mobAlive,
-      player: playerAfterMp.copyWith(
-        stats: playerAfterMp.stats.copyWith(hp: newPlayerHp),
+      player: player.copyWith(
+        stats: player.stats.copyWith(hp: updatedPlayerHp),
+        statusEffects: updatedPlayerEffects,
+      ),
+      currentMob: mob.copyWith(
+        hp: updatedMobHp,
+        statusEffects: updatedMobEffects,
       ),
     );
   }
 
+  /// Boss 特殊机制检查
+  void _checkBossMechanics(Mob mob, Player player) {
+    final hpPercent = mob.hp / mob.maxHp;
+
+    // 蘑菇妈妈: 50% 血召唤小怪
+    if (mob.traits.contains(MobTrait.summon) && hpPercent <= 0.5 && hpPercent > 0.48) {
+      addLog('👹 ${mob.name} 召唤了蘑菇仔！', LogType.warning);
+      // TODO: 实现召唤小怪机制 (需要支持多目标战斗)
+    }
+
+    // 小巴洛克: 30% 血以下狂暴
+    if (mob.traits.contains(MobTrait.rage) && hpPercent <= 0.3) {
+      final enragedMob = mob.copyWith(atk: (mob.atk * 1.5).toInt());
+      state = state.copyWith(currentMob: enragedMob);
+      addLog('🔥 ${mob.name} 进入狂暴状态！攻击力大幅提升！', LogType.warning);
+    }
+  }
+
   _PlayerHit _rollPlayerHit(Player player, Mob mob, {double multiplier = 1.0, bool forceCrit = false}) {
-    final base = (player.getAtk() * multiplier - mob.def).clamp(1, 9999).toInt();
+    // 计算攻击力 (含 Buff 加成)
+    var atk = player.getAtk();
+    final atkBuff = player.statusEffects.where((s) => s.type == StatusType.atkUp).fold(0, (sum, s) => sum + s.value);
+    if (atkBuff > 0) atk = (atk * (1 + atkBuff / 100)).toInt();
+
+    final base = (atk * multiplier - mob.def).clamp(1, 9999).toInt();
+    // 检查必定暴击状态
+    final hasNextCrit = player.statusEffects.any((s) => s.type == StatusType.nextCrit);
     final critRate = player.getCritRate();
-    final isCrit = forceCrit || state.random.nextDouble() * 100 < critRate;
+    final isCrit = forceCrit || hasNextCrit || state.random.nextDouble() * 100 < critRate;
     // 暴击倍率按职业不同 (弓箭手系更高)
     final critMult = player.job.critDamageMultiplier;
     final damage = isCrit ? (base * critMult).toInt() : base;
@@ -462,15 +743,30 @@ class GameNotifier extends StateNotifier<GameData> {
   }
 
   _MobHit _rollMobHit(Player player, Mob mob) {
+    // 检查必定闪避状态
+    final hasNextDodge = player.statusEffects.any((s) => s.type == StatusType.nextDodge);
     final avoidRate = player.getAvoidRate();
-    final isAvoided = state.random.nextDouble() * 100 < avoidRate;
+    final isAvoided = hasNextDodge || state.random.nextDouble() * 100 < avoidRate;
     if (isAvoided) {
-      return const _MobHit(damage: 0, isAvoided: true);
+      return _MobHit(damage: 0, isAvoided: true, consumedDodge: hasNextDodge);
     }
-    var damage = (mob.atk - player.getDef()).clamp(1, 9999).toInt();
+    // 计算防御力 (含 Buff 加成)
+    var def = player.getDef();
+    final defBuff = player.statusEffects.where((s) => s.type == StatusType.defUp).fold(0, (sum, s) => sum + s.value);
+    if (defBuff > 0) def = (def * (1 + defBuff / 100)).toInt();
+
+    var damage = (mob.atk - def).clamp(1, 9999).toInt();
     // 战士系减伤被动
     if (player.job.damageReduction > 0) {
       damage = (damage * (1 - player.job.damageReduction)).toInt().clamp(1, 9999);
+    }
+    // 魔法盾: 伤害优先扣 MP
+    final hasMagicGuard = player.statusEffects.any((s) => s.type == StatusType.magicGuard);
+    if (hasMagicGuard && player.stats.mp > 0) {
+      final mpAbsorb = (damage * 0.5).toInt().clamp(0, player.stats.mp);
+      final hpDamage = damage - mpAbsorb;
+      // 这里只返回 HP 伤害,MP 扣除在调用方处理
+      return _MobHit(damage: hpDamage.clamp(1, 9999), isAvoided: false, mpAbsorb: mpAbsorb);
     }
     return _MobHit(damage: damage, isAvoided: false);
   }
@@ -587,7 +883,7 @@ class GameNotifier extends StateNotifier<GameData> {
     state = state.copyWith(
       gameState: GameState.exploring,
       currentMob: null,
-      player: updatedPlayer,
+      player: updatedPlayer.copyWith(statusEffects: []),  // 清除状态效果
     );
 
     // 战斗胜利后,如果开了自动探索,立即触发下一次探索 (而非等 2s)
@@ -610,6 +906,12 @@ class GameNotifier extends StateNotifier<GameData> {
 
     // 检查任务解锁
     checkQuestUnlock();
+
+    // 检查是否达到70级（三转觉醒等级）
+    if (newLevel == 70 && player.job.isAdvanced && !player.isAwakened) {
+      addLog('🌟 等级达到 Lv.70！觉醒任务已解锁！', LogType.success);
+      addLog('📜 前往转职地图完成最终觉醒', LogType.reward);
+    }
 
     return player.copyWith(
       stats: player.stats.copyWith(
@@ -667,6 +969,7 @@ class GameNotifier extends StateNotifier<GameData> {
         stats: player.stats.copyWith(
           hp: 1,  // 剩1点血
         ),
+        statusEffects: [],  // 清除状态效果
       ),
       isAutoExplore: false,
       isAutoBattle: false,
@@ -1366,6 +1669,73 @@ class GameNotifier extends StateNotifier<GameData> {
     claimQuestReward(questId);
   }
 
+  /// 觉醒 - 三转系统
+  void awakenJob() {
+    final player = state.player;
+
+    // 检查是否已经是二转职业
+    if (!player.job.isAdvanced) {
+      addLog('❌ 只有二转职业才能觉醒', LogType.error);
+      return;
+    }
+
+    // 检查是否已觉醒
+    if (player.isAwakened) {
+      addLog('❌ 已经觉醒过了', LogType.error);
+      return;
+    }
+
+    // 检查等级
+    if (player.stats.level < 70) {
+      addLog('❌ 需要达到 Lv.70 才能觉醒', LogType.error);
+      return;
+    }
+
+    // 执行觉醒
+    final awakenedPlayer = player.awaken();
+    state = state.copyWith(player: awakenedPlayer);
+
+    // 显示觉醒信息
+    final awakenedSkill = player.job.awakenedSkill;
+    addLog('✨ ${player.job.displayName} 觉醒成功！', LogType.success);
+    addLog('💪 全属性 +10', LogType.reward);
+    addLog('❤️ MaxHP +200', LogType.reward);
+    addLog('💧 MaxMP +100', LogType.reward);
+    if (awakenedSkill != null) {
+      addLog('⚡ 获得觉醒技能: ${awakenedSkill.emoji} ${awakenedSkill.name}', LogType.reward);
+    }
+  }
+
+  /// 使用觉醒技能（如果已觉醒）
+  void useAwakenedSkill() {
+    if (state.gameState != GameState.battling || state.currentMob == null) return;
+
+    final player = state.player;
+    if (!player.isAwakened) {
+      addLog('❌ 尚未觉醒，无法使用觉醒技能', LogType.error);
+      return;
+    }
+
+    final awakenedSkill = player.job.awakenedSkill;
+    if (awakenedSkill == null) {
+      addLog('❌ 当前职业没有觉醒技能', LogType.error);
+      return;
+    }
+
+    if (player.stats.mp < awakenedSkill.mpCost) {
+      addLog('❌ MP 不足 (需要 ${awakenedSkill.mpCost})', LogType.error);
+      return;
+    }
+
+    _executePlayerAttack(
+      skillMultiplier: awakenedSkill.multiplier * (1 + player.currentSkillLevel * 0.05),
+      mpCost: awakenedSkill.mpCost,
+      isSkill: true,
+      skillName: '${awakenedSkill.emoji} ${awakenedSkill.name}',
+      forceCrit: awakenedSkill.alwaysCrit,
+    );
+  }
+
   /// 升级职业技能 (花费 SP)
   bool upgradeSkill() {
     final player = state.player;
@@ -1405,6 +1775,78 @@ class GameNotifier extends StateNotifier<GameData> {
       LogType.reward,
     );
     return true;
+  }
+
+  /// 合成物品
+  CraftResult craftItem(CraftingRecipe recipe) {
+    final player = state.player;
+
+    // Check materials
+    if (!recipe.canCraft(player)) {
+      return CraftResult(
+        success: false,
+        message: '材料不足！缺少: ${recipe.getMissingMaterials(player)}',
+      );
+    }
+
+    // Consume materials
+    final newInventory = List<String>.from(player.inventory);
+    for (final entry in recipe.requiredMaterials.entries) {
+      int removed = 0;
+      newInventory.removeWhere((id) {
+        if (id == entry.key && removed < entry.value) {
+          removed++;
+          return true;
+        }
+        return false;
+      });
+    }
+
+    // Add result
+    String resultName;
+    String resultEmoji;
+
+    if (recipe.resultType == CraftResultType.equipment) {
+      final equipment = EquipmentDatabase.getById(recipe.resultItemId);
+      if (equipment != null) {
+        final equipInstance = equipment.copyWithInstanceId();
+        final instanceId = equipInstance.instanceId;
+        _equipmentInstances[instanceId] = equipInstance;
+        newInventory.add(instanceId);
+        resultName = equipment.name;
+        resultEmoji = equipment.emoji ?? '⚔️';
+      } else {
+        return CraftResult(
+          success: false,
+          message: '合成失败: 找不到装备 ${recipe.resultItemId}',
+        );
+      }
+    } else {
+      final item = ShopDatabase.getById(recipe.resultItemId);
+      if (item != null) {
+        newInventory.add(recipe.resultItemId);
+        resultName = item.name;
+        resultEmoji = item.emoji;
+      } else {
+        return CraftResult(
+          success: false,
+          message: '合成失败: 找不到物品 ${recipe.resultItemId}',
+        );
+      }
+    }
+
+    state = state.copyWith(
+      player: player.copyWith(inventory: newInventory),
+    );
+
+    addLog('🔨 合成成功: $resultName！', LogType.success);
+
+    return CraftResult(
+      success: true,
+      message: '合成成功！获得 $resultName',
+      itemName: resultName,
+      itemEmoji: resultEmoji,
+    );
   }
 
   /// 检查并解锁新任务（升级时调用）
@@ -1535,7 +1977,14 @@ class _PlayerHit {
 class _MobHit {
   final int damage;
   final bool isAvoided;
-  const _MobHit({required this.damage, required this.isAvoided});
+  final bool consumedDodge; // 是否消耗了必定闪避状态
+  final int mpAbsorb;       // 魔法盾吸收的 MP
+  const _MobHit({
+    required this.damage,
+    required this.isAvoided,
+    this.consumedDodge = false,
+    this.mpAbsorb = 0,
+  });
 }
 
 /// 战斗特效事件 (UI 订阅触发飘字/震屏)
