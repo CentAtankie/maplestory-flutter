@@ -93,7 +93,7 @@ class _MapleStoryAppState extends ConsumerState<MapleStoryApp>
             ),
           ),
         ),
-        cardTheme: CardThemeData(
+        cardTheme: CardTheme(
           elevation: 4,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
