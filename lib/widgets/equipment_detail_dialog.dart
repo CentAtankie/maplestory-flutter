@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import "../utils/maple_theme.dart";
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../game/models/player.dart';
 import '../game/models/item.dart';
@@ -79,7 +80,7 @@ class EquipmentDetailDialog extends StatelessWidget {
     final potential = equipment.potential;
     
     return AlertDialog(
-      backgroundColor: const Color(0xFF1A1A2E),
+      backgroundColor: MapleColors.background,
       title: Row(
         children: [
           Text(equipment.emoji ?? '📦', style: const TextStyle(fontSize: 32)),
@@ -134,7 +135,7 @@ class EquipmentDetailDialog extends StatelessWidget {
               width: double.infinity,
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: const Color(0xFF0F3460),
+                color: MapleColors.card,
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Column(
@@ -172,7 +173,7 @@ class EquipmentDetailDialog extends StatelessWidget {
               decoration: BoxDecoration(
                 color: potential != null 
                     ? Color(int.parse(potential.gradeColor.replaceFirst('#', '0xFF'))).withOpacity(0.1)
-                    : const Color(0xFF0F3460),
+                    : MapleColors.card,
                 borderRadius: BorderRadius.circular(12),
                 border: potential != null
                     ? Border.all(
@@ -464,7 +465,7 @@ class CubeSelectorDialog extends ConsumerWidget {
     final hasCubes = cubeCounts.isNotEmpty;
 
     return AlertDialog(
-      backgroundColor: const Color(0xFF1A1A2E),
+      backgroundColor: MapleColors.background,
       title: const Row(
         children: [
           Icon(Icons.auto_fix_high, color: Colors.blue),
@@ -485,7 +486,7 @@ class CubeSelectorDialog extends ConsumerWidget {
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: const Color(0xFF0F3460),
+                      color: MapleColors.card,
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Row(
@@ -610,7 +611,7 @@ class CubeSelectorDialog extends ConsumerWidget {
     VoidCallback onTap,
   ) {
     return Card(
-      color: const Color(0xFF0F3460),
+      color: MapleColors.card,
       margin: const EdgeInsets.only(bottom: 8),
       child: ListTile(
         leading: Text(emoji, style: const TextStyle(fontSize: 28)),

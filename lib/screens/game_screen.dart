@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import "../utils/maple_theme.dart";
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/game_provider.dart';
 import '../game/models/map.dart';
@@ -15,10 +16,11 @@ class GameScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final gameState = ref.watch(gameProvider);
+    // 只关心当前地图,其他状态变化不触发重建
+    final currentMap = ref.watch(gameProvider.select((g) => g.currentMap));
 
     return Scaffold(
-      backgroundColor: const Color(0xFF1A1A2E),
+      backgroundColor: MapleColors.background,
       body: SafeArea(
         child: Column(
           children: [
@@ -37,20 +39,20 @@ class GameScreen extends ConsumerWidget {
                         children: [
                           // 状态栏
                           const StatusBar(),
-                          
+
                           // 地图信息
-                          _buildMapInfo(gameState),
-                          
+                          _buildMapInfo(currentMap),
+
                           // 游戏日志区域
                           Container(
                             margin: const EdgeInsets.symmetric(horizontal: 12),
                             height: 180,
                             child: const GameLog(),
                           ),
-                          
+
                           // 操作面板
                           const ActionPanel(),
-                          
+
                           const SizedBox(height: 8),
                         ],
                       ),
@@ -59,7 +61,7 @@ class GameScreen extends ConsumerWidget {
                 },
               ),
             ),
-            
+
             // 版本号显示在底部
             Container(
               padding: const EdgeInsets.symmetric(vertical: 4),
@@ -77,14 +79,14 @@ class GameScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildMapInfo(GameData gameState) {
+  Widget _buildMapInfo(GameMap currentMap) {
     return Container(
       margin: const EdgeInsets.all(12),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFF0F3460),
+        color: MapleColors.card,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFF533483)),
+        border: Border.all(color: MapleColors.accent),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -92,15 +94,15 @@ class GameScreen extends ConsumerWidget {
           Row(
             children: [
               Icon(
-                gameState.currentMap.isTown ? Icons.home : Icons.terrain,
-                color: gameState.currentMap.isTown 
-                    ? Colors.green 
+                currentMap.isTown ? Icons.home : Icons.terrain,
+                color: currentMap.isTown
+                    ? Colors.green
                     : Colors.orange,
                 size: 20,
               ),
               const SizedBox(width: 8),
               Text(
-                gameState.currentMap.name,
+                currentMap.name,
                 style: const TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
@@ -111,13 +113,13 @@ class GameScreen extends ConsumerWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            gameState.currentMap.description,
+            currentMap.description,
             style: const TextStyle(
               fontSize: 14,
               color: Colors.white70,
             ),
           ),
-          if (gameState.currentMap.mobs.isNotEmpty) ...[
+          if (currentMap.mobs.isNotEmpty) ...[
             const SizedBox(height: 8),
             Wrap(
               spacing: 8,
@@ -129,7 +131,7 @@ class GameScreen extends ConsumerWidget {
                     color: Colors.white54,
                   ),
                 ),
-                ...gameState.currentMap.mobs.map((mob) {
+                ...currentMap.mobs.map((mob) {
                   return Chip(
                     label: Text(
                       mob.displayName,
@@ -193,17 +195,17 @@ class _GameScreenWrapperState extends ConsumerState<GameScreenWrapper> {
     // 等待检查完成
     if (!_hasCheckedSave) {
       return const Scaffold(
-        backgroundColor: Color(0xFF1A1A2E),
+        backgroundColor: MapleColors.background,
         body: Center(
           child: CircularProgressIndicator(),
         ),
       );
     }
 
-    final gameState = ref.watch(gameProvider);
+    final currentGameState = ref.watch(gameProvider.select((g) => g.gameState));
 
     // 根据游戏状态显示不同界面
-    switch (gameState.gameState) {
+    switch (currentGameState) {
       case GameState.battling:
         return const BattleScreen();
       case GameState.shopping:
@@ -217,7 +219,7 @@ class _GameScreenWrapperState extends ConsumerState<GameScreenWrapper> {
 
   Widget _buildGameOverScreen(BuildContext context, WidgetRef ref) {
     return Scaffold(
-      backgroundColor: const Color(0xFF1A1A2E),
+      backgroundColor: MapleColors.background,
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,

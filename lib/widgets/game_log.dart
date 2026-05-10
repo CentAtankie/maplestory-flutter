@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import "../utils/maple_theme.dart";
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/game_provider.dart';
 
@@ -20,7 +21,7 @@ class _GameLogState extends ConsumerState<GameLog> {
 
   @override
   Widget build(BuildContext context) {
-    final logs = ref.watch(gameProvider).logs;
+    final logs = ref.watch(gameProvider.select((g) => g.logs));
 
     // 自动滚动到底部
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -36,10 +37,10 @@ class _GameLogState extends ConsumerState<GameLog> {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 12),
       decoration: BoxDecoration(
-        color: const Color(0xFF0F3460).withOpacity(0.5),
+        color: MapleColors.card.withOpacity(0.5),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: const Color(0xFF533483).withOpacity(0.3),
+          color: MapleColors.accent.withOpacity(0.3),
         ),
       ),
       child: Column(

@@ -52,6 +52,8 @@ class GameMaps {
       exits: {
         '西': 'henesys',
         '北': 'trail',
+        '粉粉熊草原': 'pinkbean_field',
+        '丝带乐园': 'ribbon_meadow',
       },
     ),
     'trail': GameMap(
@@ -75,6 +77,7 @@ class GameMaps {
       encounterChance: 0.4,
       exits: {
         '西': 'trail',
+        '蘑菇妈妈': 'mushmom_cave',
       },
     ),
     'lith': GameMap(
@@ -87,6 +90,7 @@ class GameMaps {
       exits: {
         '北': 'henesys',
         '船': 'nautilus',
+        '海滩': 'octopus_beach',
       },
       isTown: true,
     ),
@@ -99,6 +103,7 @@ class GameMaps {
       encounterChance: 0.7,
       exits: {
         '南': 'farm',
+        '丝带乐园': 'ribbon_meadow',
       },
     ),
     // 转职地图
@@ -137,6 +142,7 @@ class GameMaps {
       encounterChance: 0.0,
       exits: {
         '西': 'henesys',
+        '蜗牛花园': 'snail_garden',
       },
       isTown: true,
     ),
@@ -237,6 +243,7 @@ class GameMaps {
       encounterChance: 0.75,
       exits: {
         '西': 'ant_tunnel1',
+        '冰窟': 'ice_lab',
       },
     ),
     // ========== 废弃都市周边 ==========
@@ -300,6 +307,182 @@ class GameMaps {
       exits: {
         '西': 'highland1',
         '南': 'subway2',
+        '玩具城': 'ludibrium',
+      },
+    ),
+
+    // ========== 低级补足地图 ==========
+    'snail_garden': GameMap(
+      id: 'snail_garden',
+      name: '蜗牛花园',
+      description: '射手村公园后方的小花园,蜗牛在花丛中悠闲爬行,适合新手练手。',
+      emoji: '🌷',
+      mobs: [MobType.snail, MobType.blueSnail],
+      encounterChance: 0.7,
+      exits: {
+        '南': 'henesys_park',
+      },
+    ),
+    'pinkbean_field': GameMap(
+      id: 'pinkbean_field',
+      name: '粉粉熊草原',
+      description: '阳光明媚的草原,可爱的粉粉熊在这里跑来跑去。',
+      emoji: '🌸',
+      mobs: [MobType.pinkBean, MobType.redSnail],
+      encounterChance: 0.6,
+      exits: {
+        '西': 'farm',
+        '南': 'octopus_beach',
+      },
+    ),
+    'octopus_beach': GameMap(
+      id: 'octopus_beach',
+      name: '八爪鱼海滩',
+      description: '明珠港旁的沙滩,八爪鱼从浅水中爬上岸。',
+      emoji: '🏖️',
+      mobs: [MobType.octopus, MobType.pinkBean],
+      encounterChance: 0.65,
+      exits: {
+        '北': 'pinkbean_field',
+        '西': 'lith',
+      },
+    ),
+    'ribbon_meadow': GameMap(
+      id: 'ribbon_meadow',
+      name: '丝带乐园',
+      description: '丝带猪们结伴出没,空气里飘着甜甜的味道。',
+      emoji: '🎀',
+      mobs: [MobType.ribbonPig, MobType.slime],
+      encounterChance: 0.65,
+      exits: {
+        '北': 'slime_tree',
+        '东': 'farm',
+      },
+    ),
+    'ice_lab': GameMap(
+      id: 'ice_lab',
+      name: '冰师傅实验室',
+      description: '蚂蚁洞深处的隐秘冰窟,寒气逼人。',
+      emoji: '🧊',
+      mobs: [MobType.iceMaster, MobType.zombieMushroom],
+      encounterChance: 0.7,
+      exits: {
+        '西': 'ant_tunnel2',
+      },
+    ),
+
+    // ========== 玩具城 (高级 hub) ==========
+    'ludibrium': GameMap(
+      id: 'ludibrium',
+      name: '玩具城',
+      description: '飘浮在云层之上的玩具王国,机械与魔法交织,高级冒险家的中转站。',
+      emoji: '🎪',
+      mobs: [],
+      encounterChance: 0.0,
+      exits: {
+        '高原': 'highland2',
+        '工厂': 'toy_factory1',
+        '钟楼': 'clock_tower',
+        '丛林': 'jungle_path',
+        '港口': 'aqua_road',
+      },
+      isTown: true,
+    ),
+
+    // ========== 玩具城周边 (50-75 级) ==========
+    'toy_factory1': GameMap(
+      id: 'toy_factory1',
+      name: '玩具工厂 I',
+      description: '吱嘎作响的传送带,黑色绫翅在通风管道中乱窜。',
+      emoji: '🏭',
+      mobs: [MobType.darkLeatty, MobType.wraith],
+      encounterChance: 0.75,
+      exits: {
+        '玩具城': 'ludibrium',
+        '深处': 'toy_factory2',
+      },
+    ),
+    'toy_factory2': GameMap(
+      id: 'toy_factory2',
+      name: '玩具工厂 II',
+      description: '工厂深处,大量幸运猴躲在堆积的玩具盒里偷袭。',
+      emoji: '🏭',
+      mobs: [MobType.luckyMonkey, MobType.darkLeatty],
+      encounterChance: 0.8,
+      exits: {
+        '入口': 'toy_factory1',
+      },
+    ),
+    'aqua_road': GameMap(
+      id: 'aqua_road',
+      name: '水上街道',
+      description: '玩具城下方的海洋街区,鳄鱼怪在水道中潜伏。',
+      emoji: '🌊',
+      mobs: [MobType.crocky, MobType.luckyMonkey],
+      encounterChance: 0.75,
+      exits: {
+        '玩具城': 'ludibrium',
+        '深海': 'pianus_lair',
+      },
+    ),
+    'jungle_path': GameMap(
+      id: 'jungle_path',
+      name: '神秘丛林',
+      description: '玩具城南面的原始丛林,小赛罗群在树梢间穿梭。',
+      emoji: '🌴',
+      mobs: [MobType.jrCelion, MobType.crocky],
+      encounterChance: 0.78,
+      exits: {
+        '玩具城': 'ludibrium',
+        '深处': 'clock_tower',
+      },
+    ),
+    'clock_tower': GameMap(
+      id: 'clock_tower',
+      name: '钟楼地下',
+      description: '钟摆的滴答声回荡,时间守护者审视着每一个闯入者。',
+      emoji: '⏰',
+      mobs: [MobType.masterChronos, MobType.jrCelion],
+      encounterChance: 0.82,
+      exits: {
+        '玩具城': 'ludibrium',
+        '丛林': 'jungle_path',
+        '深渊': 'balrog_pit',
+      },
+    ),
+
+    // ========== Boss 地图 (单怪高 HP / 高奖励) ==========
+    'mushmom_cave': GameMap(
+      id: 'mushmom_cave',
+      name: '蘑菇妈妈巢穴',
+      description: '⚠️ Boss 关:树洞最深处,蘑菇妈妈在此守护幼崽。建议 25 级以上挑战。',
+      emoji: '👹',
+      mobs: [MobType.mushmom],
+      encounterChance: 1.0,
+      exits: {
+        '树洞': 'cave',
+      },
+    ),
+    'balrog_pit': GameMap(
+      id: 'balrog_pit',
+      name: '巴洛克之坑',
+      description: '⚠️ Boss 关:钟楼下方的火山深渊,小巴洛克在此沉睡。建议 50 级以上挑战。',
+      emoji: '🦂',
+      mobs: [MobType.balrogJr],
+      encounterChance: 1.0,
+      exits: {
+        '钟楼': 'clock_tower',
+      },
+    ),
+    'pianus_lair': GameMap(
+      id: 'pianus_lair',
+      name: '黑龙王洞',
+      description: '⚠️ Boss 关:水上街道尽头的海底洞穴,黑龙王在此盘踞。建议 75 级以上挑战。',
+      emoji: '🐉',
+      mobs: [MobType.pianus],
+      encounterChance: 1.0,
+      exits: {
+        '水上街道': 'aqua_road',
       },
     ),
   };

@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import "../utils/maple_theme.dart";
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/game_provider.dart';
 import '../game/models/player.dart';
@@ -41,7 +42,7 @@ class _InventoryDialogState extends ConsumerState<InventoryDialog> {
     final totalSellPrice = _calculateTotalSellPrice();
 
     return AlertDialog(
-      backgroundColor: const Color(0xFF1A1A2E),
+      backgroundColor: MapleColors.background,
       title: Row(
         children: [
           const Text(
@@ -177,7 +178,7 @@ class _InventoryDialogState extends ConsumerState<InventoryDialog> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF1A1A2E),
+        backgroundColor: MapleColors.background,
         title: const Text(
           '确认批量出售?',
           style: TextStyle(color: Colors.orange),
@@ -299,7 +300,7 @@ class _InventoryDialogState extends ConsumerState<InventoryDialog> {
   Widget _buildCategoryTabs() {
     return Container(
       decoration: BoxDecoration(
-        color: const Color(0xFF0F3460),
+        color: MapleColors.card,
         borderRadius: BorderRadius.circular(8),
       ),
       child: Row(
@@ -328,7 +329,7 @@ class _InventoryDialogState extends ConsumerState<InventoryDialog> {
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 8),
           decoration: BoxDecoration(
-            color: isSelected ? const Color(0xFF533483) : Colors.transparent,
+            color: isSelected ? MapleColors.accent : Colors.transparent,
             borderRadius: BorderRadius.circular(8),
           ),
           child: Text(
@@ -374,7 +375,7 @@ class _InventoryDialogState extends ConsumerState<InventoryDialog> {
         return Card(
           color: isSelected 
               ? Colors.orange.withOpacity(0.3)
-              : (hasEquipped ? const Color(0xFF533483) : const Color(0xFF0F3460)),
+              : (hasEquipped ? MapleColors.accent : MapleColors.card),
           margin: const EdgeInsets.only(bottom: 8),
           child: InkWell(
             onTap: _isBatchMode

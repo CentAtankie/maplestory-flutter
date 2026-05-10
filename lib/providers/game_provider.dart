@@ -56,10 +56,32 @@ class GameNotifier extends StateNotifier<GameData> {
   final SaveRepository _saveRepository;
   bool _isInitialized = false;
 
-  // 自动战斗相关
+  // 自动战斗定时器 (开关状态在 GameData 中)
   Timer? _autoBattleTimer;
-  bool _isAutoExplore = false;
-  bool _isAutoBattle = false;
+
+  // 自动存档相关
+  Timer? _autoSaveTimer;
+  static const Duration _autoSaveDebounce = Duration(seconds: 3);
+
+  // 地图等级要求(传送限制)
+  static const _mapLevelRequirements = <String, int>{
+    'henesys': 1, 'farm': 1, 'snail_garden': 1, 'lith': 1,
+    'henesys_park': 1, 'perion': 1, 'ellinia': 1, 'kerning': 1,
+    'nautilus': 1, 'pinkbean_field': 5, 'octopus_beach': 5,
+    'slime_tree': 3, 'trail': 6, 'ribbon_meadow': 12,
+    'cave': 10, 'perion_field': 15, 'ellinia_field': 15,
+    'kerning_swamp': 20, 'ice_lab': 20, 'fire_land1': 25,
+    'fire_land2': 28, 'ant_tunnel1': 30, 'ant_tunnel2': 35,
+    'mushmom_cave': 25, 'highland1': 35, 'highland2': 40,
+    'subway1': 40, 'subway2': 45, 'ludibrium': 1,
+    'toy_factory1': 45, 'toy_factory2': 50, 'aqua_road': 50,
+    'jungle_path': 55, 'clock_tower': 60,
+    'balrog_pit': 50, 'pianus_lair': 70,
+  };
+
+  // 战斗特效事件流 (UI 订阅触发动画/震屏)
+  final _battleEffects = StreamController<BattleEffect>.broadcast();
+  Stream<BattleEffect> get battleEffects => _battleEffects.stream;
 
   // 装备实例存储（key: instanceId, value: Equipment）
   final Map<String, Equipment> _equipmentInstances = {};
@@ -72,30 +94,62 @@ class GameNotifier extends StateNotifier<GameData> {
   }
 
   bool get isInitialized => _isInitialized;
-  bool get isAutoExplore => _isAutoExplore;
-  bool get isAutoBattle => _isAutoBattle;
+  bool get isAutoExplore => state.isAutoExplore;
+  bool get isAutoBattle => state.isAutoBattle;
 
   /// 通过instanceId获取装备实例
   Equipment? getEquipmentByInstanceId(String instanceId) {
     return _equipmentInstances[instanceId];
   }
 
+  /// 自动存档:state 变化时 debounce 调度,避免密集写入
+  @override
+  set state(GameData value) {
+    super.state = value;
+    _scheduleAutoSave();
+  }
+
+  void _scheduleAutoSave() {
+    if (!_isInitialized) return;
+    _autoSaveTimer?.cancel();
+    _autoSaveTimer = Timer(_autoSaveDebounce, _quietSave);
+  }
+
+  Future<void> _quietSave() async {
+    try {
+      await _saveRepository.saveGame(state, equipmentInstances: _equipmentInstances);
+    } catch (e) {
+      // ignore: avoid_print
+      print('自动存档失败: $e');
+    }
+  }
+
+  /// 立即存档 (用于 app 进入后台/退出前)
+  Future<void> flushSave() async {
+    _autoSaveTimer?.cancel();
+    if (_isInitialized) {
+      await _quietSave();
+    }
+  }
+
   /// 清理定时器
   @override
   void dispose() {
     _autoBattleTimer?.cancel();
+    _autoSaveTimer?.cancel();
+    _battleEffects.close();
     super.dispose();
   }
 
   /// 设置自动探索
   void setAutoExplore(bool value) {
-    _isAutoExplore = value;
+    state = state.copyWith(isAutoExplore: value);
     if (value) {
       addLog('🤖 自动探索已开启', LogType.success);
       _startAutoMode();
     } else {
       addLog('🛑 自动探索已关闭', LogType.warning);
-      if (!_isAutoBattle) {
+      if (!state.isAutoBattle) {
         _autoBattleTimer?.cancel();
       }
     }
@@ -103,13 +157,13 @@ class GameNotifier extends StateNotifier<GameData> {
 
   /// 设置自动战斗
   void setAutoBattle(bool value) {
-    _isAutoBattle = value;
+    state = state.copyWith(isAutoBattle: value);
     if (value) {
       addLog('⚔️ 自动战斗已开启', LogType.success);
       _startAutoMode();
     } else {
       addLog('🛑 自动战斗已关闭', LogType.warning);
-      if (!_isAutoExplore) {
+      if (!state.isAutoExplore) {
         _autoBattleTimer?.cancel();
       }
     }
@@ -118,20 +172,25 @@ class GameNotifier extends StateNotifier<GameData> {
   /// 启动自动模式定时器
   void _startAutoMode() {
     _autoBattleTimer?.cancel();
-
     // 每2秒执行一次自动操作
-    _autoBattleTimer = Timer.periodic(const Duration(seconds: 2), (timer) {
-      if (state.gameState == GameState.battling && state.currentMob != null) {
-        // 战斗中：自动攻击
-        if (_isAutoBattle) {
-          attack();
-        }
-      } else if (state.gameState == GameState.exploring) {
-        // 探索中：自动探索
-        if (_isAutoExplore && !state.currentMap.isTown) {
-          explore();
-        }
-      }
+    _autoBattleTimer = Timer.periodic(const Duration(seconds: 2), (_) => _autoTick());
+  }
+
+  /// 单次执行自动动作 (定时器和 kick 共用)
+  void _autoTick() {
+    if (state.gameState == GameState.battling && state.currentMob != null) {
+      if (state.isAutoBattle) attack();
+    } else if (state.gameState == GameState.exploring) {
+      if (state.isAutoExplore && !state.currentMap.isTown) explore();
+    }
+  }
+
+  /// 战斗结束后让自动模式快速接续,避免 2s 呆滞
+  void _kickAutoSoon() {
+    if (!state.isAutoExplore && !state.isAutoBattle) return;
+    Future.delayed(const Duration(milliseconds: 600), () {
+      if (state.gameState == GameState.gameOver) return;
+      _autoTick();
     });
   }
 
@@ -181,6 +240,7 @@ class GameNotifier extends StateNotifier<GameData> {
     final nextMap = GameMaps.getMap(nextMapId);
     state = state.copyWith(currentMap: nextMap);
     addLog('🚶 你来到了 ${nextMap.name}');
+    _autoStopOnTownEntry();
   }
 
   // 直接传送到指定地图
@@ -200,8 +260,25 @@ class GameNotifier extends StateNotifier<GameData> {
     // 获取目标地图
     final targetMap = GameMaps.getMap(mapId);
 
+    // 等级检查
+    final reqLevel = _mapLevelRequirements[mapId] ?? 1;
+    if (state.player.stats.level < reqLevel) {
+      addLog('⛔ 等级不足！需要 Lv.$reqLevel 才能进入 ${targetMap.name}', LogType.error);
+      return;
+    }
+
     state = state.copyWith(currentMap: targetMap);
     addLog('✨ 传送到了 ${targetMap.name}！', LogType.success);
+    _autoStopOnTownEntry();
+  }
+
+  /// 进入城镇时自动关闭自动探索 (按下"自动探索"开关在城镇中没意义)
+  void _autoStopOnTownEntry() {
+    if (state.currentMap.isTown && state.isAutoExplore) {
+      state = state.copyWith(isAutoExplore: false);
+      if (!state.isAutoBattle) _autoBattleTimer?.cancel();
+      addLog('🏘️ 进入城镇,自动探索已关闭', LogType.warning);
+    }
   }
 
   // 探索（野外随机遭遇）
@@ -245,93 +322,157 @@ class GameNotifier extends StateNotifier<GameData> {
   // 攻击
   void attack() {
     if (state.gameState != GameState.battling || state.currentMob == null) return;
+    _executePlayerAttack(skillMultiplier: 1.0, mpCost: 0);
+  }
 
+  /// 使用职业独享技能。倍率含玩家技能等级加成
+  void useSkill() {
+    if (state.gameState != GameState.battling || state.currentMob == null) return;
+
+    final skill = state.player.job.skill;
+    if (state.player.stats.mp < skill.mpCost) {
+      addLog('❌ MP 不足 (需要 ${skill.mpCost})', LogType.error);
+      return;
+    }
+    _executePlayerAttack(
+      skillMultiplier: state.player.skillFinalMultiplier,
+      mpCost: skill.mpCost,
+      isSkill: true,
+      skillName: '${skill.emoji} ${skill.name}',
+      forceCrit: skill.alwaysCrit,
+    );
+  }
+
+  /// 玩家攻击的统一入口: 普攻和技能共用,保证暴击/闪避规则一致
+  void _executePlayerAttack({
+    required double skillMultiplier,
+    required int mpCost,
+    bool isSkill = false,
+    String? skillName,
+    bool forceCrit = false,
+  }) {
     final player = state.player;
     final mob = state.currentMob!;
 
-    // 玩家攻击
-    final playerAtk = player.getAtk();
-    final mobDef = mob.def;
-    var damage = (playerAtk - mobDef).clamp(1, 9999);
+    // 玩家命中
+    final hit = _rollPlayerHit(player, mob, multiplier: skillMultiplier, forceCrit: forceCrit);
+    _battleEffects.add(BattleEffect(
+      target: BattleEffectTarget.mob,
+      damage: hit.damage,
+      isCrit: hit.isCrit,
+    ));
 
-    // 暴击判定
-    final critRate = player.getCritRate();
-    final isCrit = state.random.nextDouble() * 100 < critRate;
-    if (isCrit) {
-      damage = (damage * 1.5).toInt(); // 暴击1.5倍伤害
-      addLog('💥 暴击！你对 ${mob.name} 造成 $damage 点伤害！', LogType.reward);
+    if (isSkill) {
+      final label = skillName ?? '✨ 技能';
+      addLog(
+        hit.isCrit
+            ? '$label 暴击！对 ${mob.name} 造成 ${hit.damage} 点伤害！'
+            : '$label 对 ${mob.name} 造成 ${hit.damage} 点伤害！',
+        LogType.battle,
+      );
     } else {
-      addLog('⚔️ 你对 ${mob.name} 造成 $damage 点伤害！', LogType.battle);
+      addLog(
+        hit.isCrit
+            ? '💥 暴击！你对 ${mob.name} 造成 ${hit.damage} 点伤害！'
+            : '⚔️ 你对 ${mob.name} 造成 ${hit.damage} 点伤害！',
+        hit.isCrit ? LogType.reward : LogType.battle,
+      );
     }
 
-    final newMobHp = mob.hp - damage;
+    // 海盗/拳手/刺客追打被动: 概率触发额外打击
+    int extraDamage = 0;
+    if (player.job.extraHitChance > 0) {
+      if (state.random.nextDouble() < player.job.extraHitChance) {
+        extraDamage = (hit.damage * player.job.extraHitDamageRatio).toInt();
+        if (extraDamage > 0) {
+          _battleEffects.add(BattleEffect(
+            target: BattleEffectTarget.mob,
+            damage: extraDamage,
+            isCrit: false,
+            isExtraHit: true,
+          ));
+          addLog('⚡ 追加打击！再造成 $extraDamage 伤害', LogType.reward);
+        }
+      }
+    }
 
+    final totalDamage = hit.damage + extraDamage;
+    final newMobHp = mob.hp - totalDamage;
+
+    // 怪物死亡
     if (newMobHp <= 0) {
-      // 怪物死亡
+      _battleEffects.add(BattleEffect(
+        target: BattleEffectTarget.mob,
+        damage: hit.damage,
+        isFatal: true,
+      ));
       _winBattle(mob);
       return;
     }
 
-    // 怪物反击
-    final mobNew = mob.copyWith(hp: newMobHp);
+    // 扣除 MP (技能消耗)
+    final mobAlive = mob.copyWith(hp: newMobHp);
+    final playerAfterMp = mpCost > 0
+        ? player.copyWith(stats: player.stats.copyWith(mp: player.stats.mp - mpCost))
+        : player;
 
-    // 闪避判定
-    final avoidRate = player.getAvoidRate();
-    final isAvoided = state.random.nextDouble() * 100 < avoidRate;
-
-    if (isAvoided) {
+    // 怪物反击 (闪避检定)
+    final counter = _rollMobHit(playerAfterMp, mobAlive);
+    _battleEffects.add(BattleEffect(
+      target: BattleEffectTarget.player,
+      damage: counter.damage,
+      isAvoided: counter.isAvoided,
+      isReduced: !counter.isAvoided && playerAfterMp.job.damageReduction > 0,
+    ));
+    if (counter.isAvoided) {
       addLog('💨 你闪避了 ${mob.name} 的攻击！', LogType.success);
-      state = state.copyWith(currentMob: mobNew);
+      state = state.copyWith(currentMob: mobAlive, player: playerAfterMp);
       return;
     }
 
-    final mobDamage = (mob.atk - player.getDef()).clamp(1, 9999);
-    final newPlayerHp = player.stats.hp - mobDamage;
-
-    addLog('💥 ${mob.name} 对你造成 $mobDamage 点伤害！', LogType.warning);
+    final newPlayerHp = playerAfterMp.stats.hp - counter.damage;
+    addLog('💥 ${mob.name} 对你造成 ${counter.damage} 点伤害！', LogType.warning);
 
     if (newPlayerHp <= 0) {
+      _battleEffects.add(BattleEffect(
+        target: BattleEffectTarget.player,
+        damage: counter.damage,
+        isFatal: true,
+      ));
       _gameOver();
       return;
     }
 
     state = state.copyWith(
-      currentMob: mobNew,
-      player: player.copyWith(
-        stats: player.stats.copyWith(hp: newPlayerHp),
+      currentMob: mobAlive,
+      player: playerAfterMp.copyWith(
+        stats: playerAfterMp.stats.copyWith(hp: newPlayerHp),
       ),
     );
   }
 
-  // 使用技能
-  void useSkill() {
-    if (state.gameState != GameState.battling || state.currentMob == null) return;
+  _PlayerHit _rollPlayerHit(Player player, Mob mob, {double multiplier = 1.0, bool forceCrit = false}) {
+    final base = (player.getAtk() * multiplier - mob.def).clamp(1, 9999).toInt();
+    final critRate = player.getCritRate();
+    final isCrit = forceCrit || state.random.nextDouble() * 100 < critRate;
+    // 暴击倍率按职业不同 (弓箭手系更高)
+    final critMult = player.job.critDamageMultiplier;
+    final damage = isCrit ? (base * critMult).toInt() : base;
+    return _PlayerHit(damage: damage, isCrit: isCrit);
+  }
 
-    final player = state.player;
-    if (player.stats.mp < 5) {
-      addLog('❌ MP 不足！', LogType.error);
-      return;
+  _MobHit _rollMobHit(Player player, Mob mob) {
+    final avoidRate = player.getAvoidRate();
+    final isAvoided = state.random.nextDouble() * 100 < avoidRate;
+    if (isAvoided) {
+      return const _MobHit(damage: 0, isAvoided: true);
     }
-
-    final mob = state.currentMob!;
-    final damage = (player.getAtk() * 2 - mob.def).clamp(1, 9999);
-    final newMobHp = mob.hp - damage;
-
-    addLog('✨ 技能攻击！对 ${mob.name} 造成 $damage 点伤害！', LogType.battle);
-
-    if (newMobHp <= 0) {
-      _winBattle(mob);
-      return;
+    var damage = (mob.atk - player.getDef()).clamp(1, 9999).toInt();
+    // 战士系减伤被动
+    if (player.job.damageReduction > 0) {
+      damage = (damage * (1 - player.job.damageReduction)).toInt().clamp(1, 9999);
     }
-
-    state = state.copyWith(
-      currentMob: mob.copyWith(hp: newMobHp),
-      player: player.copyWith(
-        stats: player.stats.copyWith(
-          mp: player.stats.mp - 5,
-        ),
-      ),
-    );
+    return _MobHit(damage: damage, isAvoided: false);
   }
 
   // 逃跑
@@ -344,6 +485,7 @@ class GameNotifier extends StateNotifier<GameData> {
         gameState: GameState.exploring,
         currentMob: null,
       );
+      _kickAutoSoon();
     } else {
       addLog('❌ 逃跑失败！', LogType.error);
       // 怪物反击
@@ -406,15 +548,40 @@ class GameNotifier extends StateNotifier<GameData> {
     // 更新任务进度（如果有狩猎任务）
     updateQuestProgress(mob.name);
 
-    // 升级检查
+    // 升级检查(循环处理连续升级,保留溢出经验)
     var updatedPlayer = player.copyWith(
       stats: player.stats.copyWith(exp: newExp),
       meso: newMeso,
       inventory: newInventory,
     );
 
-    if (newExp >= player.stats.maxExp) {
+    while (updatedPlayer.stats.exp >= updatedPlayer.stats.maxExp) {
       updatedPlayer = _levelUp(updatedPlayer);
+    }
+
+    // 每次击杀获得 1 SP (技能点)
+    updatedPlayer = updatedPlayer.copyWith(
+      stats: updatedPlayer.stats.copyWith(sp: updatedPlayer.stats.sp + 1),
+    );
+    addLog('⭐ 获得 1 SP (当前 ${updatedPlayer.stats.sp})', LogType.reward);
+
+    // 法师系击杀回 MP 被动
+    final mpRegen = updatedPlayer.job.mpRegenOnKill;
+    if (mpRegen > 0) {
+      final regenAmount = (updatedPlayer.stats.maxMp * mpRegen).toInt();
+      if (regenAmount > 0) {
+        final newMp = (updatedPlayer.stats.mp + regenAmount).clamp(0, updatedPlayer.stats.maxMp);
+        updatedPlayer = updatedPlayer.copyWith(
+          stats: updatedPlayer.stats.copyWith(mp: newMp),
+        );
+        addLog('💧 击杀回复 $regenAmount MP', LogType.success);
+        // 飘字提示
+        _battleEffects.add(BattleEffect(
+          target: BattleEffectTarget.player,
+          damage: 0,
+          mpRegenAmount: regenAmount,
+        ));
+      }
     }
 
     state = state.copyWith(
@@ -422,18 +589,24 @@ class GameNotifier extends StateNotifier<GameData> {
       currentMob: null,
       player: updatedPlayer,
     );
+
+    // 战斗胜利后,如果开了自动探索,立即触发下一次探索 (而非等 2s)
+    _kickAutoSoon();
   }
 
   // 升级
   Player _levelUp(Player player) {
     final newLevel = player.stats.level + 1;
     final newMaxExp = (player.stats.maxExp * 1.5).toInt();
-    final newMaxHp = player.stats.maxHp + 10;
-    final newMaxMp = player.stats.maxMp + 5;
+    // 职业差异化: HP/MP 按职业不同
+    final newMaxHp = player.stats.maxHp + player.job.hpPerLevel;
+    final newMaxMp = player.stats.maxMp + player.job.mpPerLevel;
     final newAp = player.stats.ap + 5;  // 获得5点自由属性点
+    // 保留溢出经验
+    final overflowExp = player.stats.exp - player.stats.maxExp;
 
     addLog('🆙 升级了！到达 Lv.$newLevel！', LogType.success);
-    addLog('💫 获得 5 点属性点，点击角色面板分配', LogType.reward);
+    addLog('💫 +${player.job.hpPerLevel} HP / +${player.job.mpPerLevel} MP / +5 AP (${player.job.recommendedStat})', LogType.reward);
 
     // 检查任务解锁
     checkQuestUnlock();
@@ -441,7 +614,7 @@ class GameNotifier extends StateNotifier<GameData> {
     return player.copyWith(
       stats: player.stats.copyWith(
         level: newLevel,
-        exp: 0,
+        exp: overflowExp,
         maxExp: newMaxExp,
         maxHp: newMaxHp,
         maxMp: newMaxMp,
@@ -495,13 +668,17 @@ class GameNotifier extends StateNotifier<GameData> {
           hp: 1,  // 剩1点血
         ),
       ),
+      isAutoExplore: false,
+      isAutoBattle: false,
     );
+    _autoBattleTimer?.cancel();
 
     addLog('💀 你被击败了...', LogType.error);
     addLog('💨 被传送回射手村，HP 恢复至 1', LogType.warning);
     if (penalty > 0) {
       addLog('💸 损失 $penalty 金币作为惩罚', LogType.warning);
     }
+    addLog('🛑 自动模式已关闭', LogType.warning);
     addLog('🏥 去找治疗师休息恢复吧！', LogType.success);
   }
 
@@ -1149,15 +1326,12 @@ class GameNotifier extends StateNotifier<GameData> {
       newPlayer = newPlayer.copyWith(meso: newPlayer.meso + mesoReward);
     }
     if (expReward > 0) {
-      final newExp = newPlayer.stats.exp + expReward;
-      if (newExp >= newPlayer.stats.maxExp) {
-        newPlayer = _levelUp(newPlayer.copyWith(
-          stats: newPlayer.stats.copyWith(exp: newExp),
-        ));
-      } else {
-        newPlayer = newPlayer.copyWith(
-          stats: newPlayer.stats.copyWith(exp: newExp),
-        );
+      newPlayer = newPlayer.copyWith(
+        stats: newPlayer.stats.copyWith(exp: newPlayer.stats.exp + expReward),
+      );
+      // 循环处理连续升级(保留溢出经验)
+      while (newPlayer.stats.exp >= newPlayer.stats.maxExp) {
+        newPlayer = _levelUp(newPlayer);
       }
     }
 
@@ -1192,6 +1366,47 @@ class GameNotifier extends StateNotifier<GameData> {
     claimQuestReward(questId);
   }
 
+  /// 升级职业技能 (花费 SP)
+  bool upgradeSkill() {
+    final player = state.player;
+    final currentLevel = player.currentSkillLevel;
+    final cost = Player.skillUpgradeCost(currentLevel);
+
+    if (currentLevel >= Player.maxSkillLevel) {
+      addLog('❌ ${player.job.skill.name} 已达最高等级 Lv.${Player.maxSkillLevel}', LogType.warning);
+      return false;
+    }
+
+    if (player.stats.sp < cost) {
+      addLog('❌ SP 不足 (需要 $cost SP, 当前 ${player.stats.sp})', LogType.error);
+      return false;
+    }
+
+    final newLevel = currentLevel + 1;
+    final newSkillLevels = Map<String, int>.from(player.skillLevels)
+      ..[player.job.name] = newLevel;
+
+    final newSkill = player.job.skill;
+    final newMult = newSkill.multiplier * (1 + newLevel * 0.05);
+
+    state = state.copyWith(
+      player: player.copyWith(
+        stats: player.stats.copyWith(sp: player.stats.sp - cost),
+        skillLevels: newSkillLevels,
+      ),
+    );
+
+    addLog(
+      '🎯 ${newSkill.emoji} ${newSkill.name} 升级至 Lv.$newLevel！(消耗 $cost SP)',
+      LogType.success,
+    );
+    addLog(
+      '⚡ 技能倍率: ${newSkill.multiplier.toStringAsFixed(1)}× → ${newMult.toStringAsFixed(2)}×',
+      LogType.reward,
+    );
+    return true;
+  }
+
   /// 检查并解锁新任务（升级时调用）
   void checkQuestUnlock() {
     final player = state.player;
@@ -1216,6 +1431,8 @@ class GameData {
   final ShopCategory shopCategory;  // 当前商店分类
   final List<GameMail> mails;       // 邮件列表
   final List<GameQuest> quests;     // 任务列表
+  final bool isAutoExplore;         // 自动探索开关
+  final bool isAutoBattle;          // 自动战斗开关
 
   GameData({
     required this.player,
@@ -1224,9 +1441,11 @@ class GameData {
     this.currentMob,
     required this.logs,
     required this.random,
-    this.shopCategory = ShopCategory.all,  // 默认全部
-    this.mails = const [],                 // 默认空邮件列表
-    this.quests = const [],                // 默认空任务列表
+    this.shopCategory = ShopCategory.all,
+    this.mails = const [],
+    this.quests = const [],
+    this.isAutoExplore = false,
+    this.isAutoBattle = false,
   });
 
   factory GameData.initial() {
@@ -1273,6 +1492,8 @@ class GameData {
     ShopCategory? shopCategory,
     List<GameMail>? mails,
     List<GameQuest>? quests,
+    bool? isAutoExplore,
+    bool? isAutoBattle,
   }) {
     return GameData(
       player: player ?? this.player,
@@ -1284,6 +1505,8 @@ class GameData {
       shopCategory: shopCategory ?? this.shopCategory,
       mails: mails ?? this.mails,
       quests: quests ?? this.quests,
+      isAutoExplore: isAutoExplore ?? this.isAutoExplore,
+      isAutoBattle: isAutoBattle ?? this.isAutoBattle,
     );
   }
 }
@@ -1299,4 +1522,42 @@ class Random {
 
   double nextDouble() => _random.nextDouble();
   int nextInt(int max) => _random.nextInt(max);
+}
+
+/// 玩家命中结果 (含暴击信息)
+class _PlayerHit {
+  final int damage;
+  final bool isCrit;
+  const _PlayerHit({required this.damage, required this.isCrit});
+}
+
+/// 怪物命中结果 (含闪避信息)
+class _MobHit {
+  final int damage;
+  final bool isAvoided;
+  const _MobHit({required this.damage, required this.isAvoided});
+}
+
+/// 战斗特效事件 (UI 订阅触发飘字/震屏)
+enum BattleEffectTarget { mob, player }
+
+class BattleEffect {
+  final BattleEffectTarget target;
+  final int damage;
+  final bool isCrit;
+  final bool isAvoided;
+  final bool isFatal; // 死亡特效
+  final bool isExtraHit; // 追加打击 (海盗/拳手/刺客被动)
+  final bool isReduced; // 减伤被动 (战士系)
+  final int mpRegenAmount; // MP 回复 (法师系) - >0 时显示为 +N MP
+  const BattleEffect({
+    required this.target,
+    required this.damage,
+    this.isCrit = false,
+    this.isAvoided = false,
+    this.isFatal = false,
+    this.isExtraHit = false,
+    this.isReduced = false,
+    this.mpRegenAmount = 0,
+  });
 }

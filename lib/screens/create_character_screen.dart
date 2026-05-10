@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:math';
 import 'package:flutter/material.dart';
+import "../utils/maple_theme.dart";
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/game_provider.dart';
 import '../game/models/player.dart';
@@ -128,7 +129,7 @@ class _CreateCharacterScreenState extends ConsumerState<CreateCharacterScreen> {
     final total = _str + _dex + _int + _luk;
     
     return Scaffold(
-      backgroundColor: const Color(0xFF1A1A2E),
+      backgroundColor: MapleColors.background,
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(24),
@@ -158,7 +159,7 @@ class _CreateCharacterScreenState extends ConsumerState<CreateCharacterScreen> {
               Container(
                 padding: const EdgeInsets.all(24),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF0F3460),
+                  color: MapleColors.card,
                   borderRadius: BorderRadius.circular(16),
                   border: Border.all(
                     color: _isRolling ? Colors.amber : Colors.transparent,

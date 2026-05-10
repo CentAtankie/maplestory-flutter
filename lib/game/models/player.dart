@@ -3,19 +3,404 @@ import 'package:flutter/material.dart';
 import 'potential.dart';
 
 /// 职业类型
+///
+/// 一转: warrior/magician/bowman/thief/pirate (10 级)
+/// 二转: fighter/fpMage/hunter/assassin/brawler (30 级)
+/// **添加新职业必须 append 到末尾**,否则破坏现有存档 (Job.values[index])
 enum Job {
   beginner('新手', '🙂', Color(0xFF9E9E9E)),
   warrior('战士', '⚔️', Color(0xFFE53935)),
   magician('法师', '🔮', Color(0xFF1E88E5)),
   bowman('弓箭手', '🏹', Color(0xFF43A047)),
   thief('飞侠', '🗡️', Color(0xFF8E24AA)),
-  pirate('海盗', '⚓', Color(0xFFFDD835));
+  pirate('海盗', '⚓', Color(0xFFFDD835)),
+  // ===== 二转 =====
+  fighter('剑客', '🗡️', Color(0xFFB71C1C)),
+  fpMage('火法师', '🔥', Color(0xFFD84315)),
+  hunter('猎人', '🎯', Color(0xFF1B5E20)),
+  assassin('刺客', '🌑', Color(0xFF4A148C)),
+  brawler('拳手', '👊', Color(0xFFF57F17));
 
   final String displayName;
   final String emoji;
   final Color color;
 
   const Job(this.displayName, this.emoji, this.color);
+
+  /// 转职等级 (1=新手, 2=一转, 3=二转)
+  int get tier {
+    switch (this) {
+      case Job.beginner:
+        return 1;
+      case Job.warrior:
+      case Job.magician:
+      case Job.bowman:
+      case Job.thief:
+      case Job.pirate:
+        return 2;
+      case Job.fighter:
+      case Job.fpMage:
+      case Job.hunter:
+      case Job.assassin:
+      case Job.brawler:
+        return 3;
+    }
+  }
+
+  /// 主属性 (用于攻击伤害计算)
+  JobStat get mainStat {
+    switch (this) {
+      case Job.beginner:
+        return JobStat.str;
+      case Job.warrior:
+      case Job.fighter:
+      case Job.pirate:
+      case Job.brawler:
+        return JobStat.str;
+      case Job.magician:
+      case Job.fpMage:
+        return JobStat.intStat;
+      case Job.bowman:
+      case Job.hunter:
+        return JobStat.dex;
+      case Job.thief:
+      case Job.assassin:
+        return JobStat.luk;
+    }
+  }
+
+  /// 副属性
+  JobStat get subStat {
+    switch (this) {
+      case Job.beginner:
+        return JobStat.dex;
+      case Job.warrior:
+      case Job.fighter:
+        return JobStat.dex;
+      case Job.pirate:
+      case Job.brawler:
+        return JobStat.dex;
+      case Job.magician:
+      case Job.fpMage:
+        return JobStat.luk;
+      case Job.bowman:
+      case Job.hunter:
+        return JobStat.str;
+      case Job.thief:
+      case Job.assassin:
+        return JobStat.dex;
+    }
+  }
+
+  /// 升级时 maxHp 增长
+  int get hpPerLevel {
+    switch (this) {
+      case Job.beginner:
+        return 10;
+      case Job.warrior:
+        return 20;
+      case Job.fighter:
+        return 25;
+      case Job.magician:
+        return 5;
+      case Job.fpMage:
+        return 5;
+      case Job.bowman:
+        return 14;
+      case Job.hunter:
+        return 18;
+      case Job.thief:
+        return 12;
+      case Job.assassin:
+        return 14;
+      case Job.pirate:
+        return 16;
+      case Job.brawler:
+        return 20;
+    }
+  }
+
+  /// 升级时 maxMp 增长
+  int get mpPerLevel {
+    switch (this) {
+      case Job.beginner:
+        return 5;
+      case Job.warrior:
+      case Job.fighter:
+        return 3;
+      case Job.magician:
+        return 14;
+      case Job.fpMage:
+        return 18;
+      case Job.bowman:
+        return 8;
+      case Job.hunter:
+        return 10;
+      case Job.thief:
+      case Job.assassin:
+        return 10;
+      case Job.pirate:
+        return 6;
+      case Job.brawler:
+        return 6;
+    }
+  }
+
+  /// 暴击率加成 (在 LUK 基础上加)
+  double get critBonus {
+    switch (this) {
+      case Job.bowman:
+        return 5;
+      case Job.hunter:
+        return 8;
+      case Job.thief:
+        return 10;
+      case Job.assassin:
+        return 15;
+      default:
+        return 0;
+    }
+  }
+
+  /// 闪避率加成 (在 DEX 基础上加)
+  double get avoidBonus {
+    switch (this) {
+      case Job.thief:
+        return 5;
+      case Job.assassin:
+        return 7;
+      default:
+        return 0;
+    }
+  }
+
+  /// 推荐主加点提示 (用于 UI)
+  String get recommendedStat {
+    switch (mainStat) {
+      case JobStat.str:
+        return '推荐主加 力量(STR)';
+      case JobStat.dex:
+        return '推荐主加 敏捷(DEX)';
+      case JobStat.intStat:
+        return '推荐主加 智力(INT)';
+      case JobStat.luk:
+        return '推荐主加 运气(LUK)';
+    }
+  }
+
+  /// 是否为 Boss 职业 (二转及以上)
+  bool get isAdvanced => tier >= 3;
+
+  // ========== 职业被动 ==========
+
+  /// 受到伤害减免比例 (0.10 = -10% 伤害)
+  /// 战士系坦克专属
+  double get damageReduction {
+    switch (this) {
+      case Job.warrior:
+        return 0.10;
+      case Job.fighter:
+        return 0.18;
+      default:
+        return 0.0;
+    }
+  }
+
+  /// 击杀怪物后回复 MaxMP 的比例 (0.10 = +10% MaxMP)
+  /// 法师系续航专属
+  double get mpRegenOnKill {
+    switch (this) {
+      case Job.magician:
+        return 0.10;
+      case Job.fpMage:
+        return 0.15;
+      default:
+        return 0.0;
+    }
+  }
+
+  /// 暴击伤害倍率 (默认 1.5,弓箭手系更高)
+  double get critDamageMultiplier {
+    switch (this) {
+      case Job.bowman:
+        return 1.75;
+      case Job.hunter:
+        return 2.0;
+      default:
+        return 1.5;
+    }
+  }
+
+  /// 攻击/技能命中后追加打击的概率 (0.0-1.0)
+  /// 海盗系连击专属
+  double get extraHitChance {
+    switch (this) {
+      case Job.pirate:
+        return 0.30;
+      case Job.brawler:
+        return 0.45;
+      case Job.assassin:
+        return 0.30; // 刺客飞镖追打
+      default:
+        return 0.0;
+    }
+  }
+
+  /// 追加打击的伤害比例 (相对于本次伤害)
+  double get extraHitDamageRatio {
+    switch (this) {
+      case Job.pirate:
+        return 0.5;
+      case Job.brawler:
+        return 0.7;
+      case Job.assassin:
+        return 0.5;
+      default:
+        return 0.0;
+    }
+  }
+
+  /// 被动描述 (用于角色面板/任务对话框展示)
+  String get passiveDescription {
+    final parts = <String>[];
+    if (damageReduction > 0) {
+      parts.add('🛡️ 受伤减免 -${(damageReduction * 100).toInt()}%');
+    }
+    if (mpRegenOnKill > 0) {
+      parts.add('💧 击杀回复 MP +${(mpRegenOnKill * 100).toInt()}%');
+    }
+    if (critDamageMultiplier > 1.5) {
+      parts.add('💥 暴击伤害 ×${critDamageMultiplier.toStringAsFixed(2)}');
+    }
+    if (extraHitChance > 0) {
+      parts.add('⚡ ${(extraHitChance * 100).toInt()}% 概率追打 (${(extraHitDamageRatio * 100).toInt()}% 伤害)');
+    }
+    if (critBonus > 0) {
+      parts.add('🎯 暴击率 +${critBonus.toInt()}%');
+    }
+    if (avoidBonus > 0) {
+      parts.add('💨 闪避率 +${avoidBonus.toInt()}%');
+    }
+    return parts.isEmpty ? '无特殊被动' : parts.join('\n');
+  }
+
+  /// 职业独享主动技能
+  JobSkill get skill {
+    switch (this) {
+      case Job.beginner:
+        return const JobSkill(
+          name: '挥拳',
+          emoji: '✊',
+          multiplier: 1.4,
+          mpCost: 3,
+          description: '新手的微弱一击',
+        );
+      case Job.warrior:
+        return const JobSkill(
+          name: '重击',
+          emoji: '💥',
+          multiplier: 2.5,
+          mpCost: 5,
+          description: '战士的近战重击',
+        );
+      case Job.fighter:
+        return const JobSkill(
+          name: '旋风斩',
+          emoji: '🌀',
+          multiplier: 3.5,
+          mpCost: 8,
+          description: '剑客的范围斩击',
+        );
+      case Job.magician:
+        return const JobSkill(
+          name: '魔法弹',
+          emoji: '✨',
+          multiplier: 2.5,
+          mpCost: 8,
+          description: '法师的元素弹',
+        );
+      case Job.fpMage:
+        return const JobSkill(
+          name: '火球术',
+          emoji: '🔥',
+          multiplier: 3.8,
+          mpCost: 14,
+          description: '火法师的烈焰冲击',
+        );
+      case Job.bowman:
+        return const JobSkill(
+          name: '多重射击',
+          emoji: '🏹',
+          multiplier: 2.8,
+          mpCost: 10,
+          description: '弓箭手的连射',
+        );
+      case Job.hunter:
+        return const JobSkill(
+          name: '三连射',
+          emoji: '🎯',
+          multiplier: 4.0,
+          mpCost: 15,
+          description: '猎人的三段连射',
+        );
+      case Job.thief:
+        return const JobSkill(
+          name: '暗杀',
+          emoji: '🌑',
+          multiplier: 2.0,
+          mpCost: 12,
+          alwaysCrit: true,
+          description: '飞侠的必暴击攻击',
+        );
+      case Job.assassin:
+        return const JobSkill(
+          name: '幸运七',
+          emoji: '🎴',
+          multiplier: 2.8,
+          mpCost: 16,
+          alwaysCrit: true,
+          description: '刺客的双飞镖必杀',
+        );
+      case Job.pirate:
+        return const JobSkill(
+          name: '回旋踢',
+          emoji: '🦵',
+          multiplier: 2.6,
+          mpCost: 8,
+          description: '海盗的旋风踢',
+        );
+      case Job.brawler:
+        return const JobSkill(
+          name: '裂拳',
+          emoji: '👊',
+          multiplier: 3.6,
+          mpCost: 12,
+          description: '拳手的爆裂连击',
+        );
+    }
+  }
+}
+
+/// 主属性枚举
+enum JobStat { str, dex, intStat, luk }
+
+/// 职业独享技能描述
+class JobSkill {
+  final String name;
+  final String emoji;
+  final double multiplier;
+  final int mpCost;
+  final bool alwaysCrit;
+  final String description;
+
+  const JobSkill({
+    required this.name,
+    required this.emoji,
+    required this.multiplier,
+    required this.mpCost,
+    this.alwaysCrit = false,
+    required this.description,
+  });
 }
 
 /// 玩家属性
@@ -32,6 +417,7 @@ class Stats {
   int exp;
   int maxExp;
   int ap;  // 自由属性点 (Ability Points)
+  int sp;  // 技能点 (Skill Points) - 升级技能用
 
   Stats({
     this.str = 12,
@@ -45,7 +431,8 @@ class Stats {
     this.level = 1,
     this.exp = 0,
     this.maxExp = 15,
-    this.ap = 0,  // 初始没有自由属性点
+    this.ap = 0,
+    this.sp = 0,
   });
 
   /// 计算暴击率 (基于运气, 最高40%)
@@ -71,6 +458,7 @@ class Stats {
     int? exp,
     int? maxExp,
     int? ap,
+    int? sp,
   }) {
     return Stats(
       str: str ?? this.str,
@@ -85,6 +473,7 @@ class Stats {
       exp: exp ?? this.exp,
       maxExp: maxExp ?? this.maxExp,
       ap: ap ?? this.ap,
+      sp: sp ?? this.sp,
     );
   }
 }
@@ -233,6 +622,21 @@ class Player {
   List<String> inventory;
   String currentMap;
   int meso;
+  Map<String, int> skillLevels; // key: Job.name, value: 0-10 技能等级
+
+  /// 最大技能等级
+  static const int maxSkillLevel = 10;
+
+  /// 升级技能所需 SP (从当前级到下一级)
+  static int skillUpgradeCost(int currentLevel) => currentLevel + 1;
+
+  /// 当前职业的技能等级
+  int get currentSkillLevel => skillLevels[job.name] ?? 0;
+
+  /// 当前职业技能的最终倍率 (基础 + 等级加成)
+  /// 每级 +5% 基础倍率,10 级 +50%
+  double get skillFinalMultiplier =>
+      job.skill.multiplier * (1 + currentSkillLevel * 0.05);
 
   Player({
     required this.name,
@@ -242,6 +646,7 @@ class Player {
     List<String>? inventory,
     this.currentMap = 'henesys',
     this.meso = 0,
+    Map<String, int>? skillLevels,
   })  : equipment = equipment ?? {
           EquipmentSlot.weapon: equipmentDb['beginner_sword'],
           EquipmentSlot.helmet: null,
@@ -250,7 +655,8 @@ class Player {
           EquipmentSlot.shoes: null,
           EquipmentSlot.cape: null,
         },
-        inventory = inventory ?? [];
+        inventory = inventory ?? [],
+        skillLevels = skillLevels ?? {};
 
   /// 创建新玩家 - 投骰子决定初始属性 (总25点，每个4-13)
   factory Player.create(String name, {Random? random}) {
@@ -309,8 +715,26 @@ class Player {
     ];
   }
 
-  /// 获取基础攻击力
-  int get baseAtk => stats.str ~/ 5 + stats.dex ~/ 5;
+  /// 获取基础攻击力 - 按职业主属性计算
+  int get baseAtk {
+    final main = _totalForStat(job.mainStat);
+    final sub = _totalForStat(job.subStat);
+    return main ~/ 4 + sub ~/ 8;
+  }
+
+  /// 根据 JobStat 取出 base + 装备总值
+  int _totalForStat(JobStat stat) {
+    switch (stat) {
+      case JobStat.str:
+        return totalStr;
+      case JobStat.dex:
+        return totalDex;
+      case JobStat.intStat:
+        return totalInt;
+      case JobStat.luk:
+        return totalLuk;
+    }
+  }
   
   /// 获取装备攻击加成（武器基础+潜能）
   int get equipAtk {
@@ -442,8 +866,8 @@ class Player {
     return bonus;
   }
 
-  /// 获取总暴击率 (最高50%)
-  double getCritRate() => (baseCritRate + equipCritRate).clamp(0, 50);
+  /// 获取总暴击率 (最高50%) - 含职业加成
+  double getCritRate() => (baseCritRate + equipCritRate + job.critBonus).clamp(0, 50);
 
   /// 获取基础闪避率
   double get baseAvoidRate => stats.getAvoidRate();
@@ -464,8 +888,8 @@ class Player {
     return bonus;
   }
 
-  /// 获取总闪避率 (最高50%)
-  double getAvoidRate() => (baseAvoidRate + equipAvoidRate).clamp(0, 50);
+  /// 获取总闪避率 (最高50%) - 含职业加成
+  double getAvoidRate() => (baseAvoidRate + equipAvoidRate + job.avoidBonus).clamp(0, 50);
 
   /// 复制玩家
   Player copyWith({
@@ -476,6 +900,7 @@ class Player {
     List<String>? inventory,
     String? currentMap,
     int? meso,
+    Map<String, int>? skillLevels,
   }) {
     return Player(
       name: name ?? this.name,
@@ -485,6 +910,7 @@ class Player {
       inventory: inventory ?? this.inventory,
       currentMap: currentMap ?? this.currentMap,
       meso: meso ?? this.meso,
+      skillLevels: skillLevels ?? this.skillLevels,
     );
   }
 }

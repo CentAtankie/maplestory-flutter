@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import "../utils/maple_theme.dart";
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/game_provider.dart';
 import '../game/models/player.dart';
@@ -12,22 +13,34 @@ class StatusBar extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final player = ref.watch(gameProvider).player;
+    // 细粒度订阅: player 变化才重建顶部信息和血条
+    final player = ref.watch(gameProvider.select((g) => g.player));
     final stats = player.stats;
-    final gameData = ref.watch(gameProvider);
+
+    // 邮件徽标只关心计数
+    final unreadMails = ref.watch(
+      gameProvider.select((g) => g.mails.where((m) => !m.isRead).length),
+    );
+    final unclaimedAttachments = ref.watch(
+      gameProvider.select((g) => g.mails.where((m) => m.hasUnclaimedAttachments).length),
+    );
+
+    // 任务徽标只关心计数
+    final availableQuestCount = ref.watch(
+      gameProvider.select((g) => g.availableQuestCount),
+    );
+    final activeQuestCount = ref.watch(
+      gameProvider.select((g) => g.activeQuestCount),
+    );
 
     final hpPercent = stats.hp / stats.maxHp;
     final mpPercent = stats.mp / stats.maxMp;
     final expPercent = stats.exp / stats.maxExp;
 
-    // 计算未读邮件和未领取附件数量
-    final unreadMails = gameData.mails.where((m) => !m.isRead).length;
-    final unclaimedAttachments = gameData.mails.where((m) => m.hasUnclaimedAttachments).length;
-
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: const Color(0xFF16213E),
+        color: MapleColors.surface,
         borderRadius: const BorderRadius.vertical(
           bottom: Radius.circular(16),
         ),
@@ -122,18 +135,18 @@ class StatusBar extends ConsumerWidget {
                       ),
                     ),
                     // 可接取或进行中任务标记
-                    if (gameData.availableQuestCount > 0 || gameData.activeQuestCount > 0)
+                    if (availableQuestCount > 0 || activeQuestCount > 0)
                       Positioned(
                         right: 4,
                         top: 4,
                         child: Container(
                           padding: const EdgeInsets.all(4),
                           decoration: BoxDecoration(
-                            color: gameData.availableQuestCount > 0 ? Colors.green : Colors.orange,
+                            color: availableQuestCount > 0 ? Colors.green : Colors.orange,
                             shape: BoxShape.circle,
                           ),
                           child: Text(
-                            '${gameData.availableQuestCount > 0 ? gameData.availableQuestCount : gameData.activeQuestCount}',
+                            '${availableQuestCount > 0 ? availableQuestCount : activeQuestCount}',
                             style: const TextStyle(
                               color: Colors.white,
                               fontSize: 10,
@@ -241,7 +254,7 @@ class StatusBar extends ConsumerWidget {
             ),
             
             const SizedBox(height: 8),
-            
+
             // EXP 条
             _buildBar(
               label: 'EXP',
@@ -250,6 +263,49 @@ class StatusBar extends ConsumerWidget {
               percent: expPercent,
               color: Colors.purple,
               icon: Icons.star,
+            ),
+            const SizedBox(height: 8),
+            // SP 显示
+            Row(
+              children: [
+                SizedBox(
+                  width: 50,
+                  child: Row(
+                    children: [
+                      const Icon(Icons.auto_fix_high, color: Colors.cyan, size: 14),
+                      const SizedBox(width: 4),
+                      const Expanded(
+                        child: Text(
+                          'SP',
+                          style: TextStyle(
+                            color: Colors.cyan,
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                          ),
+                          overflow: TextOverflow.visible,
+                          softWrap: false,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Text(
+                  '${stats.sp}',
+                  style: const TextStyle(
+                    color: Colors.cyan,
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const Spacer(),
+                Text(
+                  '击杀怪物获得',
+                  style: TextStyle(
+                    color: Colors.white.withValues(alpha: 0.3),
+                    fontSize: 10,
+                  ),
+                ),
+              ],
             ),
           ],
         ),
@@ -268,17 +324,21 @@ class StatusBar extends ConsumerWidget {
     return Row(
       children: [
         SizedBox(
-          width: 40,
+          width: 50,
           child: Row(
             children: [
               Icon(icon, color: color, size: 14),
               const SizedBox(width: 4),
-              Text(
-                label,
-                style: TextStyle(
-                  color: color,
-                  fontSize: 12,
-                  fontWeight: FontWeight.bold,
+              Expanded(
+                child: Text(
+                  label,
+                  style: TextStyle(
+                    color: color,
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  overflow: TextOverflow.visible,
+                  softWrap: false,
                 ),
               ),
             ],

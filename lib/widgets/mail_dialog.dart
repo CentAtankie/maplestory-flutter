@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import "../utils/maple_theme.dart";
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/game_provider.dart';
 import '../game/models/mail.dart';
@@ -22,7 +23,7 @@ class _MailDialogState extends ConsumerState<MailDialog> {
     final isMobile = screenWidth < 600;
 
     return AlertDialog(
-      backgroundColor: const Color(0xFF1A1A2E),
+      backgroundColor: MapleColors.background,
       insetPadding: isMobile 
           ? const EdgeInsets.all(8) 
           : const EdgeInsets.symmetric(horizontal: 40, vertical: 24),
@@ -107,7 +108,7 @@ class _MailDialogState extends ConsumerState<MailDialog> {
         padding: const EdgeInsets.all(12),
         margin: const EdgeInsets.only(bottom: 4),
         decoration: BoxDecoration(
-          color: isSelected ? const Color(0xFF533483) : mail.isRead ? Colors.transparent : const Color(0xFF0F3460),
+          color: isSelected ? MapleColors.accent : mail.isRead ? Colors.transparent : MapleColors.card,
           borderRadius: BorderRadius.circular(8),
           border: isSelected ? Border.all(color: Colors.amber.withOpacity(0.5)) : null,
         ),
@@ -219,7 +220,7 @@ class _MailDialogState extends ConsumerState<MailDialog> {
                   child: Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: const Color(0xFF533483), 
+                      color: MapleColors.accent, 
                       borderRadius: BorderRadius.circular(8), 
                       border: Border.all(color: Colors.amber),
                     ),
@@ -303,7 +304,7 @@ class _MailDialogState extends ConsumerState<MailDialog> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF1A1A2E),
+        backgroundColor: MapleColors.background,
         insetPadding: isMobile 
             ? const EdgeInsets.all(8) 
             : const EdgeInsets.symmetric(horizontal: 40, vertical: 24),
@@ -332,7 +333,7 @@ class _MailDialogState extends ConsumerState<MailDialog> {
                   break;
               }
               return Card(
-                color: const Color(0xFF0F3460),
+                color: MapleColors.card,
                 margin: const EdgeInsets.only(bottom: 8),
                 child: ListTile(
                   leading: Text(emoji, style: const TextStyle(fontSize: 24)),

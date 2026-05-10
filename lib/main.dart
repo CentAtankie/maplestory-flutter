@@ -1,19 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'providers/game_provider.dart';
 import 'repositories/hive_save_repository.dart';
 import 'screens/game_screen.dart';
 import 'services/audio_manager.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
+
   // 初始化 Hive 存档
   await HiveSaveRepository().init();
-  
+
   // 初始化音频并播放背景音乐
   await AudioManager().init();
   await AudioManager().playHenesysBGM();
-  
+
   runApp(
     const ProviderScope(
       child: MapleStoryApp(),
@@ -21,8 +22,37 @@ void main() async {
   );
 }
 
-class MapleStoryApp extends StatelessWidget {
+class MapleStoryApp extends ConsumerStatefulWidget {
   const MapleStoryApp({super.key});
+
+  @override
+  ConsumerState<MapleStoryApp> createState() => _MapleStoryAppState();
+}
+
+class _MapleStoryAppState extends ConsumerState<MapleStoryApp>
+    with WidgetsBindingObserver {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // app 进入后台/隐藏/即将销毁时立即存档
+    if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.inactive ||
+        state == AppLifecycleState.hidden ||
+        state == AppLifecycleState.detached) {
+      ref.read(gameProvider.notifier).flushSave();
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -63,7 +93,7 @@ class MapleStoryApp extends StatelessWidget {
             ),
           ),
         ),
-        cardTheme: CardTheme(
+        cardTheme: CardThemeData(
           elevation: 4,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),

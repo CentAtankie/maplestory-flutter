@@ -235,26 +235,114 @@ class ShopDatabase {
       description: '刺蘑菇的伞盖，非常稀有',
       price: 100,
     ),
+    // 木片
+    GameItem(
+      id: 'wood_piece',
+      name: '木片',
+      emoji: '🪵',
+      type: ItemType.material,
+      description: '木妖身上掉落的碎片',
+      price: 80,
+    ),
+    // 野猪牙齿
+    GameItem(
+      id: 'boar_tooth',
+      name: '野猪牙齿',
+      emoji: '🦷',
+      type: ItemType.material,
+      description: '野猪的尖牙，可以打磨成饰品',
+      price: 120,
+    ),
+    // 独眼兽尾巴
+    GameItem(
+      id: 'evil_eye_tail',
+      name: '独眼兽尾巴',
+      emoji: '🌀',
+      type: ItemType.material,
+      description: '独眼兽的尾巴，有微弱的魔力',
+      price: 150,
+    ),
+    // 僵尸蘑菇盖
+    GameItem(
+      id: 'zombie_mushroom_cap',
+      name: '僵尸蘑菇盖',
+      emoji: '🧟',
+      type: ItemType.material,
+      description: '散发着诡异气息的蘑菇盖',
+      price: 200,
+    ),
+    // 火焰野猪牙齿
+    GameItem(
+      id: 'fire_boar_tooth',
+      name: '火焰野猪牙齿',
+      emoji: '🔥',
+      type: ItemType.material,
+      description: '带有火焰纹路的尖牙',
+      price: 250,
+    ),
+    // 石头人核心
+    GameItem(
+      id: 'golem_stone',
+      name: '石头人核心',
+      emoji: '🗿',
+      type: ItemType.material,
+      description: '石头人的动力核心',
+      price: 350,
+    ),
+    // 暗黑石头人核心
+    GameItem(
+      id: 'dark_golem_stone',
+      name: '暗黑石头人核心',
+      emoji: '⬛',
+      type: ItemType.material,
+      description: '散发着黑暗气息的石头核心',
+      price: 500,
+    ),
+    // 冰晶碎片
+    GameItem(
+      id: 'ice_piece',
+      name: '冰晶碎片',
+      emoji: '❄️',
+      type: ItemType.material,
+      description: '极寒之地凝结的冰晶',
+      price: 400,
+    ),
+    // 火焰碎片
+    GameItem(
+      id: 'fire_piece',
+      name: '火焰碎片',
+      emoji: '🔥',
+      type: ItemType.material,
+      description: '永不熄灭的火焰凝结物',
+      price: 400,
+    ),
+    // 幽灵布料
+    GameItem(
+      id: 'wraith_cloth',
+      name: '幽灵布料',
+      emoji: '👻',
+      type: ItemType.material,
+      description: '小幽灵留下的神秘布料',
+      price: 600,
+    ),
   ];
 
-  /// 根据 ID 获取物品
-  static GameItem? getById(String id) {
-    try {
-      return items.firstWhere((item) => item.id == id);
-    } catch (e) {
-      return null;
-    }
-  }
+  /// 根据 ID 获取物品 - O(1) Map 查询
+  static final Map<String, GameItem> _byId = {
+    for (final item in items) item.id: item,
+  };
 
-  /// 获取所有消耗品
-  static List<GameItem> getConsumables() {
-    return items.where((item) => item.type == ItemType.consumable).toList();
-  }
+  static GameItem? getById(String id) => _byId[id];
 
-  /// 获取所有卷轴
-  static List<GameItem> getScrolls() {
-    return items.where((item) => item.type == ItemType.scroll).toList();
-  }
+  /// 获取所有消耗品 (缓存,避免每次重建)
+  static final List<GameItem> _consumables =
+      items.where((item) => item.type == ItemType.consumable).toList(growable: false);
+  static List<GameItem> getConsumables() => _consumables;
+
+  /// 获取所有卷轴 (缓存)
+  static final List<GameItem> _scrolls =
+      items.where((item) => item.type == ItemType.scroll).toList(growable: false);
+  static List<GameItem> getScrolls() => _scrolls;
 }
 
 /// 装备数据库（使用player.dart中的Equipment类）
@@ -454,19 +542,17 @@ class EquipmentDatabase {
     ),
   ];
 
-  /// 根据ID获取装备
-  static Equipment? getById(String id) {
-    try {
-      return equipments.firstWhere((eq) => eq.id == id);
-    } catch (e) {
-      return null;
-    }
-  }
+  /// 根据ID获取装备 - O(1) Map 查询
+  static final Map<String, Equipment> _byId = {
+    for (final eq in equipments) if (eq.id != null) eq.id!: eq,
+  };
 
-  /// 获取商店出售的装备（低级装备）
-  static List<Equipment> getShopEquipments() {
-    return equipments.where((eq) => (eq.levelReq ?? 1) <= 10).toList();
-  }
+  static Equipment? getById(String id) => _byId[id];
+
+  /// 商店出售的装备 (缓存)
+  static final List<Equipment> _shopEquipments =
+      equipments.where((eq) => (eq.levelReq ?? 1) <= 10).toList(growable: false);
+  static List<Equipment> getShopEquipments() => _shopEquipments;
 
   /// 获取指定等级范围的装备（用于怪物掉落）
   static List<Equipment> getByLevelRange(int minLevel, int maxLevel) {

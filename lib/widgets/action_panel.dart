@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import "../utils/maple_theme.dart";
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/game_provider.dart';
@@ -16,13 +17,14 @@ class ActionPanel extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final gameState = ref.watch(gameProvider);
-    final isTown = gameState.currentMap.isTown;
+    // 仅订阅当前地图: 地图变化才重建主面板
+    final currentMap = ref.watch(gameProvider.select((g) => g.currentMap));
+    final isTown = currentMap.isTown;
 
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFF16213E),
+        color: MapleColors.surface,
         borderRadius: const BorderRadius.vertical(
           top: Radius.circular(20),
         ),
@@ -39,15 +41,15 @@ class ActionPanel extends ConsumerWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             // 地图按钮（替换方向键）
-            _buildMapButton(context, ref, gameState),
-            
+            _buildMapButton(context, ref, currentMap),
+
             const SizedBox(height: 12),
-            
+
             // 功能按钮
             _buildActionButtons(context, ref, isTown),
-            
+
             const SizedBox(height: 12),
-            
+
             // 自动模式开关
             _buildAutoModeSwitches(context, ref),
           ],
@@ -56,16 +58,16 @@ class ActionPanel extends ConsumerWidget {
     );
   }
 
-  Widget _buildMapButton(BuildContext context, WidgetRef ref, GameData gameState) {
+  Widget _buildMapButton(BuildContext context, WidgetRef ref, GameMap currentMap) {
     return ElevatedButton.icon(
       onPressed: () => _showMapSelector(context, ref),
       icon: const Icon(Icons.map, color: Colors.white),
       label: Text(
-        '地图: ${gameState.currentMap.name}',
+        '地图: ${currentMap.name}',
         style: const TextStyle(color: Colors.white),
       ),
       style: ElevatedButton.styleFrom(
-        backgroundColor: const Color(0xFF0F3460),
+        backgroundColor: MapleColors.card,
         foregroundColor: Colors.white,
         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
         minimumSize: const Size(double.infinity, 48),
@@ -80,43 +82,97 @@ class ActionPanel extends ConsumerWidget {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF1A1A2E),
+        backgroundColor: MapleColors.background,
         title: const Text(
           '🗺️ 选择目的地',
           style: TextStyle(color: Colors.white),
         ),
         content: SizedBox(
           width: double.maxFinite,
-          height: 400,
+          height: 500,
           child: ListView(
             children: [
-              // 村庄分类 - 可展开
+              // 安全区 (城镇/特殊)
               _buildExpandableCategory(
                 context, ref,
-                title: '🏘️ 安全区（村庄）',
+                title: '🏘️ 安全区(村镇)',
                 maps: [
                   _buildMapTile(context, ref, '射手村', 'henesys', '🏘️'),
+                  _buildMapTile(context, ref, '射手村公园', 'henesys_park', '🎯'),
                   _buildMapTile(context, ref, '明珠港', 'lith', '⚓'),
+                  _buildMapTile(context, ref, '诺特勒斯号', 'nautilus', '⚓'),
+                  _buildMapTile(context, ref, '勇士部落', 'perion', '⛺'),
+                  _buildMapTile(context, ref, '魔法密林', 'ellinia', '🌲'),
+                  _buildMapTile(context, ref, '废弃都市', 'kerning', '🏙️'),
+                  _buildMapTile(context, ref, '玩具城', 'ludibrium', '🎪'),
                 ],
               ),
               const SizedBox(height: 8),
-              // 初级野外 - 可展开
+              // 初级 (Lv.1-10)
               _buildExpandableCategory(
                 context, ref,
                 title: '🌱 初级冒险区 (Lv.1-10)',
                 maps: [
+                  _buildMapTile(context, ref, '蜗牛花园', 'snail_garden', '🌷'),
                   _buildMapTile(context, ref, '射手村东部平原', 'farm', '🌾'),
+                  _buildMapTile(context, ref, '粉粉熊草原', 'pinkbean_field', '🌸'),
+                  _buildMapTile(context, ref, '八爪鱼海滩', 'octopus_beach', '🏖️'),
                   _buildMapTile(context, ref, '射手村北部小路', 'trail', '🌲'),
                   _buildMapTile(context, ref, '绿水灵树洞', 'slime_tree', '🌳'),
                 ],
               ),
               const SizedBox(height: 8),
-              // 中级野外 - 可展开
+              // 中级 (Lv.10-25)
               _buildExpandableCategory(
                 context, ref,
-                title: '🌲 中级冒险区 (Lv.10-20)',
+                title: '🌲 中级冒险区 (Lv.10-25)',
                 maps: [
                   _buildMapTile(context, ref, '树洞', 'cave', '🕳️'),
+                  _buildMapTile(context, ref, '丝带乐园', 'ribbon_meadow', '🎀'),
+                  _buildMapTile(context, ref, '勇士部落西部荒野', 'perion_field', '🏜️'),
+                  _buildMapTile(context, ref, '魔法森林', 'ellinia_field', '🌲'),
+                  _buildMapTile(context, ref, '沼泽地', 'kerning_swamp', '🐸'),
+                ],
+              ),
+              const SizedBox(height: 8),
+              // 高级 (Lv.25-45)
+              _buildExpandableCategory(
+                context, ref,
+                title: '🔥 高级冒险区 (Lv.25-45)',
+                maps: [
+                  _buildMapTile(context, ref, '火焰之地I', 'fire_land1', '🔥'),
+                  _buildMapTile(context, ref, '火焰之地II', 'fire_land2', '🔥'),
+                  _buildMapTile(context, ref, '蚂蚁洞入口', 'ant_tunnel1', '🐜'),
+                  _buildMapTile(context, ref, '蚂蚁洞深处', 'ant_tunnel2', '🐜'),
+                  _buildMapTile(context, ref, '冰师傅实验室', 'ice_lab', '🧊'),
+                  _buildMapTile(context, ref, '地铁入口', 'subway1', '🚇'),
+                  _buildMapTile(context, ref, '地铁深处', 'subway2', '🚇'),
+                ],
+              ),
+              const SizedBox(height: 8),
+              // 顶级 (Lv.45+)
+              _buildExpandableCategory(
+                context, ref,
+                title: '⛰️ 顶级冒险区 (Lv.45+)',
+                maps: [
+                  _buildMapTile(context, ref, '高原I', 'highland1', '⛰️'),
+                  _buildMapTile(context, ref, '高原II', 'highland2', '⛰️'),
+                  _buildMapTile(context, ref, '玩具工厂 I', 'toy_factory1', '🏭'),
+                  _buildMapTile(context, ref, '玩具工厂 II', 'toy_factory2', '🏭'),
+                  _buildMapTile(context, ref, '水上街道', 'aqua_road', '🌊'),
+                  _buildMapTile(context, ref, '神秘丛林', 'jungle_path', '🌴'),
+                  _buildMapTile(context, ref, '钟楼地下', 'clock_tower', '⏰'),
+                ],
+              ),
+              const SizedBox(height: 8),
+              // Boss 关
+              _buildExpandableCategory(
+                context, ref,
+                title: '⚠️ Boss 关 (单怪高难度)',
+                maps: [
+                  _buildMapTile(context, ref, '蘑菇妈妈巢穴 (Lv.30)', 'mushmom_cave', '👹'),
+                  _buildMapTile(context, ref, '巴洛克之坑 (Lv.55)', 'balrog_pit', '🦂'),
+                  _buildMapTile(context, ref, '黑龙王洞 (Lv.80)', 'pianus_lair', '🐉'),
                 ],
               ),
             ],
@@ -145,7 +201,7 @@ class ActionPanel extends ConsumerWidget {
         
         return Container(
           decoration: BoxDecoration(
-            color: const Color(0xFF0F3460),
+            color: MapleColors.card,
             borderRadius: BorderRadius.circular(12),
           ),
           child: Column(
@@ -156,7 +212,7 @@ class ActionPanel extends ConsumerWidget {
                 width: double.infinity,
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF533483).withOpacity(0.3),
+                  color: MapleColors.accent.withOpacity(0.3),
                   borderRadius: const BorderRadius.vertical(
                     top: Radius.circular(12),
                   ),
@@ -304,16 +360,16 @@ class ActionPanel extends ConsumerWidget {
 
   /// 构建自动模式开关
   Widget _buildAutoModeSwitches(BuildContext context, WidgetRef ref) {
-    final isAutoExplore = ref.watch(gameProvider.notifier).isAutoExplore;
-    final isAutoBattle = ref.watch(gameProvider.notifier).isAutoBattle;
-    final gameState = ref.watch(gameProvider);
-    final isTown = gameState.currentMap.isTown;
-    final isBattling = gameState.gameState == GameState.battling;
+    // 通过 select 订阅,确保开关切换时 UI 立即重建
+    final isAutoExplore = ref.watch(gameProvider.select((g) => g.isAutoExplore));
+    final isAutoBattle = ref.watch(gameProvider.select((g) => g.isAutoBattle));
+    final isTown = ref.watch(gameProvider.select((g) => g.currentMap.isTown));
+    final isBattling = ref.watch(gameProvider.select((g) => g.gameState == GameState.battling));
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
-        color: const Color(0xFF0F3460),
+        color: MapleColors.card,
         borderRadius: BorderRadius.circular(12),
       ),
       child: Row(
@@ -471,7 +527,7 @@ class ActionPanel extends ConsumerWidget {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF1A1A2E),
+        backgroundColor: MapleColors.background,
         title: const Text(
           '⚙️ 设置',
           style: TextStyle(color: Colors.white),
@@ -651,7 +707,7 @@ class ActionPanel extends ConsumerWidget {
                         showDialog(
                           context: context,
                           builder: (context) => AlertDialog(
-                            backgroundColor: const Color(0xFF1A1A2E),
+                            backgroundColor: MapleColors.background,
                             title: const Text(
                               '📤 存档已导出',
                               style: TextStyle(color: Colors.white),
@@ -732,7 +788,7 @@ class ActionPanel extends ConsumerWidget {
                     showDialog(
                       context: context,
                       builder: (context) => AlertDialog(
-                        backgroundColor: const Color(0xFF1A1A2E),
+                        backgroundColor: MapleColors.background,
                         title: const Text(
                           '⚠️ 确认删除?',
                           style: TextStyle(color: Colors.red),
@@ -784,7 +840,7 @@ class ActionPanel extends ConsumerWidget {
                       barrierDismissible: false,
                       builder: (BuildContext ctx) {
                         return AlertDialog(
-                          backgroundColor: const Color(0xFF1A1A2E),
+                          backgroundColor: MapleColors.background,
                           title: const Text(
                             '确认重新开始?',
                             style: TextStyle(color: Colors.white),
@@ -844,7 +900,7 @@ class ActionPanel extends ConsumerWidget {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF1A1A2E),
+        backgroundColor: MapleColors.background,
         title: const Text(
           '📥 导入存档',
           style: TextStyle(color: Colors.white),
@@ -911,7 +967,7 @@ class ActionPanel extends ConsumerWidget {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF1A1A2E),
+        backgroundColor: MapleColors.background,
         title: const Text(
           '✏️ 修改名字',
           style: TextStyle(color: Colors.white),

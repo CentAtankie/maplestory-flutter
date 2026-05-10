@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import "../utils/maple_theme.dart";
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/game_provider.dart';
 import '../game/models/player.dart';
@@ -17,7 +18,7 @@ class _CharacterDialogState extends ConsumerState<CharacterDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      backgroundColor: const Color(0xFF1A1A2E),
+      backgroundColor: MapleColors.background,
       title: Row(
         children: [
           const Text('👤 角色', style: TextStyle(color: Colors.white)),
@@ -75,7 +76,7 @@ class _CharacterDialogState extends ConsumerState<CharacterDialog> {
 
     return Container(
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(color: const Color(0xFF0F3460), borderRadius: BorderRadius.circular(12)),
+      decoration: BoxDecoration(color: MapleColors.card, borderRadius: BorderRadius.circular(12)),
       child: Column(
         children: [
           Row(
@@ -102,26 +103,204 @@ class _CharacterDialogState extends ConsumerState<CharacterDialog> {
             ],
           ),
           const SizedBox(height: 12),
-          _buildStatRow('💪 力量', player.stats.str, equipStr, totalStr),
-          _buildStatRow('🏃 敏捷', player.stats.dex, equipDex, totalDex),
-          _buildStatRow('🧠 智力', player.stats.intStat, equipInt, totalInt),
-          _buildStatRow('🍀 运气', player.stats.luk, equipLuk, totalLuk),
+          _buildStatRow('💪 力量', player.stats.str, equipStr, totalStr,
+              isMain: player.job.mainStat == JobStat.str),
+          _buildStatRow('🏃 敏捷', player.stats.dex, equipDex, totalDex,
+              isMain: player.job.mainStat == JobStat.dex),
+          _buildStatRow('🧠 智力', player.stats.intStat, equipInt, totalInt,
+              isMain: player.job.mainStat == JobStat.intStat),
+          _buildStatRow('🍀 运气', player.stats.luk, equipLuk, totalLuk,
+              isMain: player.job.mainStat == JobStat.luk),
           const Divider(color: Colors.white24),
           _buildSimpleStatRow('⚔️ 攻击', player.getAtk()),
           _buildSimpleStatRow('🛡️ 防御', player.getDef()),
           _buildSimpleStatRow('💥 暴击', player.getCritRate().toInt(), suffix: '%'),
           _buildSimpleStatRow('💨 闪避', player.getAvoidRate().toInt(), suffix: '%'),
+          const SizedBox(height: 8),
+          // 推荐加点提示
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            decoration: BoxDecoration(
+              color: _getJobColor(player.job).withOpacity(0.2),
+              borderRadius: BorderRadius.circular(6),
+              border: Border.all(color: _getJobColor(player.job).withOpacity(0.4)),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.lightbulb_outline, color: Colors.amber, size: 14),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    player.job.recommendedStat,
+                    style: const TextStyle(color: Colors.white, fontSize: 12),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 8),
+          // 职业被动
+          if (player.job.passiveDescription != '无特殊被动')
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: Colors.blueGrey.withOpacity(0.15),
+                borderRadius: BorderRadius.circular(6),
+                border: Border.all(color: Colors.blueGrey.withOpacity(0.4)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Row(
+                    children: [
+                      Icon(Icons.workspace_premium, color: Colors.cyan, size: 14),
+                      SizedBox(width: 6),
+                      Text(
+                        '职业被动',
+                        style: TextStyle(color: Colors.cyan, fontSize: 12, fontWeight: FontWeight.bold),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    player.job.passiveDescription,
+                    style: const TextStyle(color: Colors.white70, fontSize: 11, height: 1.6),
+                  ),
+                ],
+              ),
+            ),
+          const SizedBox(height: 8),
+          // 技能升级
+          if (player.job == Job.beginner)
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: Colors.grey.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(6),
+                border: Border.all(color: Colors.grey.withOpacity(0.4)),
+              ),
+              child: const Row(
+                children: [
+                  Icon(Icons.info_outline, color: Colors.grey, size: 14),
+                  SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      '转职后解锁技能升级系统',
+                      style: TextStyle(color: Colors.white54, fontSize: 12),
+                    ),
+                  ),
+                ],
+              ),
+            )
+          else
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: Colors.purple.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(6),
+                border: Border.all(color: Colors.purple.withOpacity(0.4)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Row(
+                    children: [
+                      Icon(Icons.auto_fix_high, color: Colors.purple, size: 14),
+                      SizedBox(width: 6),
+                      Text(
+                        '技能等级',
+                        style: TextStyle(color: Colors.purple, fontSize: 12, fontWeight: FontWeight.bold),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Text(
+                        '${player.job.skill.emoji} ${player.job.skill.name}',
+                        style: const TextStyle(color: Colors.white, fontSize: 13),
+                      ),
+                      const Spacer(),
+                      Text(
+                        'Lv.${player.currentSkillLevel}/${Player.maxSkillLevel}',
+                        style: TextStyle(
+                          color: player.currentSkillLevel >= Player.maxSkillLevel ? Colors.amber : Colors.white70,
+                          fontSize: 13,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    '倍率: ${player.job.skill.multiplier.toStringAsFixed(1)}x ${player.currentSkillLevel > 0 ? '+${(player.currentSkillLevel * 5)}%' : ''} = ${player.skillFinalMultiplier.toStringAsFixed(2)}x',
+                    style: const TextStyle(color: Colors.white54, fontSize: 11),
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Text(
+                        'SP: ${player.stats.sp}',
+                        style: const TextStyle(color: Colors.cyan, fontSize: 12),
+                      ),
+                      const Spacer(),
+                      if (player.currentSkillLevel < Player.maxSkillLevel) ...[
+                        Text(
+                          '消耗: ${Player.skillUpgradeCost(player.currentSkillLevel)} SP',
+                          style: TextStyle(
+                            color: player.stats.sp >= Player.skillUpgradeCost(player.currentSkillLevel)
+                                ? Colors.green
+                                : Colors.red,
+                            fontSize: 11,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        ElevatedButton(
+                          onPressed: () {
+                            final cost = Player.skillUpgradeCost(player.currentSkillLevel);
+                            if (player.stats.sp < cost) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text('❌ SP 不足 (需要 $cost SP, 当前 ${player.stats.sp})'),
+                                  backgroundColor: Colors.red,
+                                ),
+                              );
+                              return;
+                            }
+                            ref.read(gameProvider.notifier).upgradeSkill();
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.purple,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                            minimumSize: const Size(0, 32),
+                            disabledBackgroundColor: Colors.grey[700],
+                          ),
+                          child: const Text('升级', style: TextStyle(fontSize: 12)),
+                        ),
+                      ] else
+                        const Text(
+                          '已满级',
+                          style: TextStyle(color: Colors.amber, fontSize: 12, fontWeight: FontWeight.bold),
+                        ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
         ],
       ),
     );
   }
 
-  Widget _buildStatRow(String label, int base, int equipBonus, int total) {
+  Widget _buildStatRow(String label, int base, int equipBonus, int total, {bool isMain = false}) {
+    final mainColor = isMain ? Colors.amber : Colors.white70;
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
         children: [
-          Text(label, style: const TextStyle(color: Colors.white70, fontSize: 14)),
+          if (isMain) const Text('★ ', style: TextStyle(color: Colors.amber, fontSize: 12)),
+          Text(label, style: TextStyle(color: mainColor, fontSize: 14, fontWeight: isMain ? FontWeight.bold : FontWeight.normal)),
           const Spacer(),
           if (equipBonus > 0)
             Text('$base', style: const TextStyle(color: Colors.white54, fontSize: 14)),
@@ -129,7 +308,7 @@ class _CharacterDialogState extends ConsumerState<CharacterDialog> {
             Text(' +$equipBonus', style: const TextStyle(color: Colors.green, fontSize: 14)),
           if (equipBonus > 0)
             const Text(' = ', style: TextStyle(color: Colors.white54)),
-          Text('$total', style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold)),
+          Text('$total', style: TextStyle(color: isMain ? Colors.amber : Colors.white, fontSize: 14, fontWeight: FontWeight.bold)),
         ],
       ),
     );
@@ -169,7 +348,7 @@ class _CharacterDialogState extends ConsumerState<CharacterDialog> {
 
   Widget _buildEquipmentSlot(EquipmentSlot slot, String emoji, String name, Equipment? equip, StateSetter setDialogState) {
     return Card(
-      color: equip != null ? const Color(0xFF533483) : const Color(0xFF0F3460),
+      color: equip != null ? MapleColors.accent : MapleColors.card,
       margin: const EdgeInsets.only(bottom: 8),
       child: InkWell(
         onTap: equip != null ? () => _showEquipmentDetail(context, equip) : null,
@@ -291,7 +470,7 @@ class _CharacterDialogState extends ConsumerState<CharacterDialog> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF1A1A2E),
+        backgroundColor: MapleColors.background,
         title: Row(children: [Text(equip.emoji ?? '⚔️', style: const TextStyle(fontSize: 28)), const SizedBox(width: 12), Expanded(child: Text(equip.name, style: const TextStyle(color: Colors.white)))]),
         content: SizedBox(
           width: 300,
@@ -301,7 +480,7 @@ class _CharacterDialogState extends ConsumerState<CharacterDialog> {
             children: [
               Container(
                 padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(color: const Color(0xFF0F3460), borderRadius: BorderRadius.circular(8)),
+                decoration: BoxDecoration(color: MapleColors.card, borderRadius: BorderRadius.circular(8)),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [

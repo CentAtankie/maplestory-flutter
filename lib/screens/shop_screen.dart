@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import "../utils/maple_theme.dart";
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/game_provider.dart';
 import '../game/models/item.dart' hide Equipment;
@@ -14,9 +15,9 @@ class ShopScreen extends ConsumerWidget {
     final currentCategory = gameState.shopCategory;
 
     return Scaffold(
-      backgroundColor: const Color(0xFF1A1A2E),
+      backgroundColor: MapleColors.background,
       appBar: AppBar(
-        backgroundColor: const Color(0xFF16213E),
+        backgroundColor: MapleColors.surface,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () {
@@ -62,9 +63,9 @@ class ShopScreen extends ConsumerWidget {
             margin: const EdgeInsets.all(12),
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: const Color(0xFF0F3460),
+              color: MapleColors.card,
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: const Color(0xFF533483)),
+              border: Border.all(color: MapleColors.accent),
             ),
             child: const Row(
               children: [
@@ -130,10 +131,10 @@ class ShopScreen extends ConsumerWidget {
         margin: const EdgeInsets.symmetric(horizontal: 4),
         padding: const EdgeInsets.symmetric(vertical: 8),
         decoration: BoxDecoration(
-          color: isActive ? const Color(0xFF533483) : Colors.transparent,
+          color: isActive ? MapleColors.accent : Colors.transparent,
           borderRadius: BorderRadius.circular(8),
           border: Border.all(
-            color: isActive ? const Color(0xFF533483) : Colors.white24,
+            color: isActive ? MapleColors.accent : Colors.white24,
           ),
         ),
         child: Text(
@@ -177,7 +178,7 @@ class ShopScreen extends ConsumerWidget {
         final canAfford = player.meso >= item.price;
 
         return Card(
-          color: const Color(0xFF0F3460),
+          color: MapleColors.card,
           margin: const EdgeInsets.only(bottom: 8),
           child: InkWell(
             onTap: canAfford
@@ -322,7 +323,7 @@ class ShopScreen extends ConsumerWidget {
         final isMaterial = item.type == ItemType.material;
 
         return Card(
-          color: const Color(0xFF0F3460),
+          color: MapleColors.card,
           margin: const EdgeInsets.only(bottom: 8),
           child: Padding(
             padding: const EdgeInsets.all(12),
@@ -448,7 +449,7 @@ class ShopScreen extends ConsumerWidget {
         final canAfford = player.meso >= item.price;
 
         return Card(
-          color: const Color(0xFF0F3460),
+          color: MapleColors.card,
           margin: const EdgeInsets.only(bottom: 8),
           child: InkWell(
             onTap: canAfford
@@ -551,7 +552,7 @@ class ShopScreen extends ConsumerWidget {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF1A1A2E),
+        backgroundColor: MapleColors.background,
         title: Row(
           children: [
             Text(item.emoji, style: const TextStyle(fontSize: 28)),
@@ -640,7 +641,7 @@ class ShopScreen extends ConsumerWidget {
         final canEquip = player.stats.level >= levelReq;
 
         return Card(
-          color: const Color(0xFF0F3460),
+          color: MapleColors.card,
           margin: const EdgeInsets.only(bottom: 8),
           child: InkWell(
             onTap: canAfford && canEquip
@@ -814,7 +815,7 @@ class ShopScreen extends ConsumerWidget {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF1A1A2E),
+        backgroundColor: MapleColors.background,
         title: Row(
           children: [
             Text(equipment.emoji ?? '📦', style: const TextStyle(fontSize: 28)),

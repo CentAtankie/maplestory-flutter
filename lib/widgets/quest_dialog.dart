@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import "../utils/maple_theme.dart";
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../game/models/quest.dart';
 import '../game/models/player.dart';
@@ -24,7 +25,7 @@ class QuestDialog extends ConsumerWidget {
     return DefaultTabController(
       length: 3,
       child: AlertDialog(
-        backgroundColor: const Color(0xFF1A1A2E),
+        backgroundColor: MapleColors.background,
         title: const Row(
           children: [
             Text('📜 任务', style: TextStyle(color: Colors.white, fontSize: 18)),
@@ -147,7 +148,7 @@ class QuestDialog extends ConsumerWidget {
     }
 
     return Card(
-      color: const Color(0xFF0F3460),
+      color: MapleColors.card,
       margin: const EdgeInsets.only(bottom: 8),
       child: Padding(
         padding: const EdgeInsets.all(12),
@@ -184,6 +185,23 @@ class QuestDialog extends ConsumerWidget {
                       ),
                     ),
                   ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            // 等级/职业要求
+            Row(
+              children: [
+                _buildRequirementBadge(
+                  '⭐ Lv.${quest.minLevel}',
+                  player.stats.level >= quest.minLevel,
+                ),
+                if (quest.requiredJob != null) ...[
+                  const SizedBox(width: 6),
+                  _buildRequirementBadge(
+                    '${quest.requiredJob!.emoji} ${quest.requiredJob!.displayName}',
+                    player.job == quest.requiredJob,
+                  ),
+                ],
               ],
             ),
             const SizedBox(height: 8),
@@ -229,13 +247,18 @@ class QuestDialog extends ConsumerWidget {
                 width: double.infinity,
                 child: ElevatedButton(
                   onPressed: showAccept
-                      ? () => _acceptQuest(context, ref, quest)
+                      ? (quest.canAccept(player) ? () => _acceptQuest(context, ref, quest) : null)
                       : () => _claimReward(context, ref, quest),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: showAccept ? Colors.green : Colors.amber,
                     foregroundColor: Colors.white,
+                    disabledBackgroundColor: Colors.grey[700],
                   ),
-                  child: Text(showAccept ? '接受任务' : '领取奖励'),
+                  child: Text(
+                    showAccept
+                        ? (quest.canAccept(player) ? '接受任务' : _whyCannotAccept(player, quest))
+                        : '领取奖励',
+                  ),
                 ),
               ),
             ],
@@ -296,7 +319,7 @@ class QuestDialog extends ConsumerWidget {
       context: context,
       barrierDismissible: false,
       builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF1A1A2E),
+        backgroundColor: MapleColors.background,
         title: Row(
           children: [
             Text(quest.targetJob!.emoji, style: const TextStyle(fontSize: 32)),
@@ -338,5 +361,33 @@ class QuestDialog extends ConsumerWidget {
         ],
       ),
     );
+  }
+
+  /// 等级/职业要求徽章 (满足:绿色;不满足:红色)
+  Widget _buildRequirementBadge(String text, bool met) {
+    final color = met ? Colors.green : Colors.red;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.2),
+        borderRadius: BorderRadius.circular(4),
+        border: Border.all(color: color.withOpacity(0.6)),
+      ),
+      child: Text(
+        text,
+        style: TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.bold),
+      ),
+    );
+  }
+
+  /// 给出无法接受的具体原因
+  String _whyCannotAccept(Player player, GameQuest quest) {
+    if (player.stats.level < quest.minLevel) {
+      return '需要 Lv.${quest.minLevel}';
+    }
+    if (quest.requiredJob != null && player.job != quest.requiredJob) {
+      return '需要 ${quest.requiredJob!.displayName}';
+    }
+    return '无法接受';
   }
 }

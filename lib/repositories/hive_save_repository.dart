@@ -12,9 +12,13 @@ import 'save_repository.dart';
 
 /// Hive 本地存档实现
 class HiveSaveRepository implements SaveRepository {
-  static const String _boxName = 'game_saves_v6';  // 升级版本号，避免旧存档冲突
+  static const String _boxName = 'game_saves_v6';
   static const String _saveKey = 'current_save_v6';
   static const String _equipmentKey = 'equipment_instances_v6';
+  static const String _backupKey = 'current_save_v6_backup';
+
+  /// 当前存档结构版本。新增/修改字段时 +1,并在 _migrate 中处理升级逻辑
+  static const int currentSchemaVersion = 1;
 
   Box? _box;
 
@@ -77,6 +81,7 @@ class HiveSaveRepository implements SaveRepository {
     if (_box == null) await init();
 
     final saveData = _GameSaveData(
+      schemaVersion: currentSchemaVersion,
       player: data.player,
       currentMapId: data.currentMap.id,
       logs: data.logs,
@@ -102,21 +107,45 @@ class HiveSaveRepository implements SaveRepository {
       final saveData = _box!.get(_saveKey) as _GameSaveData?;
       if (saveData == null) return null;
 
+      // 版本迁移
+      final migrated = _migrate(saveData);
+
       return GameData(
-        player: saveData.player,
-        currentMap: GameMaps.getMap(saveData.currentMapId),
+        player: migrated.player,
+        currentMap: GameMaps.getMap(migrated.currentMapId),
         gameState: GameState.exploring,
-        logs: saveData.logs,
+        logs: migrated.logs,
         random: Random(),
         shopCategory: ShopCategory.all,
-        mails: saveData.mails,
-        quests: saveData.quests,
+        mails: migrated.mails,
+        quests: migrated.quests,
       );
-    } catch (e) {
-      print('存档格式不兼容，重置存档: $e');
-      await _box!.delete(_saveKey);
+    } catch (e, stack) {
+      // 不再自动删除存档,而是备份后返回 null,让调用方/用户决定如何恢复
+      // ignore: avoid_print
+      print('存档加载失败 (已保留备份): $e\n$stack');
+      try {
+        final raw = _box!.get(_saveKey);
+        if (raw != null) {
+          await _box!.put(_backupKey, raw);
+        }
+      } catch (_) {
+        // 备份失败也不能让原始数据丢失
+      }
       return null;
     }
+  }
+
+  /// 版本迁移:把旧 schema 升级到 currentSchemaVersion
+  /// 未来 schema 变化在这里加 case 分支
+  _GameSaveData _migrate(_GameSaveData data) {
+    var current = data;
+    while (current.schemaVersion < currentSchemaVersion) {
+      // 占位:未来在这里写迁移逻辑
+      // case 1 -> 2: current = current.copyWith(schemaVersion: 2, /* 字段调整 */);
+      break;
+    }
+    return current;
   }
 
   @override
@@ -187,22 +216,75 @@ class HiveSaveRepository implements SaveRepository {
 
   @override
   Future<void> importFromJson(String json) async {
-    final data = jsonDecode(json) as Map<String, dynamic>;
+    // 安全检查 1: 大小限制 (1MB),防止粘贴超大字符串卡死 isolate
+    const maxImportBytes = 1024 * 1024;
+    if (json.length > maxImportBytes) {
+      throw FormatException('存档过大 (${json.length} > $maxImportBytes 字节)');
+    }
+    if (json.trim().isEmpty) {
+      throw const FormatException('存档内容为空');
+    }
 
-    final player = _playerFromJson(data['player'] as Map<String, dynamic>);
+    // 安全检查 2: JSON 解析与基础结构校验
+    final Map<String, dynamic> data;
+    try {
+      final decoded = jsonDecode(json);
+      if (decoded is! Map<String, dynamic>) {
+        throw const FormatException('存档根节点必须是对象');
+      }
+      data = decoded;
+    } on FormatException {
+      rethrow;
+    } catch (e) {
+      throw FormatException('JSON 解析失败: $e');
+    }
+
+    // 安全检查 3: 必填字段
+    if (data['player'] is! Map<String, dynamic>) {
+      throw const FormatException('缺少 player 字段或类型错误');
+    }
+    if (data['currentMapId'] is! String) {
+      throw const FormatException('缺少 currentMapId 字段或类型错误');
+    }
+
+    // 安全检查 4: schemaVersion 不能高于当前支持版本
+    final importedVersion = data['schemaVersion'] as int? ?? 1;
+    if (importedVersion > currentSchemaVersion) {
+      throw FormatException(
+        '存档版本 v$importedVersion 高于当前支持的 v$currentSchemaVersion,请升级游戏',
+      );
+    }
+
+    // 安全检查 5: currentMapId 必须存在
     final currentMapId = data['currentMapId'] as String;
-    final logs = (data['logs'] as List).map((log) => LogEntry(
-      message: log['message'] as String,
-      type: LogType.values[log['type'] as int],
-    )).toList();
-    final mails = data['mails'] != null
-        ? (data['mails'] as List).map((m) => _mailFromJson(m as Map<String, dynamic>)).toList()
-        : <GameMail>[];
-    final quests = data['quests'] != null
-        ? (data['quests'] as List).map((q) => _questFromJson(q as Map<String, dynamic>)).toList()
-        : QuestDatabase.getAllQuests();
+    final knownMap = GameMaps.getMap(currentMapId);
+    if (knownMap.id != currentMapId) {
+      throw FormatException('未知地图: $currentMapId');
+    }
+
+    // 安全检查 6: 尝试解析子结构,失败前不动任何持久化数据
+    final Player player;
+    final List<LogEntry> logs;
+    final List<GameMail> mails;
+    final List<GameQuest> quests;
+    try {
+      player = _playerFromJson(data['player'] as Map<String, dynamic>);
+      logs = ((data['logs'] as List?) ?? []).map((log) => LogEntry(
+        message: log['message'] as String,
+        type: LogType.values[log['type'] as int],
+      )).toList();
+      mails = data['mails'] != null
+          ? (data['mails'] as List).map((m) => _mailFromJson(m as Map<String, dynamic>)).toList()
+          : <GameMail>[];
+      quests = data['quests'] != null
+          ? (data['quests'] as List).map((q) => _questFromJson(q as Map<String, dynamic>)).toList()
+          : QuestDatabase.getAllQuests();
+    } catch (e) {
+      throw FormatException('存档结构解析失败: $e');
+    }
 
     final saveData = _GameSaveData(
+      schemaVersion: currentSchemaVersion,
       player: player,
       currentMapId: currentMapId,
       logs: logs,
@@ -212,10 +294,21 @@ class HiveSaveRepository implements SaveRepository {
     );
 
     if (_box == null) await init();
+
+    // 写入前先备份当前存档,出错时可恢复
+    try {
+      final existing = _box!.get(_saveKey);
+      if (existing != null) {
+        await _box!.put(_backupKey, existing);
+      }
+    } catch (_) {
+      // 备份失败不阻塞导入
+    }
+
     await _box!.put(_saveKey, saveData);
 
-    // 导入装备实例
-    if (data['equipmentInstances'] != null) {
+    // 导入装备实例 (容错: 校验是 String 类型)
+    if (data['equipmentInstances'] is String) {
       await _box!.put(_equipmentKey, data['equipmentInstances'] as String);
     }
   }
@@ -333,15 +426,22 @@ class HiveSaveRepository implements SaveRepository {
         'dex': player.stats.dex,
         'int': player.stats.intStat,
         'luk': player.stats.luk,
+        'ap': player.stats.ap,
+        'sp': player.stats.sp,
       },
       'meso': player.meso,
       'inventory': player.inventory,
       'currentMap': player.currentMap,
+      'skillLevels': player.skillLevels,
     };
   }
 
   Player _playerFromJson(Map<String, dynamic> json) {
     final statsJson = json['stats'] as Map<String, dynamic>;
+    final skillLevelsRaw = json['skillLevels'];
+    final Map<String, int> skillLevels = skillLevelsRaw is Map
+        ? skillLevelsRaw.map((k, v) => MapEntry(k.toString(), v as int))
+        : <String, int>{};
     return Player(
       name: json['name'] as String,
       job: Job.values[json['job'] as int],
@@ -357,10 +457,13 @@ class HiveSaveRepository implements SaveRepository {
         dex: statsJson['dex'] as int,
         intStat: statsJson['int'] as int,
         luk: statsJson['luk'] as int,
+        ap: statsJson['ap'] as int? ?? 0,
+        sp: statsJson['sp'] as int? ?? 0,
       ),
       meso: json['meso'] as int,
       inventory: List<String>.from(json['inventory'] as List),
       currentMap: json['currentMap'] as String,
+      skillLevels: skillLevels,
     );
   }
 
@@ -433,6 +536,7 @@ class HiveSaveRepository implements SaveRepository {
 
 /// 存档数据类（用于 Hive 存储）
 class _GameSaveData {
+  final int schemaVersion;
   final Player player;
   final String currentMapId;
   final List<LogEntry> logs;
@@ -441,6 +545,7 @@ class _GameSaveData {
   final DateTime timestamp;
 
   _GameSaveData({
+    this.schemaVersion = 1,
     required this.player,
     required this.currentMapId,
     required this.logs,
@@ -448,6 +553,26 @@ class _GameSaveData {
     required this.quests,
     required this.timestamp,
   });
+
+  _GameSaveData copyWith({
+    int? schemaVersion,
+    Player? player,
+    String? currentMapId,
+    List<LogEntry>? logs,
+    List<GameMail>? mails,
+    List<GameQuest>? quests,
+    DateTime? timestamp,
+  }) {
+    return _GameSaveData(
+      schemaVersion: schemaVersion ?? this.schemaVersion,
+      player: player ?? this.player,
+      currentMapId: currentMapId ?? this.currentMapId,
+      logs: logs ?? this.logs,
+      mails: mails ?? this.mails,
+      quests: quests ?? this.quests,
+      timestamp: timestamp ?? this.timestamp,
+    );
+  }
 }
 
 /// Hive 适配器
@@ -457,13 +582,32 @@ class GameDataAdapter extends TypeAdapter<_GameSaveData> {
 
   @override
   _GameSaveData read(BinaryReader reader) {
+    final player = reader.read() as Player;
+    final currentMapId = reader.readString();
+    final logs = reader.readList().cast<LogEntry>();
+    final mails = reader.readList().cast<GameMail>();
+    final quests = reader.readList().cast<GameQuest>();
+    final timestamp = DateTime.parse(reader.readString());
+
+    // schemaVersion 写在尾部以保持向后兼容
+    // 老存档没有这个字段,读取失败时默认为 1
+    int schemaVersion = 1;
+    try {
+      if (reader.availableBytes > 0) {
+        schemaVersion = reader.readInt();
+      }
+    } catch (_) {
+      schemaVersion = 1;
+    }
+
     return _GameSaveData(
-      player: reader.read() as Player,
-      currentMapId: reader.readString(),
-      logs: reader.readList().cast<LogEntry>(),
-      mails: reader.readList().cast<GameMail>(),
-      quests: reader.readList().cast<GameQuest>(),
-      timestamp: DateTime.parse(reader.readString()),
+      schemaVersion: schemaVersion,
+      player: player,
+      currentMapId: currentMapId,
+      logs: logs,
+      mails: mails,
+      quests: quests,
+      timestamp: timestamp,
     );
   }
 
@@ -475,6 +619,7 @@ class GameDataAdapter extends TypeAdapter<_GameSaveData> {
     writer.writeList(obj.mails);
     writer.writeList(obj.quests);
     writer.writeString(obj.timestamp.toIso8601String());
+    writer.writeInt(obj.schemaVersion);
   }
 }
 
@@ -495,6 +640,19 @@ class PlayerAdapter extends TypeAdapter<Player> {
     final equipmentJson = reader.readString();
     final equipment = _equipmentMapFromJson(equipmentJson);
 
+    // 向后兼容:老存档没有 skillLevels
+    Map<String, int> skillLevels = {};
+    try {
+      if (reader.availableBytes > 0) {
+        final length = reader.readInt();
+        for (int i = 0; i < length; i++) {
+          final key = reader.readString();
+          final value = reader.readInt();
+          skillLevels[key] = value;
+        }
+      }
+    } catch (_) {}
+
     return Player(
       name: name,
       job: job,
@@ -503,6 +661,7 @@ class PlayerAdapter extends TypeAdapter<Player> {
       inventory: inventory,
       currentMap: currentMap,
       equipment: equipment,
+      skillLevels: skillLevels,
     );
   }
 
@@ -516,6 +675,12 @@ class PlayerAdapter extends TypeAdapter<Player> {
     writer.writeString(obj.currentMap);
     // 保存装备为JSON
     writer.writeString(_equipmentMapToJson(obj.equipment));
+    // 保存技能等级 (新字段,写在尾部保持兼容)
+    writer.writeInt(obj.skillLevels.length);
+    obj.skillLevels.forEach((key, value) {
+      writer.writeString(key);
+      writer.writeInt(value);
+    });
   }
 
   // 装备Map转JSON
@@ -627,18 +792,38 @@ class StatsAdapter extends TypeAdapter<Stats> {
 
   @override
   Stats read(BinaryReader reader) {
+    final level = reader.readInt();
+    final hp = reader.readInt();
+    final maxHp = reader.readInt();
+    final mp = reader.readInt();
+    final maxMp = reader.readInt();
+    final exp = reader.readInt();
+    final maxExp = reader.readInt();
+    final str = reader.readInt();
+    final dex = reader.readInt();
+    final intStat = reader.readInt();
+    final luk = reader.readInt();
+    // 向后兼容:老存档没有 ap/sp,读取失败时默认 0
+    int ap = 0;
+    int sp = 0;
+    try {
+      if (reader.availableBytes > 0) ap = reader.readInt();
+      if (reader.availableBytes > 0) sp = reader.readInt();
+    } catch (_) {}
     return Stats(
-      level: reader.readInt(),
-      hp: reader.readInt(),
-      maxHp: reader.readInt(),
-      mp: reader.readInt(),
-      maxMp: reader.readInt(),
-      exp: reader.readInt(),
-      maxExp: reader.readInt(),
-      str: reader.readInt(),
-      dex: reader.readInt(),
-      intStat: reader.readInt(),
-      luk: reader.readInt(),
+      level: level,
+      hp: hp,
+      maxHp: maxHp,
+      mp: mp,
+      maxMp: maxMp,
+      exp: exp,
+      maxExp: maxExp,
+      str: str,
+      dex: dex,
+      intStat: intStat,
+      luk: luk,
+      ap: ap,
+      sp: sp,
     );
   }
 
@@ -655,6 +840,8 @@ class StatsAdapter extends TypeAdapter<Stats> {
     writer.writeInt(obj.dex);
     writer.writeInt(obj.intStat);
     writer.writeInt(obj.luk);
+    writer.writeInt(obj.ap);
+    writer.writeInt(obj.sp);
   }
 }
 

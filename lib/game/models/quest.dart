@@ -167,6 +167,62 @@ class QuestDatabase {
       targetMapId: 'nautilus',
       rewards: {'meso': 2000, 'exp': 500},
     ),
+    // ========== 二转任务 (30 级) ==========
+    GameQuest(
+      id: 'job2_fighter',
+      title: '剑客的觉醒',
+      description: '战士进阶之路！等级 30 以上,前往勇士部落与武术教练对话,觉醒为剑客。剑客拥有更强的力量和 HP 增长。',
+      type: QuestType.jobChange,
+      minLevel: 30,
+      requiredJob: Job.warrior,
+      targetJob: Job.fighter,
+      targetMapId: 'perion',
+      rewards: {'meso': 8000, 'exp': 3000},
+    ),
+    GameQuest(
+      id: 'job2_fp_mage',
+      title: '火元素的领悟',
+      description: '法师进阶之路！等级 30 以上,前往魔法密林研习火属性魔法,觉醒为火法师。火法师释放的火球术伤害极高。',
+      type: QuestType.jobChange,
+      minLevel: 30,
+      requiredJob: Job.magician,
+      targetJob: Job.fpMage,
+      targetMapId: 'ellinia',
+      rewards: {'meso': 8000, 'exp': 3000},
+    ),
+    GameQuest(
+      id: 'job2_hunter',
+      title: '猎人的契约',
+      description: '弓箭手进阶之路！等级 30 以上,前往射手村公园,与赫丽娜签订猎人契约。猎人的三连射可造成多段伤害。',
+      type: QuestType.jobChange,
+      minLevel: 30,
+      requiredJob: Job.bowman,
+      targetJob: Job.hunter,
+      targetMapId: 'henesys_park',
+      rewards: {'meso': 8000, 'exp': 3000},
+    ),
+    GameQuest(
+      id: 'job2_assassin',
+      title: '刺客的暗影',
+      description: '飞侠进阶之路！等级 30 以上,前往废弃都市,接受达克鲁的考验,觉醒为刺客。刺客的幸运七必定暴击。',
+      type: QuestType.jobChange,
+      minLevel: 30,
+      requiredJob: Job.thief,
+      targetJob: Job.assassin,
+      targetMapId: 'kerning',
+      rewards: {'meso': 8000, 'exp': 3000},
+    ),
+    GameQuest(
+      id: 'job2_brawler',
+      title: '拳手的狂怒',
+      description: '海盗进阶之路！等级 30 以上,前往诺特勒斯号,与凯琳交手,觉醒为拳手。拳手以双拳粉碎一切。',
+      type: QuestType.jobChange,
+      minLevel: 30,
+      requiredJob: Job.pirate,
+      targetJob: Job.brawler,
+      targetMapId: 'nautilus',
+      rewards: {'meso': 8000, 'exp': 3000},
+    ),
     // ========== 高级等级任务 ==========
     // 20级任务
     GameQuest(
@@ -257,14 +313,12 @@ class QuestDatabase {
     return _quests.where((q) => q.type == QuestType.jobChange).toList();
   }
 
-  /// 根据ID获取任务
-  static GameQuest? getQuestById(String id) {
-    try {
-      return _quests.firstWhere((q) => q.id == id);
-    } catch (e) {
-      return null;
-    }
-  }
+  /// 根据ID获取任务 - O(1) Map 查询
+  static final Map<String, GameQuest> _byId = {
+    for (final q in _quests) q.id: q,
+  };
+
+  static GameQuest? getQuestById(String id) => _byId[id];
 
   /// 获取适合玩家的可接任务
   static List<GameQuest> getAvailableQuestsForPlayer(Player player) {

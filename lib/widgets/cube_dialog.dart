@@ -1,5 +1,6 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
+import "../utils/maple_theme.dart";
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/game_provider.dart';
 import '../game/models/player.dart';
@@ -191,7 +192,7 @@ class _CubeDialogState extends ConsumerState<CubeDialog> {
     final hasRolled = _previewStats != null;
 
     return AlertDialog(
-      backgroundColor: const Color(0xFF1A1A2E),
+      backgroundColor: MapleColors.background,
       title: Row(
         children: [
           Text(_cubeEmoji, style: const TextStyle(fontSize: 28)),
@@ -229,7 +230,7 @@ class _CubeDialogState extends ConsumerState<CubeDialog> {
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: const Color(0xFF0F3460),
+                color: MapleColors.card,
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Row(
@@ -302,7 +303,7 @@ class _CubeDialogState extends ConsumerState<CubeDialog> {
                               .replaceFirst('#', '0xFF'),
                         ),
                       ).withOpacity(0.2)
-                    : const Color(0xFF0F3460),
+                    : MapleColors.card,
                 borderRadius: BorderRadius.circular(12),
                 border: hasRolled
                     ? Border.all(
@@ -655,7 +656,7 @@ class CubeEquipmentSelector extends ConsumerWidget {
         .toList();
 
     return AlertDialog(
-      backgroundColor: const Color(0xFF1A1A2E),
+      backgroundColor: MapleColors.background,
       title: Row(
         children: [
           Text(_getCubeEmoji(cubeType), style: const TextStyle(fontSize: 28)),
@@ -696,7 +697,7 @@ class CubeEquipmentSelector extends ConsumerWidget {
                   final potential = equipment.potential;
 
                   return Card(
-                    color: const Color(0xFF0F3460),
+                    color: MapleColors.card,
                     margin: const EdgeInsets.only(bottom: 8),
                     child: ListTile(
                       leading: Text(
