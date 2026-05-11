@@ -1,6 +1,6 @@
 import 'dart:convert';
 import 'dart:math' as math;
-import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:http/http.dart' as http;
 import '../game/models/map.dart';
 import '../game/models/mail.dart';
 import '../game/models/player.dart';
@@ -9,60 +9,55 @@ import '../game/models/quest.dart';
 import '../providers/game_provider.dart';
 import 'save_repository.dart';
 
-/// Supabase 云端存档实现（无 auth 版本）
+/// Supabase 云端存档实现（HTTP 直连版本）
 ///
-/// 使用设备 UUID 作为标识，无需登录即可存档。
-/// 适合 Flutter Web 等 auth 可能被拦截的环境。
+/// 不依赖 supabase_flutter 包，直接用 HTTP 访问 REST API。
+/// 完全绕过 auth，使用设备 UUID 作为标识。
 class SupabaseSaveRepository implements SaveRepository {
   static const String _tableName = 'player_saves';
   static const String _backupTableName = 'player_save_backups';
-  static const String _deviceIdKey = 'supabase_device_id';
 
-  SupabaseClient get _client => Supabase.instance.client;
+  final String _url;
+  final String _key;
+  late final String _deviceId;
 
-  String? _deviceId;
+  SupabaseSaveRepository({required String url, required String key})
+      : _url = url.replaceAll(RegExp(r'/$'), ''),
+        _key = key;
 
-  /// 初始化：生成或读取设备 UUID
+  Map<String, String> get _headers => {
+        'apikey': _key,
+        'Authorization': 'Bearer $_key',
+        'Content-Type': 'application/json',
+        'Prefer': 'return=representation',
+      };
+
+  /// 初始化：生成设备 UUID
   Future<void> init() async {
-    _deviceId = await _getOrCreateDeviceId();
-  }
-
-  /// 从 localStorage 读取设备 ID，没有则生成新的
-  Future<String> _getOrCreateDeviceId() async {
-    try {
-      final existing = _client.auth.currentSession?.accessToken;
-      // 尝试从 localStorage 读取（通过 Supabase 的本地存储）
-      // 实际上我们用 Supabase 的 auth 存储来存 device_id
-      // 但 auth 失败了，所以我们用另一种方式
-    } catch (_) {}
-
-    // 生成新的 UUID v4
-    return _generateUuid();
+    _deviceId = _generateUuid();
   }
 
   String _generateUuid() {
     final random = math.Random();
     final bytes = List<int>.generate(16, (_) => random.nextInt(256));
-    bytes[6] = (bytes[6] & 0x0F) | 0x40; // version 4
-    bytes[8] = (bytes[8] & 0x3F) | 0x80; // variant
-
+    bytes[6] = (bytes[6] & 0x0F) | 0x40;
+    bytes[8] = (bytes[8] & 0x3F) | 0x80;
     final hex = bytes.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
     return '${hex.substring(0, 8)}-${hex.substring(8, 12)}-${hex.substring(12, 16)}-${hex.substring(16, 20)}-${hex.substring(20, 32)}';
   }
 
   @override
-  Future<void> saveGame(GameData data, {Map<String, Equipment>? equipmentInstances}) async {
-    if (_deviceId == null) throw Exception('未初始化');
-
+  Future<void> saveGame(GameData data,
+      {Map<String, Equipment>? equipmentInstances}) async {
     final saveData = {
       'schema_version': 1,
       'player': _playerToJson(data.player),
       'current_map_id': data.currentMap.id,
       'logs': data.logs.map((log) => {
-        'message': log.message,
-        'type': log.type.index,
-        'timestamp': log.timestamp.toIso8601String(),
-      }).toList(),
+            'message': log.message,
+            'type': log.type.index,
+            'timestamp': log.timestamp.toIso8601String(),
+          }).toList(),
       'mails': data.mails.map((mail) => _mailToJson(mail)).toList(),
       'quests': data.quests.map((quest) => _questToJson(quest)).toList(),
       'auto_explore': data.isAutoExplore,
@@ -74,34 +69,50 @@ class SupabaseSaveRepository implements SaveRepository {
         ? _equipmentInstancesToJson(equipmentInstances)
         : null;
 
-    await _client.from(_tableName).upsert({
+    final body = jsonEncode({
       'device_id': _deviceId,
       'save_data': saveData,
       'equipment_instances': equipmentJson,
       'updated_at': DateTime.now().toIso8601String(),
     });
+
+    final response = await http.post(
+      Uri.parse('$_url/rest/v1/$_tableName'),
+      headers: {..._headers, 'Prefer': 'resolution=merge-duplicates'},
+      body: body,
+    );
+
+    if (response.statusCode != 200 && response.statusCode != 201) {
+      throw Exception('保存失败: ${response.statusCode} ${response.body}');
+    }
   }
 
   @override
   Future<GameData?> loadGame() async {
-    if (_deviceId == null) return null;
-
     try {
-      final response = await _client
-          .from(_tableName)
-          .select()
-          .eq('device_id', _deviceId!)
-          .maybeSingle();
+      final response = await http.get(
+        Uri.parse(
+            '$_url/rest/v1/$_tableName?device_id=eq.$_deviceId&select=*'),
+        headers: _headers,
+      );
 
-      if (response == null) return null;
+      if (response.statusCode != 200) {
+        print('读档 HTTP 错误: ${response.statusCode}');
+        return null;
+      }
 
-      final saveData = response['save_data'] as Map<String, dynamic>;
-      final player = _playerFromJson(saveData['player'] as Map<String, dynamic>);
+      final List<dynamic> results = jsonDecode(response.body);
+      if (results.isEmpty) return null;
+
+      final row = results.first;
+      final saveData = row['save_data'] as Map<String, dynamic>;
+      final player =
+          _playerFromJson(saveData['player'] as Map<String, dynamic>);
       final currentMapId = saveData['current_map_id'] as String;
       final logs = ((saveData['logs'] as List?) ?? []).map((log) => LogEntry(
-        message: log['message'] as String,
-        type: LogType.values[log['type'] as int],
-      )).toList();
+            message: log['message'] as String,
+            type: LogType.values[log['type'] as int],
+          )).toList();
       final mails = ((saveData['mails'] as List?) ?? [])
           .map((m) => _mailFromJson(m as Map<String, dynamic>))
           .toList();
@@ -130,46 +141,56 @@ class SupabaseSaveRepository implements SaveRepository {
 
   @override
   Future<Map<String, Equipment>?> loadEquipmentInstances() async {
-    if (_deviceId == null) return null;
-
     try {
-      final response = await _client
-          .from(_tableName)
-          .select('equipment_instances')
-          .eq('device_id', _deviceId!)
-          .maybeSingle();
+      final response = await http.get(
+        Uri.parse(
+            '$_url/rest/v1/$_tableName?device_id=eq.$_deviceId&select=equipment_instances'),
+        headers: _headers,
+      );
 
-      if (response == null) return null;
+      if (response.statusCode != 200) return null;
 
-      final jsonStr = response['equipment_instances'] as String?;
+      final List<dynamic> results = jsonDecode(response.body);
+      if (results.isEmpty) return null;
+
+      final jsonStr = results.first['equipment_instances'] as String?;
       if (jsonStr == null) return null;
 
       return _equipmentInstancesFromJson(jsonStr);
     } catch (e) {
-      print('云端装备实例加载失败: $e');
+      print('装备实例加载失败: $e');
       return null;
     }
   }
 
   @override
   Future<void> deleteSave() async {
-    if (_deviceId == null) return;
-    await _client.from(_tableName).delete().eq('device_id', _deviceId!);
+    await http.delete(
+      Uri.parse(
+          '$_url/rest/v1/$_tableName?device_id=eq.$_deviceId'),
+      headers: _headers,
+    );
   }
 
   @override
   Future<bool> hasSave() async {
-    if (_deviceId == null) return false;
-    final response = await _client
-        .from(_tableName)
-        .select()
-        .eq('device_id', _deviceId!)
-        .maybeSingle();
-    return response != null;
+    try {
+      final response = await http.get(
+        Uri.parse(
+            '$_url/rest/v1/$_tableName?device_id=eq.$_deviceId&select=id'),
+        headers: _headers,
+      );
+      if (response.statusCode != 200) return false;
+      final List<dynamic> results = jsonDecode(response.body);
+      return results.isNotEmpty;
+    } catch (_) {
+      return false;
+    }
   }
 
   @override
-  Future<String> exportToJson(Map<String, Equipment> equipmentInstances) async {
+  Future<String> exportToJson(
+      Map<String, Equipment> equipmentInstances) async {
     final data = await loadGame();
     if (data == null) throw Exception('没有存档可导出');
 
@@ -177,10 +198,10 @@ class SupabaseSaveRepository implements SaveRepository {
       'player': _playerToJson(data.player),
       'currentMapId': data.currentMap.id,
       'logs': data.logs.map((log) => {
-        'message': log.message,
-        'type': log.type.index,
-        'timestamp': log.timestamp.toIso8601String(),
-      }).toList(),
+            'message': log.message,
+            'type': log.type.index,
+            'timestamp': log.timestamp.toIso8601String(),
+          }).toList(),
       'mails': data.mails.map((mail) => _mailToJson(mail)).toList(),
       'quests': data.quests.map((quest) => _questToJson(quest)).toList(),
       'equipmentInstances': _equipmentInstancesToJson(equipmentInstances),
@@ -231,41 +252,55 @@ class SupabaseSaveRepository implements SaveRepository {
     try {
       player = _playerFromJson(data['player'] as Map<String, dynamic>);
       logs = ((data['logs'] as List?) ?? []).map((log) => LogEntry(
-        message: log['message'] as String,
-        type: LogType.values[log['type'] as int],
-      )).toList();
+            message: log['message'] as String,
+            type: LogType.values[log['type'] as int],
+          )).toList();
       mails = data['mails'] != null
-          ? (data['mails'] as List).map((m) => _mailFromJson(m as Map<String, dynamic>)).toList()
+          ? (data['mails'] as List)
+              .map((m) => _mailFromJson(m as Map<String, dynamic>))
+              .toList()
           : <GameMail>[];
       quests = data['quests'] != null
-          ? (data['quests'] as List).map((q) => _questFromJson(q as Map<String, dynamic>)).toList()
+          ? (data['quests'] as List)
+              .map((q) => _questFromJson(q as Map<String, dynamic>))
+              .toList()
           : QuestDatabase.getAllQuests();
     } catch (e) {
       throw FormatException('存档结构解析失败: $e');
     }
-
-    if (_deviceId == null) throw Exception('未初始化');
 
     final saveData = {
       'schema_version': 1,
       'player': _playerToJson(player),
       'current_map_id': currentMapId,
       'logs': logs.map((log) => {
-        'message': log.message,
-        'type': log.type.index,
-        'timestamp': log.timestamp.toIso8601String(),
-      }).toList(),
+            'message': log.message,
+            'type': log.type.index,
+            'timestamp': log.timestamp.toIso8601String(),
+          }).toList(),
       'mails': mails.map((m) => _mailToJson(m)).toList(),
       'quests': quests.map((q) => _questToJson(q)).toList(),
       'saved_at': DateTime.now().toIso8601String(),
     };
 
-    await _client.from(_tableName).upsert({
+    final body = jsonEncode({
       'device_id': _deviceId,
       'save_data': saveData,
-      'equipment_instances': data['equipmentInstances'] is String ? data['equipmentInstances'] : null,
+      'equipment_instances': data['equipmentInstances'] is String
+          ? data['equipmentInstances']
+          : null,
       'updated_at': DateTime.now().toIso8601String(),
     });
+
+    final response = await http.post(
+      Uri.parse('$_url/rest/v1/$_tableName'),
+      headers: {..._headers, 'Prefer': 'resolution=merge-duplicates'},
+      body: body,
+    );
+
+    if (response.statusCode != 200 && response.statusCode != 201) {
+      throw Exception('导入失败: ${response.statusCode} ${response.body}');
+    }
   }
 
   // ========== JSON 序列化辅助方法 ==========
@@ -345,13 +380,13 @@ class SupabaseSaveRepository implements SaveRepository {
       'is_read': mail.isRead,
       'is_claimed': mail.isClaimed,
       'attachments': mail.attachments.map((a) => {
-        'type': a.type.index,
-        'item_id': a.itemId,
-        'equipment_id': a.equipmentId,
-        'instance_id': a.instanceId,
-        'count': a.count,
-        'meso': a.meso,
-      }).toList(),
+            'type': a.type.index,
+            'item_id': a.itemId,
+            'equipment_id': a.equipmentId,
+            'instance_id': a.instanceId,
+            'count': a.count,
+            'meso': a.meso,
+          }).toList(),
     };
   }
 
@@ -366,13 +401,13 @@ class SupabaseSaveRepository implements SaveRepository {
       isClaimed: json['is_claimed'] as bool? ?? false,
       attachments: (json['attachments'] as List? ?? [])
           .map((a) => MailAttachment(
-            type: MailAttachmentType.values[a['type'] as int],
-            itemId: a['item_id'] as String?,
-            equipmentId: a['equipment_id'] as String?,
-            instanceId: a['instance_id'] as String?,
-            count: a['count'] as int?,
-            meso: a['meso'] as int?,
-          ))
+                type: MailAttachmentType.values[a['type'] as int],
+                itemId: a['item_id'] as String?,
+                equipmentId: a['equipment_id'] as String?,
+                instanceId: a['instance_id'] as String?,
+                count: a['count'] as int?,
+                meso: a['meso'] as int?,
+              ))
           .toList(),
     );
   }
@@ -402,8 +437,12 @@ class SupabaseSaveRepository implements SaveRepository {
       description: json['description'] as String,
       type: QuestType.values[json['type'] as int],
       minLevel: json['min_level'] as int,
-      requiredJob: json['required_job'] != null ? Job.values[json['required_job'] as int] : null,
-      targetJob: json['target_job'] != null ? Job.values[json['target_job'] as int] : null,
+      requiredJob: json['required_job'] != null
+          ? Job.values[json['required_job'] as int]
+          : null,
+      targetJob: json['target_job'] != null
+          ? Job.values[json['target_job'] as int]
+          : null,
       targetMapId: json['target_map_id'] as String?,
       targetMobs: (json['target_mobs'] as List).cast<String>(),
       targetCount: json['target_count'] as int,
@@ -426,7 +465,8 @@ class SupabaseSaveRepository implements SaveRepository {
   }
 
   Map<String, Equipment> _equipmentInstancesFromJson(String json) {
-    final Map<String, dynamic> jsonMap = jsonDecode(json) as Map<String, dynamic>;
+    final Map<String, dynamic> jsonMap =
+        jsonDecode(json) as Map<String, dynamic>;
     final Map<String, Equipment> instances = {};
     for (final entry in jsonMap.entries) {
       final equip = _equipmentFromJson(entry.value as Map<String, dynamic>);
@@ -455,7 +495,9 @@ class SupabaseSaveRepository implements SaveRepository {
       'level_req': equipment.levelReq,
       'crit': equipment.crit,
       'avoid': equipment.avoid,
-      'potential': equipment.potential != null ? _potentialToJson(equipment.potential!) : null,
+      'potential': equipment.potential != null
+          ? _potentialToJson(equipment.potential!)
+          : null,
     };
   }
 
@@ -492,10 +534,10 @@ class SupabaseSaveRepository implements SaveRepository {
     return {
       'grade': potential.grade.index,
       'stats': potential.stats.map((s) => {
-        'type': s.type.index,
-        'value': s.value,
-        'grade': s.grade,
-      }).toList(),
+            'type': s.type.index,
+            'value': s.value,
+            'grade': s.grade,
+          }).toList(),
     };
   }
 
@@ -503,14 +545,15 @@ class SupabaseSaveRepository implements SaveRepository {
     return EquipmentPotential(
       grade: PotentialGrade.values[json['grade'] as int],
       stats: (json['stats'] as List).map((s) => PotentialStat(
-        type: PotentialType.values[s['type'] as int],
-        value: s['value'] as int,
-        grade: s['grade'] as String,
-      )).toList(),
+            type: PotentialType.values[s['type'] as int],
+            value: s['value'] as int,
+            grade: s['grade'] as String,
+          )).toList(),
     );
   }
 
-  Map<String, dynamic> _equipmentMapToJson(Map<EquipmentSlot, Equipment?> equipment) {
+  Map<String, dynamic> _equipmentMapToJson(
+      Map<EquipmentSlot, Equipment?> equipment) {
     final Map<String, dynamic> jsonMap = {};
     for (final entry in equipment.entries) {
       if (entry.value != null) {
@@ -520,7 +563,8 @@ class SupabaseSaveRepository implements SaveRepository {
     return jsonMap;
   }
 
-  Map<EquipmentSlot, Equipment?> _equipmentMapFromJson(Map<String, dynamic> json) {
+  Map<EquipmentSlot, Equipment?> _equipmentMapFromJson(
+      Map<String, dynamic> json) {
     final Map<EquipmentSlot, Equipment?> equipment = {};
     for (final entry in json.entries) {
       final slotIndex = int.parse(entry.key);
