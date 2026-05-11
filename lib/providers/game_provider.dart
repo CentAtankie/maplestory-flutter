@@ -1953,9 +1953,15 @@ class GameData {
   }
 }
 
+// 存档仓库 Provider（可被 override）
+final saveRepositoryProvider = Provider<SaveRepository>((ref) {
+  return HiveSaveRepository();
+});
+
 // Provider 定义
 final gameProvider = StateNotifierProvider<GameNotifier, GameData>((ref) {
-  return GameNotifier();
+  final repo = ref.watch(saveRepositoryProvider);
+  return GameNotifier(saveRepository: repo);
 });
 
 // 辅助类

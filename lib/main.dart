@@ -1,23 +1,53 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'providers/game_provider.dart';
 import 'repositories/hive_save_repository.dart';
+import 'repositories/save_repository.dart';
+import 'repositories/supabase_save_repository.dart';
 import 'screens/game_screen.dart';
 import 'services/audio_manager.dart';
+
+// ===================== Supabase 配置 =====================
+const String supabaseUrl = 'https://jwanzezqcwzievzpjnil.supabase.co';
+const String supabaseAnonKey =
+    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp3Ym56ZXpxY3d6aWV2enBqbmlsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg0NTU5NjcsImV4cCI6MjA5NDAzMTk2N30.O_6v9xg-ASnS4bGvaCkRbHcYY_wZY3jX02ican2fHJE';
+// =========================================================
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // 初始化 Hive 存档
+  // 初始化 Hive 本地存档（作为离线回退）
   await HiveSaveRepository().init();
+
+  // 初始化 Supabase（如果配置了 URL）
+  SupabaseSaveRepository? cloudRepository;
+  if (supabaseUrl.startsWith('https://')) {
+    try {
+      await Supabase.initialize(
+        url: supabaseUrl,
+        anonKey: supabaseAnonKey,
+      );
+      cloudRepository = SupabaseSaveRepository();
+      await cloudRepository.init();
+    } catch (e) {
+      // Supabase 初始化失败时回退到本地 Hive 存档
+      // ignore: avoid_print
+      print('Supabase 初始化失败，使用本地存档: $e');
+    }
+  }
 
   // 初始化音频并播放背景音乐
   await AudioManager().init();
   await AudioManager().playHenesysBGM();
 
   runApp(
-    const ProviderScope(
-      child: MapleStoryApp(),
+    ProviderScope(
+      overrides: [
+        if (cloudRepository != null)
+          saveRepositoryProvider.overrideWithValue(cloudRepository),
+      ],
+      child: const MapleStoryApp(),
     ),
   );
 }
