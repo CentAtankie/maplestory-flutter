@@ -21,15 +21,16 @@ void main() async {
   await HiveSaveRepository().init();
 
   // 初始化 Supabase（如果配置了 URL）
-  SupabaseSaveRepository? cloudRepository;
+  SaveRepository? cloudRepository;
   if (supabaseUrl.startsWith('https://')) {
     try {
       await Supabase.initialize(
         url: supabaseUrl,
         anonKey: supabaseAnonKey,
       );
-      cloudRepository = SupabaseSaveRepository();
-      await cloudRepository.init();
+      final repo = SupabaseSaveRepository();
+      await repo.init();
+      cloudRepository = repo;
     } catch (e) {
       // Supabase 初始化失败时回退到本地 Hive 存档
       // ignore: avoid_print
