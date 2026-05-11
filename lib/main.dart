@@ -10,8 +10,7 @@ import 'services/audio_manager.dart';
 
 // ===================== Supabase 配置 =====================
 const String supabaseUrl = 'https://jwanzezqcwzievzpjnil.supabase.co';
-const String supabaseAnonKey =
-    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp3Ym56ZXpxY3d6aWV2enBqbmlsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg0NTU5NjcsImV4cCI6MjA5NDAzMTk2N30.O_6v9xg-ASnS4bGvaCkRbHcYY_wZY3jX02ican2fHJE';
+const String supabaseAnonKey = 'sb_publishable_SCgGMpokhJuu3JVoWM2slQ_zYocgZSm';
 // =========================================================
 
 void main() async {

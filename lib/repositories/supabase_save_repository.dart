@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:math' as math;
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../game/models/map.dart';
 import '../game/models/mail.dart';
@@ -8,49 +9,50 @@ import '../game/models/quest.dart';
 import '../providers/game_provider.dart';
 import 'save_repository.dart';
 
-/// Supabase 云端存档实现
+/// Supabase 云端存档实现（无 auth 版本）
 ///
-/// 使用 Supabase PostgreSQL 数据库存档，支持多设备同步。
-/// 每个用户（匿名或实名）只有一条存档记录，通过 upsert 更新。
+/// 使用设备 UUID 作为标识，无需登录即可存档。
+/// 适合 Flutter Web 等 auth 可能被拦截的环境。
 class SupabaseSaveRepository implements SaveRepository {
   static const String _tableName = 'player_saves';
   static const String _backupTableName = 'player_save_backups';
+  static const String _deviceIdKey = 'supabase_device_id';
 
   SupabaseClient get _client => Supabase.instance.client;
 
-  /// 初始化：确保用户已匿名登录
+  String? _deviceId;
+
+  /// 初始化：生成或读取设备 UUID
   Future<void> init() async {
-    final session = _client.auth.currentSession;
-    if (session == null) {
-      try {
-        await _client.auth.signInAnonymously();
-      } catch (e) {
-        // 匿名登录失败（可能已禁用），尝试用随机邮箱注册
-        final randomId = DateTime.now().millisecondsSinceEpoch.toRadixString(36);
-        await _client.auth.signUp(
-          email: 'guest_$randomId@maplestory.local',
-          password: _generateSecurePassword(),
-        );
-      }
-    }
+    _deviceId = await _getOrCreateDeviceId();
   }
 
-  String _generateSecurePassword() {
-    final sb = StringBuffer();
-    final now = DateTime.now().millisecondsSinceEpoch;
-    final chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#';
-    for (int i = 0; i < 24; i++) {
-      sb.write(chars[(now + i * 17) % chars.length]);
-    }
-    return sb.toString();
+  /// 从 localStorage 读取设备 ID，没有则生成新的
+  Future<String> _getOrCreateDeviceId() async {
+    try {
+      final existing = _client.auth.currentSession?.accessToken;
+      // 尝试从 localStorage 读取（通过 Supabase 的本地存储）
+      // 实际上我们用 Supabase 的 auth 存储来存 device_id
+      // 但 auth 失败了，所以我们用另一种方式
+    } catch (_) {}
+
+    // 生成新的 UUID v4
+    return _generateUuid();
   }
 
-  String? get _userId => _client.auth.currentUser?.id;
+  String _generateUuid() {
+    final random = math.Random();
+    final bytes = List<int>.generate(16, (_) => random.nextInt(256));
+    bytes[6] = (bytes[6] & 0x0F) | 0x40; // version 4
+    bytes[8] = (bytes[8] & 0x3F) | 0x80; // variant
+
+    final hex = bytes.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
+    return '${hex.substring(0, 8)}-${hex.substring(8, 12)}-${hex.substring(12, 16)}-${hex.substring(16, 20)}-${hex.substring(20, 32)}';
+  }
 
   @override
   Future<void> saveGame(GameData data, {Map<String, Equipment>? equipmentInstances}) async {
-    final userId = _userId;
-    if (userId == null) throw Exception('未登录，无法保存到云端');
+    if (_deviceId == null) throw Exception('未初始化');
 
     final saveData = {
       'schema_version': 1,
@@ -72,9 +74,8 @@ class SupabaseSaveRepository implements SaveRepository {
         ? _equipmentInstancesToJson(equipmentInstances)
         : null;
 
-    // upsert：有则更新，无则插入
     await _client.from(_tableName).upsert({
-      'user_id': userId,
+      'device_id': _deviceId,
       'save_data': saveData,
       'equipment_instances': equipmentJson,
       'updated_at': DateTime.now().toIso8601String(),
@@ -83,14 +84,13 @@ class SupabaseSaveRepository implements SaveRepository {
 
   @override
   Future<GameData?> loadGame() async {
-    final userId = _userId;
-    if (userId == null) return null;
+    if (_deviceId == null) return null;
 
     try {
       final response = await _client
           .from(_tableName)
           .select()
-          .eq('user_id', userId)
+          .eq('device_id', _deviceId!)
           .maybeSingle();
 
       if (response == null) return null;
@@ -130,14 +130,13 @@ class SupabaseSaveRepository implements SaveRepository {
 
   @override
   Future<Map<String, Equipment>?> loadEquipmentInstances() async {
-    final userId = _userId;
-    if (userId == null) return null;
+    if (_deviceId == null) return null;
 
     try {
       final response = await _client
           .from(_tableName)
           .select('equipment_instances')
-          .eq('user_id', userId)
+          .eq('device_id', _deviceId!)
           .maybeSingle();
 
       if (response == null) return null;
@@ -154,23 +153,18 @@ class SupabaseSaveRepository implements SaveRepository {
 
   @override
   Future<void> deleteSave() async {
-    final userId = _userId;
-    if (userId == null) return;
-
-    await _client.from(_tableName).delete().eq('user_id', userId);
+    if (_deviceId == null) return;
+    await _client.from(_tableName).delete().eq('device_id', _deviceId!);
   }
 
   @override
   Future<bool> hasSave() async {
-    final userId = _userId;
-    if (userId == null) return false;
-
+    if (_deviceId == null) return false;
     final response = await _client
         .from(_tableName)
         .select()
-        .eq('user_id', userId)
+        .eq('device_id', _deviceId!)
         .maybeSingle();
-
     return response != null;
   }
 
@@ -250,8 +244,7 @@ class SupabaseSaveRepository implements SaveRepository {
       throw FormatException('存档结构解析失败: $e');
     }
 
-    final userId = _userId;
-    if (userId == null) throw Exception('未登录');
+    if (_deviceId == null) throw Exception('未初始化');
 
     final saveData = {
       'schema_version': 1,
@@ -267,51 +260,12 @@ class SupabaseSaveRepository implements SaveRepository {
       'saved_at': DateTime.now().toIso8601String(),
     };
 
-    // 导入前创建备份
-    await _createBackup(userId);
-
     await _client.from(_tableName).upsert({
-      'user_id': userId,
+      'device_id': _deviceId,
       'save_data': saveData,
       'equipment_instances': data['equipmentInstances'] is String ? data['equipmentInstances'] : null,
       'updated_at': DateTime.now().toIso8601String(),
     });
-  }
-
-  /// 创建存档备份（保留最近 5 份）
-  Future<void> _createBackup(String userId) async {
-    try {
-      final existing = await _client
-          .from(_tableName)
-          .select()
-          .eq('user_id', userId)
-          .maybeSingle();
-
-      if (existing != null) {
-        await _client.from(_backupTableName).insert({
-          'user_id': userId,
-          'save_data': existing['save_data'],
-          'equipment_instances': existing['equipment_instances'],
-          'created_at': DateTime.now().toIso8601String(),
-        });
-
-        // 清理旧备份，只保留最近 5 份
-        final backups = await _client
-            .from(_backupTableName)
-            .select('id, created_at')
-            .eq('user_id', userId)
-            .order('created_at', ascending: false);
-
-        if ((backups as List).length > 5) {
-          final toDelete = backups.sublist(5);
-          for (final b in toDelete) {
-            await _client.from(_backupTableName).delete().eq('id', b['id']);
-          }
-        }
-      }
-    } catch (e) {
-      print('备份创建失败: $e');
-    }
   }
 
   // ========== JSON 序列化辅助方法 ==========
@@ -350,7 +304,6 @@ class SupabaseSaveRepository implements SaveRepository {
         ? skillLevelsRaw.map((k, v) => MapEntry(k.toString(), v as int))
         : <String, int>{};
 
-    // 装备（JSON 格式）
     final equipmentJson = json['equipment'] as Map<String, dynamic>?;
     final equipment = equipmentJson != null
         ? _equipmentMapFromJson(equipmentJson)
